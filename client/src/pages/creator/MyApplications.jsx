@@ -48,7 +48,7 @@ const MyApplications = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="max-w-4xl mx-auto px-6 py-8 pb-20 md:pb-0">
 
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">My Applications</h1>

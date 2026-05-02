@@ -109,10 +109,28 @@ const saveCreator = async (req, res) => {
   }
 };
 
+// GET /api/brands/saved-creators
+const getSavedCreators = async (req, res) => {
+  try {
+    const brand = await Brand.findOne({ userId: req.user.id })
+      .populate('savedCreators', 'name profilePhoto instagram categories pricing location isOpenForCollab barterEnabled isAdminVerified');
+
+    if (!brand) {
+      return res.status(404).json({ message: 'Brand profile not found' });
+    }
+
+    res.json({ savedCreators: brand.savedCreators });
+  } catch (error) {
+    console.error('getSavedCreators error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getMyProfile,
   createProfile,
   updateProfile,
   getPublicProfile,
   saveCreator,
+  getSavedCreators,
 };

@@ -36,7 +36,7 @@ const Register = () => {
       const res = await registerUser(formData);
       login(res.data.user, res.data.token);
       toast.success('Account created successfully');
-      navigate(`/${res.data.user.role}/dashboard`);
+      navigate('/');
     } catch (error) {
       const msg = error.response?.data?.message || 'Registration failed';
       toast.error(msg);
@@ -52,7 +52,7 @@ const Register = () => {
         {/* logo */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">
-            Collab<span className="text-blue-600">Space</span>
+            Good<span className="text-blue-600">Creator</span>
           </h1>
           <p className="text-gray-500 text-sm mt-1">Create your account</p>
         </div>

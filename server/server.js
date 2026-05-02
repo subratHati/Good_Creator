@@ -30,7 +30,21 @@ const authLimiter = rateLimit({
 });
 
 // middleware
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+app.use(cors({
+  origin: function (origin, callback) {
+    const allowed = [
+      'http://localhost:5173',
+      process.env.CLIENT_URL,
+    ].filter(Boolean);
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -46,7 +60,7 @@ app.use('/api/enquiries', enquiriesRoutes);
 
 // health check 
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', message: 'CollabSpace API running' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // 404 handler

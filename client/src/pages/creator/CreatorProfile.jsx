@@ -20,6 +20,7 @@ const CreatorProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -100,6 +101,7 @@ const CreatorProfile = () => {
     try {
       await disconnectInstagram();
       toast.success('Instagram disconnected');
+      setShowDisconnectConfirm(false);
       setProfile((prev) => ({
         ...prev,
         instagram: { ...prev.instagram, isConnected: false },
@@ -233,7 +235,7 @@ const CreatorProfile = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-3xl mx-auto px-6 py-8">
+      <div className="max-w-3xl mx-auto px-6 py-8 pb-20 md:pb-0">
 
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Creator Profile</h1>
@@ -421,11 +423,31 @@ const CreatorProfile = () => {
               <button
                 type="button"
                 onClick={() => setForm({ ...form, isOpenForCollab: !form.isOpenForCollab })}
-                className={`relative w-11 h-6 rounded-full transition-colors ${form.isOpenForCollab ? 'bg-blue-600' : 'bg-gray-200'
-                  }`}
+                style={{
+                  position: 'relative',
+                  width: '44px',
+                  height: '24px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  backgroundColor: form.isOpenForCollab ? '#2563EB' : '#D1D5DB',
+                  transition: 'background-color 0.2s',
+                  padding: 0,
+                }}
               >
-                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.isOpenForCollab ? 'translate-x-5' : 'translate-x-0.5'
-                  }`} />
+                <span style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: form.isOpenForCollab ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  backgroundColor: 'white',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  transition: 'left 0.2s',
+                  display: 'block',
+                }} />
               </button>
             </div>
 
@@ -439,11 +461,31 @@ const CreatorProfile = () => {
               <button
                 type="button"
                 onClick={() => setForm({ ...form, barterEnabled: !form.barterEnabled })}
-                className={`relative w-11 h-6 rounded-full transition-colors ${form.barterEnabled ? 'bg-blue-600' : 'bg-gray-200'
-                  }`}
+                style={{
+                  position: 'relative',
+                  width: '44px',
+                  height: '24px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  backgroundColor: form.barterEnabled ? '#2563EB' : '#D1D5DB',
+                  transition: 'background-color 0.2s',
+                  padding: 0,
+                }}
               >
-                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${form.barterEnabled ? 'translate-x-5' : 'translate-x-0.5'
-                  }`} />
+                <span style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: form.barterEnabled ? '22px' : '2px',
+                  width: '20px',
+                  height: '20px',
+                  borderRadius: '50%',
+                  backgroundColor: 'white',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  transition: 'left 0.2s',
+                  display: 'block',
+                }} />
               </button>
             </div>
           </div>
@@ -529,22 +571,50 @@ const CreatorProfile = () => {
                 </div>
 
                 {/* actions */}
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={handleInstagramSync}
-                    className="flex-1 py-2.5 border border-blue-200 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-colors"
-                  >
-                    Sync now
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleInstagramDisconnect}
-                    className="px-4 py-2.5 border border-red-200 text-red-500 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors"
-                  >
-                    Disconnect
-                  </button>
-                </div>
+                {/* disconnect confirmation state */}
+                {showDisconnectConfirm ? (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <div className="font-semibold text-red-800 text-sm mb-1">
+                      Are you sure you want to disconnect?
+                    </div>
+                    <div className="text-xs text-red-600 mb-3">
+                      This will remove your verified Instagram stats from your profile. Brands will no longer see your follower count, engagement rate, and avg views until you reconnect.
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowDisconnectConfirm(false)}
+                        className="flex-1 py-2 border border-gray-200 bg-white rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleInstagramDisconnect}
+                        className="flex-1 py-2 bg-red-500 text-white rounded-lg text-xs font-semibold hover:bg-red-600 transition-colors"
+                      >
+                        Yes, disconnect
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleInstagramSync}
+                      className="flex-1 py-2.5 border border-blue-200 text-blue-600 rounded-xl text-sm font-semibold hover:bg-blue-50 transition-colors"
+                    >
+                      Sync now
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowDisconnectConfirm(true)}
+                      className="px-4 py-2.5 text-gray-400 text-xs hover:text-red-500 transition-colors"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-3">

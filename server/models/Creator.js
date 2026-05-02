@@ -42,6 +42,9 @@ const creatorSchema = new mongoose.Schema({
         avgReach: { type: Number, default: 0 },
         avgLikes: { type: Number, default: 0 },
         avgViews: { type: Number, default: 0 },
+        avgComments: { type: Number, default: 0 },
+        avgSaved: { type: Number, default: 0 },
+        avgShares: { type: Number, default: 0 },
         engagementRate: { type: Number, default: 0 },
         isConnected: { type: Boolean, default: false },
         lastSynced: { type: Date, default: null },
@@ -79,7 +82,7 @@ const creatorSchema = new mongoose.Schema({
     { timestamps: true }
 );
 
-    // indexes for fast search queries
+// indexes for fast search queries
 creatorSchema.index({ 'instagram.followersCount': 1 });
 creatorSchema.index({ categories: 1 });
 creatorSchema.index({ 'location.city': 1 });

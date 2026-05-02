@@ -16,3 +16,6 @@ export const uploadBrandLogo = (formData) =>
 
 export const saveCreator = (creatorId) =>
   axiosInstance.put(`/brands/save-creator/${creatorId}`);
+
+export const getSavedCreators = () =>
+  axiosInstance.get('/brands/saved-creators');

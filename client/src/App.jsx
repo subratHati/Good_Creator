@@ -8,6 +8,9 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import InstagramCallback from './pages/auth/InstagramCallback';
 
+//Navbar
+import BottomNav from './components/BottomNav';
+
 // creator
 import CreatorDashboard from './pages/creator/CreatorDashboard';
 import CreatorProfile from './pages/creator/CreatorProfile';
@@ -22,10 +25,12 @@ import BrowseCreators from './pages/brand/BrowseCreators';
 import CreateOpening from './pages/brand/CreateOpening';
 import ManageOpenings from './pages/brand/ManageOpenings';
 import ViewApplicants from './pages/brand/ViewApplicants';
+import SavedCreators from './pages/brand/SavedCreators';
 
 //public
 import CreatorPublicProfile from './pages/public/CreatorPublicProfile';
 import BrandPublicProfile from './pages/public/BrandPublicProfile';
+import HomePage from './pages/home/HomePage';
 
 
 const App = () => {
@@ -34,7 +39,7 @@ const App = () => {
       <AuthProvider>
         <Toaster position="top-right" />
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
@@ -81,10 +86,14 @@ const App = () => {
           <Route path="/brand/openings/:id/applicants" element={
             <ProtectedRoute allowedRole="brand"><ViewApplicants /></ProtectedRoute>
           } />
+          <Route path="/brand/saved-creators" element={
+            <ProtectedRoute allowedRole="brand"><SavedCreators /></ProtectedRoute>
+          } />
 
 
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+        <BottomNav />
       </AuthProvider>
     </BrowserRouter>
   );
