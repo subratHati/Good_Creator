@@ -22,12 +22,7 @@
 const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth.middleware');
-const {
-  getAuthUrl,
-  connectInstagram,
-  syncInstagram,
-  disconnectInstagram,
-} = require('../controllers/instagram.controller');
+const { getAuthUrl, connectInstagram, syncInstagram, disconnectInstagram } = require('../controllers/instagram.controller');
 
 router.get('/auth-url', protect, getAuthUrl);
 router.post('/connect', protect, connectInstagram);

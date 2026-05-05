@@ -18,6 +18,7 @@ const enquiriesRoutes = require('./routes/enquiry.routes');
 connectDB();
 
 const app = express();
+app.set('trust proxy', 1);
 
 //security
 app.use(helmet());

@@ -79,6 +79,7 @@ const CreatorProfile = () => {
   const handleInstagramConnect = async () => {
     try {
       const res = await getInstagramAuthUrl();
+       console.log('Auth URL:', res.data.url); // add this
       window.location.href = res.data.url;
     } catch {
       toast.error('Failed to get Instagram auth URL');

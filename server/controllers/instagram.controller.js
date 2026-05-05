@@ -506,8 +506,6 @@ const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
 const { encryptToken, decryptToken } = require('../services/instagram.service');
 
-// ─── helpers ────────────────────────────────────────────────────────────────
-
 const calculateEngagementRate = (metrics, followersCount) => {
   if (!followersCount) return 0;
   return parseFloat((
@@ -518,127 +516,73 @@ const calculateEngagementRate = (metrics, followersCount) => {
 const calculateReelMetrics = async (igUserId, accessToken) => {
   try {
     console.log('[METRICS] Fetching media for igUserId:', igUserId);
-
     const mediaRes = await axios.get(
       `https://graph.instagram.com/v21.0/${igUserId}/media`,
-      {
-        params: {
-          fields: 'id,media_type,like_count,comments_count,timestamp',
-          limit: 50,
-          access_token: accessToken,
-        },
-      }
+      { params: { fields: 'id,media_type,like_count,comments_count,timestamp', limit: 50, access_token: accessToken } }
     );
-
     const allMedia = mediaRes.data.data || [];
     console.log('[METRICS] Total media fetched:', allMedia.length);
     console.log('[METRICS] Media types:', allMedia.map(p => p.media_type));
-
-    // reels returned as VIDEO or REEL
-    const reelsOnly = allMedia.filter(
-      (post) => post.media_type === 'REEL' || post.media_type === 'VIDEO'
-    );
-    console.log('[METRICS] Reels/Videos:', reelsOnly.length);
-
+    const reelsOnly = allMedia.filter(p => p.media_type === 'REEL' || p.media_type === 'VIDEO');
+    console.log('[METRICS] Reels only:', reelsOnly.length);
     const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    const eligibleReels = reelsOnly.filter(
-      (post) => new Date(post.timestamp) < fortyEightHoursAgo
-    );
+    const eligibleReels = reelsOnly.filter(p => new Date(p.timestamp) < fortyEightHoursAgo);
     const reelsToAnalyse = eligibleReels.slice(0, 20);
-
     console.log(`[METRICS] Eligible: ${eligibleReels.length}, Analysing: ${reelsToAnalyse.length}`);
-
     if (reelsToAnalyse.length === 0) {
       return { avgLikes: 0, avgComments: 0, avgReach: 0, avgViews: 0, avgSaved: 0, avgShares: 0, reelsAnalysed: 0 };
     }
-
     const insightPromises = reelsToAnalyse.map(async (post) => {
       try {
         const insightRes = await axios.get(
           `https://graph.instagram.com/v21.0/${post.id}/insights`,
-          {
-            params: {
-              metric: 'reach,saved,shares,views',
-              access_token: accessToken,
-            },
-          }
+          { params: { metric: 'reach,saved,shares,views', access_token: accessToken } }
         );
-
         const insights = {};
-        insightRes.data.data.forEach((item) => {
+        insightRes.data.data.forEach(item => {
           insights[item.name] = item.values?.[0]?.value || item.total_value?.value || 0;
         });
-
         console.log(`[METRICS] Reel ${post.id}:`, insights);
         return { ...post, reach: insights.reach || 0, saved: insights.saved || 0, shares: insights.shares || 0, views: insights.views || 0 };
       } catch (err) {
-        console.error(`[METRICS] Insight failed for ${post.id}:`, err.response?.data || err.message);
+        console.error(`[METRICS] Insight failed ${post.id}:`, err.response?.data || err.message);
         return { ...post, reach: 0, saved: 0, shares: 0, views: 0 };
       }
     });
-
     const reelsWithInsights = await Promise.all(insightPromises);
-
-    let totalLikes = 0, totalComments = 0, totalReach = 0, totalViews = 0, totalSaved = 0, totalShares = 0;
-    reelsWithInsights.forEach((post) => {
-      totalLikes += post.like_count || 0;
-      totalComments += post.comments_count || 0;
-      totalReach += post.reach || 0;
-      totalViews += post.views || 0;
-      totalSaved += post.saved || 0;
-      totalShares += post.shares || 0;
-    });
-
+    let tL=0,tC=0,tR=0,tV=0,tS=0,tSh=0;
+    reelsWithInsights.forEach(p => { tL+=p.like_count||0; tC+=p.comments_count||0; tR+=p.reach||0; tV+=p.views||0; tS+=p.saved||0; tSh+=p.shares||0; });
     const count = reelsWithInsights.length;
     const metrics = {
-      avgLikes: Math.round(totalLikes / count),
-      avgComments: Math.round(totalComments / count),
-      avgReach: Math.round(totalReach / count),
-      avgViews: Math.round(totalViews / count),
-      avgSaved: Math.round(totalSaved / count),
-      avgShares: Math.round(totalShares / count),
+      avgLikes: Math.round(tL/count), avgComments: Math.round(tC/count),
+      avgReach: Math.round(tR/count), avgViews: Math.round(tV/count),
+      avgSaved: Math.round(tS/count), avgShares: Math.round(tSh/count),
       reelsAnalysed: count,
     };
-
     console.log('[METRICS] Final:', metrics);
     return metrics;
   } catch (err) {
-    console.error('[METRICS] calculateReelMetrics failed:', err.response?.data || err.message);
+    console.error('[METRICS] Failed:', err.response?.data || err.message);
     return { avgLikes: 0, avgComments: 0, avgReach: 0, avgViews: 0, avgSaved: 0, avgShares: 0, reelsAnalysed: 0 };
   }
 };
 
-// ─── GET /api/instagram/auth-url ────────────────────────────────────────────
-
 const getAuthUrl = (req, res) => {
-  const scope = [
-    'instagram_business_basic',
-    'instagram_business_manage_insights',
-  ].join(',');
-
+  const scope = ['instagram_business_basic', 'instagram_business_manage_insights'].join(',');
   const authUrl =
     `https://www.instagram.com/oauth/authorize` +
     `?client_id=${process.env.INSTAGRAM_APP_ID}` +
     `&redirect_uri=${encodeURIComponent(process.env.INSTAGRAM_REDIRECT_URI)}` +
     `&response_type=code` +
     `&scope=${scope}`;
-
   res.json({ url: authUrl });
 };
 
-// ─── POST /api/instagram/connect ────────────────────────────────────────────
-
 const connectInstagram = async (req, res) => {
   const { code } = req.body;
-
-  if (!code) {
-    return res.status(400).json({ message: 'Authorization code is required' });
-  }
-
+  if (!code) return res.status(400).json({ message: 'Authorization code is required' });
   try {
-    console.log('[CONNECT] Exchanging code for token...');
-
-    // step 1 — exchange code for short-lived token
+    console.log('[CONNECT] Exchanging code...');
     const tokenRes = await axios.post(
       'https://api.instagram.com/oauth/access_token',
       new URLSearchParams({
@@ -650,57 +594,30 @@ const connectInstagram = async (req, res) => {
       }),
       { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
     );
-
     console.log('[CONNECT] Token response:', JSON.stringify(tokenRes.data));
-
-    // new API returns array in data field
-    const tokenData = Array.isArray(tokenRes.data.data)
-      ? tokenRes.data.data[0]
-      : tokenRes.data;
-
+    const tokenData = Array.isArray(tokenRes.data.data) ? tokenRes.data.data[0] : tokenRes.data;
     const shortToken = tokenData.access_token;
     const igUserId = tokenData.user_id;
-
     console.log('[CONNECT] Short token received, igUserId:', igUserId);
-
-    // step 2 — exchange for long-lived token (60 days)
-    const longTokenRes = await axios.get(
-      'https://graph.instagram.com/access_token',
-      {
-        params: {
-          grant_type: 'ig_exchange_token',
-          client_secret: process.env.INSTAGRAM_APP_SECRET,
-          access_token: shortToken,
-        },
-      }
-    );
-
-    const longToken = longTokenRes.data.access_token;
-    console.log('[CONNECT] Long-lived token received');
-
-    // step 3 — get profile — no Facebook page needed!
-    const profileRes = await axios.get(
-      `https://graph.instagram.com/v21.0/${igUserId}`,
-      {
-        params: {
-          fields: 'id,username,followers_count,profile_picture_url,biography',
-          access_token: longToken,
-        },
-      }
-    );
-
+    let longToken = shortToken;
+    try {
+      const longTokenRes = await axios.get('https://graph.instagram.com/access_token', {
+        params: { grant_type: 'ig_exchange_token', client_secret: process.env.INSTAGRAM_APP_SECRET, access_token: shortToken }
+      });
+      longToken = longTokenRes.data.access_token || shortToken;
+      console.log('[CONNECT] Long-lived token received');
+    } catch (err) {
+      console.log('[CONNECT] Long token failed, using short token:', err.response?.data?.error?.message);
+    }
+    const profileRes = await axios.get(`https://graph.instagram.com/v21.0/${igUserId}`, {
+      params: { fields: 'id,username,followers_count,profile_picture_url', access_token: longToken }
+    });
     const profile = profileRes.data;
     console.log('[CONNECT] Profile:', profile.username, 'followers:', profile.followers_count);
-
     const encryptedToken = encryptToken(longToken);
-
-    // step 4 — get metrics
     const metrics = await calculateReelMetrics(igUserId, longToken);
     const engagementRate = calculateEngagementRate(metrics, profile.followers_count || 0);
-
     console.log('[CONNECT] Engagement rate:', engagementRate);
-
-    // step 5 — save to DB
     if (req.user.role === 'creator') {
       const updated = await Creator.findOneAndUpdate(
         { userId: req.user.id },
@@ -738,15 +655,10 @@ const connectInstagram = async (req, res) => {
         { new: true }
       );
     }
-
     return res.json({
       message: 'Instagram connected successfully',
       requiresSelection: false,
-      instagram: {
-        handle: profile.username,
-        followersCount: profile.followers_count || 0,
-        engagementRate,
-      },
+      instagram: { handle: profile.username, followersCount: profile.followers_count || 0, engagementRate },
     });
   } catch (error) {
     console.error('[CONNECT] Error:', error.response?.data || error.message);
@@ -754,55 +666,28 @@ const connectInstagram = async (req, res) => {
   }
 };
 
-// ─── POST /api/instagram/sync ────────────────────────────────────────────────
-
 const syncInstagram = async (req, res) => {
   try {
     if (req.user.role === 'creator') {
       const creator = await Creator.findOne({ userId: req.user.id });
-      if (!creator?.instagram?.isConnected) {
-        return res.status(400).json({ message: 'Instagram not connected' });
-      }
-
+      if (!creator?.instagram?.isConnected) return res.status(400).json({ message: 'Instagram not connected' });
       const accessToken = decryptToken(creator.instagram.accessToken);
       const igUserId = creator.instagram.userId;
-
-      console.log('[SYNC] Syncing creator igUserId:', igUserId);
-
-      // refresh token first
+      console.log('[SYNC] Syncing igUserId:', igUserId);
       let freshToken = accessToken;
       try {
-        const refreshRes = await axios.get(
-          'https://graph.instagram.com/refresh_access_token',
-          {
-            params: {
-              grant_type: 'ig_refresh_token',
-              access_token: accessToken,
-            },
-          }
-        );
-        freshToken = refreshRes.data.access_token;
+        const refreshRes = await axios.get('https://graph.instagram.com/refresh_access_token', {
+          params: { grant_type: 'ig_refresh_token', access_token: accessToken }
+        });
+        freshToken = refreshRes.data.access_token || accessToken;
         console.log('[SYNC] Token refreshed');
-      } catch {
-        console.log('[SYNC] Token refresh failed, using existing token');
-      }
-
-      // get fresh profile
-      const profileRes = await axios.get(
-        `https://graph.instagram.com/v21.0/${igUserId}`,
-        {
-          params: {
-            fields: 'followers_count',
-            access_token: freshToken,
-          },
-        }
-      );
+      } catch { console.log('[SYNC] Token refresh failed, using existing'); }
+      const profileRes = await axios.get(`https://graph.instagram.com/v21.0/${igUserId}`, {
+        params: { fields: 'followers_count', access_token: freshToken }
+      });
       const followersCount = profileRes.data.followers_count || 0;
-      console.log('[SYNC] Followers:', followersCount);
-
       const metrics = await calculateReelMetrics(igUserId, freshToken);
       const engagementRate = calculateEngagementRate(metrics, followersCount);
-
       const updated = await Creator.findOneAndUpdate(
         { userId: req.user.id },
         {
@@ -820,58 +705,34 @@ const syncInstagram = async (req, res) => {
         },
         { new: true }
       );
-
       console.log('[SYNC] Done — avgViews:', updated?.instagram?.avgViews, 'engagementRate:', updated?.instagram?.engagementRate);
       return res.json({ message: 'Instagram synced successfully' });
     }
-
     if (req.user.role === 'brand') {
       const brand = await Brand.findOne({ userId: req.user.id });
-      if (!brand?.instagram?.isVerified) {
-        return res.status(400).json({ message: 'Instagram not connected' });
-      }
-
+      if (!brand?.instagram?.isVerified) return res.status(400).json({ message: 'Instagram not connected' });
       const accessToken = decryptToken(brand.instagram.accessToken);
-      const profileRes = await axios.get(
-        `https://graph.instagram.com/v21.0/${brand.instagram.userId}`,
-        {
-          params: {
-            fields: 'username,followers_count,profile_picture_url',
-            access_token: accessToken,
-          },
-        }
-      );
-
-      await Brand.findOneAndUpdate(
-        { userId: req.user.id },
-        {
-          'instagram.followersCount': profileRes.data.followers_count || 0,
-          'instagram.profilePicUrl': profileRes.data.profile_picture_url || '',
-        }
-      );
-
+      const profileRes = await axios.get(`https://graph.instagram.com/v21.0/${brand.instagram.userId}`, {
+        params: { fields: 'username,followers_count,profile_picture_url', access_token: accessToken }
+      });
+      await Brand.findOneAndUpdate({ userId: req.user.id }, {
+        'instagram.followersCount': profileRes.data.followers_count || 0,
+        'instagram.profilePicUrl': profileRes.data.profile_picture_url || '',
+      });
       return res.json({ message: 'Instagram synced successfully' });
     }
   } catch (error) {
-    console.error('[SYNC] Error:', error.response?.data || error.message);
+    console.error('[SYNC] Error:', error.message);
     res.status(500).json({ message: 'Failed to sync Instagram' });
   }
 };
 
-// ─── POST /api/instagram/disconnect ─────────────────────────────────────────
-
 const disconnectInstagram = async (req, res) => {
   try {
     if (req.user.role === 'creator') {
-      await Creator.findOneAndUpdate(
-        { userId: req.user.id },
-        { 'instagram.accessToken': '', 'instagram.isConnected': false, 'instagram.userId': '' }
-      );
+      await Creator.findOneAndUpdate({ userId: req.user.id }, { 'instagram.accessToken': '', 'instagram.isConnected': false, 'instagram.userId': '' });
     } else if (req.user.role === 'brand') {
-      await Brand.findOneAndUpdate(
-        { userId: req.user.id },
-        { 'instagram.accessToken': '', 'instagram.isVerified': false, 'instagram.userId': '' }
-      );
+      await Brand.findOneAndUpdate({ userId: req.user.id }, { 'instagram.accessToken': '', 'instagram.isVerified': false, 'instagram.userId': '' });
     }
     res.json({ message: 'Instagram disconnected' });
   } catch (error) {
