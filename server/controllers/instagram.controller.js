@@ -683,7 +683,7 @@ const syncInstagram = async (req, res) => {
         freshToken = refreshRes.data.access_token || accessToken;
         console.log('[SYNC] Token refreshed');
       } catch { console.log('[SYNC] Token refresh failed, using existing'); }
-      const profileRes = await axios.get(`https://graph.instagram.com/v21.0/${igUserId}`, {
+      const profileRes = await axios.get(`https://graph.instagram.com/v21.0/me`, {
         params: { fields: 'followers_count', access_token: freshToken }
       });
       const followersCount = profileRes.data.followers_count || 0;
