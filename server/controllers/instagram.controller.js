@@ -517,7 +517,7 @@ const calculateReelMetrics = async (igUserId, accessToken) => {
   try {
     console.log('[METRICS] Fetching media for igUserId:', igUserId);
     const mediaRes = await axios.get(
-      `https://graph.instagram.com/v21.0/${igUserId}/media`,
+      `https://graph.instagram.com/v21.0/me/media`,
       { params: { fields: 'id,media_type,like_count,comments_count,timestamp', limit: 50, access_token: accessToken } }
     );
     const allMedia = mediaRes.data.data || [];
@@ -610,7 +610,7 @@ const connectInstagram = async (req, res) => {
       console.log('[CONNECT] Long token failed, using short token:', err.response?.data?.error?.message);
     }
     console.log('[CONNECT] Using igUserId for profile fetch:', igUserId, typeof igUserId); //temporary debug line
-    const profileRes = await axios.get(`https://graph.instagram.com/v21.0/${igUserId}`, {
+    const profileRes = await axios.get(`https://graph.instagram.com/v21.0/me`, {
       params: { fields: 'id,username,followers_count,profile_picture_url', access_token: longToken }
     });
     const profile = profileRes.data;
