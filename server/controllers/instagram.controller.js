@@ -597,7 +597,7 @@ const connectInstagram = async (req, res) => {
     console.log('[CONNECT] Token response:', JSON.stringify(tokenRes.data));
     const tokenData = Array.isArray(tokenRes.data.data) ? tokenRes.data.data[0] : tokenRes.data;
     const shortToken = tokenData.access_token;
-    const igUserId = tokenData.user_id;
+    const igUserId = String(tokenData.user_id);
     console.log('[CONNECT] Short token received, igUserId:', igUserId);
     let longToken = shortToken;
     try {
@@ -609,6 +609,7 @@ const connectInstagram = async (req, res) => {
     } catch (err) {
       console.log('[CONNECT] Long token failed, using short token:', err.response?.data?.error?.message);
     }
+    console.log('[CONNECT] Using igUserId for profile fetch:', igUserId, typeof igUserId); //temporary debug line
     const profileRes = await axios.get(`https://graph.instagram.com/v21.0/${igUserId}`, {
       params: { fields: 'id,username,followers_count,profile_picture_url', access_token: longToken }
     });
