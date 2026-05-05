@@ -550,13 +550,13 @@ const calculateReelMetrics = async (igUserId, accessToken) => {
       }
     });
     const reelsWithInsights = await Promise.all(insightPromises);
-    let tL=0,tC=0,tR=0,tV=0,tS=0,tSh=0;
-    reelsWithInsights.forEach(p => { tL+=p.like_count||0; tC+=p.comments_count||0; tR+=p.reach||0; tV+=p.views||0; tS+=p.saved||0; tSh+=p.shares||0; });
+    let tL = 0, tC = 0, tR = 0, tV = 0, tS = 0, tSh = 0;
+    reelsWithInsights.forEach(p => { tL += p.like_count || 0; tC += p.comments_count || 0; tR += p.reach || 0; tV += p.views || 0; tS += p.saved || 0; tSh += p.shares || 0; });
     const count = reelsWithInsights.length;
     const metrics = {
-      avgLikes: Math.round(tL/count), avgComments: Math.round(tC/count),
-      avgReach: Math.round(tR/count), avgViews: Math.round(tV/count),
-      avgSaved: Math.round(tS/count), avgShares: Math.round(tSh/count),
+      avgLikes: Math.round(tL / count), avgComments: Math.round(tC / count),
+      avgReach: Math.round(tR / count), avgViews: Math.round(tV / count),
+      avgSaved: Math.round(tS / count), avgShares: Math.round(tSh / count),
       reelsAnalysed: count,
     };
     console.log('[METRICS] Final:', metrics);
@@ -599,27 +599,51 @@ const connectInstagram = async (req, res) => {
     const shortToken = tokenData.access_token;
     const igUserId = String(tokenData.user_id);
     console.log('[CONNECT] Short token received, igUserId:', igUserId);
+
     let longToken = shortToken;
     try {
-      const longTokenRes = await axios.get('https://graph.instagram.com/access_token', {
-        params: { grant_type: 'ig_exchange_token', client_secret: process.env.INSTAGRAM_APP_SECRET, access_token: shortToken }
+      const longTokenRes = await axios({
+        method: 'GET',
+        url: 'https://graph.instagram.com/access_token',
+        params: {
+          grant_type: 'ig_exchange_token',
+          client_secret: process.env.INSTAGRAM_APP_SECRET,
+          access_token: shortToken,
+        },
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
       longToken = longTokenRes.data.access_token || shortToken;
       console.log('[CONNECT] Long-lived token received');
     } catch (err) {
       console.log('[CONNECT] Long token failed, using short token:', err.response?.data?.error?.message);
     }
+
     console.log('[CONNECT] Using igUserId for profile fetch:', igUserId, typeof igUserId); //temporary debug line
-    const profileRes = await axios.get(`https://graph.instagram.com/v21.0/me`, {
-      params: { fields: 'id,username,followers_count,profile_picture_url', access_token: longToken }
+
+    const profileRes = await axios({
+      method: 'GET',
+      url: `https://graph.instagram.com/v21.0/me`,
+      params: {
+        fields: 'id,username,followers_count,profile_picture_url',
+        access_token: longToken,
+      },
+      headers: {
+        'Authorization': `Bearer ${longToken}`,
+      },
     });
+
     const profile = profileRes.data;
     console.log('[CONNECT] Profile:', profile.username, 'followers:', profile.followers_count);
     const encryptedToken = encryptToken(longToken);
     const metrics = await calculateReelMetrics(igUserId, longToken);
     const engagementRate = calculateEngagementRate(metrics, profile.followers_count || 0);
+
     console.log('[CONNECT] Engagement rate:', engagementRate);
+
     if (req.user.role === 'creator') {
+
       const updated = await Creator.findOneAndUpdate(
         { userId: req.user.id },
         {
