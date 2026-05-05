@@ -68,8 +68,12 @@ const BottomNav = () => {
     return location.pathname.startsWith(path);
   };
 
+  // hide on desktop using JS window check — more reliable than Tailwind md:hidden in production
+  if (typeof window !== 'undefined' && window.innerWidth >= 768) return null;
+
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200"
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex items-stretch h-16">
