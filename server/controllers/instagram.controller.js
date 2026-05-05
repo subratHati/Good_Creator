@@ -601,38 +601,22 @@ const connectInstagram = async (req, res) => {
     console.log('[CONNECT] Short token received, igUserId:', igUserId);
 
     let longToken = shortToken;
+
+    // try long-lived token exchange
     try {
-      const longTokenRes = await axios({
-        method: 'GET',
-        url: 'https://graph.instagram.com/access_token',
-        params: {
-          grant_type: 'ig_exchange_token',
-          client_secret: process.env.INSTAGRAM_APP_SECRET,
-          access_token: shortToken,
-        },
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const longTokenRes = await axios.get(
+        `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${process.env.INSTAGRAM_APP_SECRET}&access_token=${shortToken}`
+      );
       longToken = longTokenRes.data.access_token || shortToken;
       console.log('[CONNECT] Long-lived token received');
     } catch (err) {
       console.log('[CONNECT] Long token failed, using short token:', err.response?.data?.error?.message);
     }
 
-    console.log('[CONNECT] Using igUserId for profile fetch:', igUserId, typeof igUserId); //temporary debug line
-
-    const profileRes = await axios({
-      method: 'GET',
-      url: `https://graph.instagram.com/v21.0/me`,
-      params: {
-        fields: 'id,username,followers_count,profile_picture_url',
-        access_token: longToken,
-      },
-      headers: {
-        'Authorization': `Bearer ${longToken}`,
-      },
-    });
+    // get profile using Bearer token in URL directly
+    const profileRes = await axios.get(
+      `https://graph.instagram.com/v21.0/me?fields=id,username,followers_count,profile_picture_url&access_token=${longToken}`
+    );
 
     const profile = profileRes.data;
     console.log('[CONNECT] Profile:', profile.username, 'followers:', profile.followers_count);
