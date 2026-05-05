@@ -71,9 +71,17 @@ const BottomNav = () => {
   // hide on desktop using JS window check — more reliable than Tailwind md:hidden in production
   if (typeof window !== 'undefined' && window.innerWidth >= 768) return null;
 
-  return (
+return (
+  <>
+    <style>{`
+      @media (min-width: 768px) {
+        .bottom-nav-mobile {
+          display: none !important;
+        }
+      }
+    `}</style>
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200"
+      className="bottom-nav-mobile fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex items-stretch h-16">
@@ -95,7 +103,8 @@ const BottomNav = () => {
         })}
       </div>
     </nav>
-  );
+  </>
+);
 };
 
 export default BottomNav;
