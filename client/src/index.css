@@ -1,9 +1,7 @@
 @import "tailwindcss";
 
-@layer utilities {
-  @media (min-width: 768px) {
-    .hide-on-desktop {
-      display: none !important;
-    }
+@media (min-width: 768px) {
+  .hide-on-desktop {
+    display: none !important;
   }
 }
