@@ -3,6 +3,9 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
+import MessagesPage from './pages/messages/MessagesPage';
+import ChatWindow from './pages/messages/ChatWindow';
+
 // auth
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -88,6 +91,13 @@ const App = () => {
           } />
           <Route path="/brand/saved-creators" element={
             <ProtectedRoute allowedRole="brand"><SavedCreators /></ProtectedRoute>
+          } />
+
+          <Route path="/messages" element={
+            <ProtectedRoute><MessagesPage /></ProtectedRoute>
+          } />
+          <Route path="/messages/:id" element={
+            <ProtectedRoute><ChatWindow /></ProtectedRoute>
           } />
 
 

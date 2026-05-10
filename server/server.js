@@ -5,6 +5,8 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const connectDB = require("./config/db");
+const http = require("http");
+const { Server } = require("socket.io");
 
 const authRoutes = require("./routes/auth.routes");
 const creatorRoutes = require("./routes/creator.routes");
@@ -13,11 +15,27 @@ const instagramRoutes = require('./routes/instagram.routes');
 const openingRoutes = require('./routes/opening.routes');
 const applicationRoutes = require('./routes/application.routes');
 const enquiriesRoutes = require('./routes/enquiry.routes');
+const chatRoutes = require('./routes/chat.routes');
 
 
 connectDB();
 
 const app = express();
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: {
+    origin: [
+      'http://localhost:5173',
+      process.env.CLIENT_URL,
+    ].filter(Boolean),
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
+app.set('io', io);
+
 app.set('trust proxy', 1);
 
 //security
@@ -25,9 +43,9 @@ app.use(helmet());
 
 // rate limit auth routes - max 20 requests per 15 min per IP 
 const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 20,
-    message: { message: 'Too many requests, please try again later' },
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { message: 'Too many requests, please try again later' },
 });
 
 // middleware
@@ -58,6 +76,7 @@ app.use('/api/instagram', instagramRoutes);
 app.use('/api/openings', openingRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/enquiries', enquiriesRoutes);
+app.use('/api/chat', chatRoutes);
 
 // health check 
 app.get('/api/health', (req, res) => {
@@ -66,18 +85,42 @@ app.get('/api/health', (req, res) => {
 
 // 404 handler
 app.use((req, res) => {
-    res.status(404).json({ message: 'Route not found' });
+  res.status(404).json({ message: 'Route not found' });
 });
 
 // global error handler 
 app.use((err, req, res, next) => {
-    console.error('Global error:', err);  // change this line
-    res.status(500).json({ message: 'Something went wrong' });
+  console.error('Global error:', err);  // change this line
+  res.status(500).json({ message: 'Something went wrong' });
+});
+
+io.on('connection', (socket) => {
+  console.log('[SOCKET] User connected:', socket.id);
+
+  socket.on('join_user', (userId) => {
+    socket.join(`user_${userId}`);
+  });
+
+  socket.on('join_conversation', (conversationId) => {
+    socket.join(`conversation_${conversationId}`);
+  });
+
+  socket.on('leave_conversation', (conversationId) => {
+    socket.leave(`conversation_${conversationId}`);
+  });
+
+  socket.on('typing', ({ conversationId, userId, isTyping }) => {
+    socket.to(`conversation_${conversationId}`).emit('user_typing', { userId, isTyping });
+  });
+
+  socket.on('disconnect', () => {
+    console.log('[SOCKET] User disconnected:', socket.id);
+  });
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
 
 require('./jobs/syncCreatorInsights')();

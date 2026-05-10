@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, MapPin, CheckCircle } from 'lucide-react';
 import axiosInstance from '../../api/axiosInstance';
+import { getOrCreateConversation } from '../../api/chat';
 import useAuth from '../../hooks/useAuth';
 
 const formatNumber = (num) => {
@@ -105,14 +106,12 @@ const CreatorPublicProfile = () => {
 
               {/* badges */}
               <div className="flex flex-wrap justify-center gap-2 mb-4">
-                <span className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${
-                  creator.isOpenForCollab
+                <span className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${creator.isOpenForCollab
                     ? 'bg-green-50 text-green-700'
                     : 'bg-gray-100 text-gray-500'
-                }`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${
-                    creator.isOpenForCollab ? 'bg-green-500' : 'bg-gray-400'
-                  }`} />
+                  }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${creator.isOpenForCollab ? 'bg-green-500' : 'bg-gray-400'
+                    }`} />
                   {creator.isOpenForCollab ? 'Open for collab' : 'Closed'}
                 </span>
                 {creator.barterEnabled && (
@@ -128,9 +127,22 @@ const CreatorPublicProfile = () => {
                 </p>
               )}
 
+              {/* Message button — only show for brands */}
+              {user?.role === 'brand' && (
+                <button
+                  onClick={async () => {
+                    const res = await getOrCreateConversation(creator._id);
+                    navigate(`/messages/${res.data.conversation._id}`);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors mb-3"
+                >
+                  💬 Message Creator
+                </button>
+              )}
+
               {/* instagram button */}
               {ig?.handle && (
-                
+
                 <a
                   href={"https://instagram.com/" + ig.handle}
                   target="_blank"
@@ -138,9 +150,9 @@ const CreatorPublicProfile = () => {
                   className="w-full flex items-center justify-center gap-2 py-3 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="2" y="2" width="20" height="20" rx="5"/>
-                    <circle cx="12" cy="12" r="4"/>
-                    <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/>
+                    <rect x="2" y="2" width="20" height="20" rx="5" />
+                    <circle cx="12" cy="12" r="4" />
+                    <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" />
                   </svg>
                   Visit Instagram
                 </a>
@@ -240,36 +252,35 @@ const CreatorPublicProfile = () => {
               creator.pricing?.story > 0 ||
               creator.pricing?.ugcCollab > 0 ||
               creator.pricing?.ugcNonCollab > 0) && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-5">
-                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Pricing</div>
-                <div>
-                  {[
-                    { key: 'reel', label: 'Reel', desc: 'Short video content' },
-                    { key: 'post', label: 'Feed post', desc: 'Photo or carousel' },
-                    { key: 'story', label: 'Story', desc: '24hr story mention' },
-                    { key: 'ugcCollab', label: 'UGC with collab tag', desc: 'With brand tag' },
-                    { key: 'ugcNonCollab', label: 'UGC without collab tag', desc: 'Without brand tag' },
-                  ]
-                    .filter(({ key }) => creator.pricing?.[key] > 0)
-                    .map(({ key, label, desc }, i, arr) => (
-                      <div
-                        key={key}
-                        className={`flex items-center justify-between py-3 ${
-                          i < arr.length - 1 ? 'border-b border-gray-100' : ''
-                        }`}
-                      >
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{label}</div>
-                          <div className="text-xs text-gray-400">{desc}</div>
+                <div className="bg-white rounded-2xl border border-gray-200 p-5">
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Pricing</div>
+                  <div>
+                    {[
+                      { key: 'reel', label: 'Reel', desc: 'Short video content' },
+                      { key: 'post', label: 'Feed post', desc: 'Photo or carousel' },
+                      { key: 'story', label: 'Story', desc: '24hr story mention' },
+                      { key: 'ugcCollab', label: 'UGC with collab tag', desc: 'With brand tag' },
+                      { key: 'ugcNonCollab', label: 'UGC without collab tag', desc: 'Without brand tag' },
+                    ]
+                      .filter(({ key }) => creator.pricing?.[key] > 0)
+                      .map(({ key, label, desc }, i, arr) => (
+                        <div
+                          key={key}
+                          className={`flex items-center justify-between py-3 ${i < arr.length - 1 ? 'border-b border-gray-100' : ''
+                            }`}
+                        >
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">{label}</div>
+                            <div className="text-xs text-gray-400">{desc}</div>
+                          </div>
+                          <div className="text-sm font-bold text-gray-900">
+                            ₹{creator.pricing[key].toLocaleString('en-IN')}
+                          </div>
                         </div>
-                        <div className="text-sm font-bold text-gray-900">
-                          ₹{creator.pricing[key].toLocaleString('en-IN')}
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* sample content */}
             {creator.sampleContentLinks?.filter(l => l).length > 0 && (
@@ -277,7 +288,7 @@ const CreatorPublicProfile = () => {
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Sample content</div>
                 <div className="space-y-2">
                   {creator.sampleContentLinks.filter(l => l).map((link, i) => (
-                    
+
                     <a
                       key={i}
                       href={link}

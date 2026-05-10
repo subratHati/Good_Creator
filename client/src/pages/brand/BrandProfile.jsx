@@ -76,10 +76,17 @@ const BrandProfile = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    //validation
     if (!form.brandName.trim()) {
       toast.error('Brand name is required');
       return;
     }
+     if (!form.category) {
+    toast.error('Please select a category');
+    return;
+  }
+
     setSaving(true);
     try {
       const payload = {

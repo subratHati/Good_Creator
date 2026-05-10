@@ -71,6 +71,7 @@ const Navbar = () => {
   const creatorLinks = [
     { label: 'Home', path: '/' },
     { label: 'Browse Brands', path: '/creator/browse-brands' },
+    { label: 'Messages', path: '/messages' },
     { label: 'Applications', path: '/creator/applications' },
     { label: 'Enquiries', path: '/creator/enquiries' },
   ];
@@ -78,6 +79,7 @@ const Navbar = () => {
   const brandLinks = [
     { label: 'Home', path: '/' },
     { label: 'Browse Creators', path: '/brand/browse-creators' },
+    { label: 'Messages', path: '/messages' },
     { label: 'Saved', path: '/brand/saved-creators' },
     { label: 'Openings', path: '/brand/openings' },
   ];
@@ -110,11 +112,10 @@ const Navbar = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive(link.path)
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(link.path)
                       ? 'text-blue-600 bg-blue-50'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   {link.label}
                 </Link>
@@ -128,11 +129,10 @@ const Navbar = () => {
             {user ? (
               <>
                 {/* role badge — desktop only */}
-                <span className={`hidden md:block text-xs font-semibold px-3 py-1 rounded-full ${
-                  user.role === 'creator'
+                <span className={`hidden md:block text-xs font-semibold px-3 py-1 rounded-full ${user.role === 'creator'
                     ? 'bg-blue-100 text-blue-700'
                     : 'bg-orange-100 text-orange-700'
-                }`}>
+                  }`}>
                   {user.role}
                 </span>
 
