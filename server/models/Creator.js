@@ -77,6 +77,14 @@ const creatorSchema = new mongoose.Schema({
         type: [String],
         default: [],
     },
+    
+    bankDetails: {
+        accountHolderName: { type: String, default: '' },
+        accountNumber: { type: String, default: '' },
+        ifscCode: { type: String, default: '' },
+        bankName: { type: String, default: '' },
+        isVerified: { type: Boolean, default: false },
+    },
 
 },
     { timestamps: true }

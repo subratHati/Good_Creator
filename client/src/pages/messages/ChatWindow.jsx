@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { getMessages, sendMessage } from '../../api/chat';
+import { createPaymentOrder, verifyPayment, releasePayment } from '../../api/payment';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
 
@@ -111,6 +112,17 @@ const PaymentReleasedMessage = ({ message }) => (
       <div className="text-2xl mb-1">🎉</div>
       <div className="font-bold text-green-800 text-sm">Payment Released!</div>
       <div className="text-xs text-green-600 mt-1">{message.text}</div>
+      <p className="text-xs text-gray-400 mt-2">{formatTime(message.createdAt)}</p>
+    </div>
+  </div>
+);
+
+const PaymentConfirmedMessage = ({ message }) => (
+  <div className="max-w-xs rounded-2xl overflow-hidden border border-blue-200 bg-blue-50">
+    <div className="px-4 py-3 text-center">
+      <div className="text-2xl mb-1">✅</div>
+      <div className="font-bold text-blue-800 text-sm">Payment Confirmed!</div>
+      <div className="text-xs text-blue-600 mt-1 leading-relaxed">{message.text}</div>
       <p className="text-xs text-gray-400 mt-2">{formatTime(message.createdAt)}</p>
     </div>
   </div>
@@ -311,23 +323,77 @@ const ChatWindow = () => {
     }
   };
 
-  const handlePay = (message) => {
-    toast('Payment integration coming soon — Day 11');
-  };
+const handlePay = async (message) => {
+  try {
+    if (!window.Razorpay) {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = resolve;
+        script.onerror = reject;
+        document.body.appendChild(script);
+      });
+    }
+
+    const orderRes = await createPaymentOrder({
+      messageId: message._id,
+      conversationId: id,
+      amount: message.paymentRequest.amount,
+    });
+
+    const { orderId, amount, keyId, description } = orderRes.data;
+
+    const options = {
+      key: keyId,
+      amount: amount,
+      currency: 'INR',
+      name: 'GoodCreator',
+      description: description,
+      order_id: orderId,
+      handler: async (response) => {
+        try {
+          await verifyPayment({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            messageId: message._id,
+            conversationId: id,
+            amount: amount,
+          });
+          toast.success('Payment successful! 🎉');
+          const res = await getMessages(id);
+          setMessages(res.data.messages);
+        } catch {
+          toast.error('Payment verification failed. Contact support.');
+        }
+      },
+      theme: { color: '#111827' },
+      modal: {
+        ondismiss: () => { toast('Payment cancelled'); },
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  } catch (error) {
+    toast.error('Failed to initiate payment');
+    console.error('[PAY] error:', error);
+  }
+};
 
   const handleApproveDelivery = async (message) => {
-    try {
-      await sendMessage(id, {
-        type: 'payment_released',
-        text: 'Delivery approved! Payment will be released within 24 hours.',
-      });
-      toast.success('Delivery approved!');
-      const res = await getMessages(id);
-      setMessages(res.data.messages);
-    } catch {
-      toast.error('Failed to approve delivery');
-    }
-  };
+  try {
+    await releasePayment({
+      conversationId: id,
+      deliveryMessageId: message._id,
+    });
+    toast.success('Delivery approved! Payment will be released within 24 hours. 🎉');
+    const res = await getMessages(id);
+    setMessages(res.data.messages);
+  } catch {
+    toast.error('Failed to approve delivery');
+  }
+};
 
   const groupedMessages = messages.reduce((groups, message) => {
     const date = formatDate(message.createdAt);
@@ -383,6 +449,7 @@ const ChatWindow = () => {
                   {message.type === 'payment_request' && <PaymentRequestMessage message={message} isOwn={isOwn} onPay={handlePay} />}
                   {message.type === 'delivery' && <DeliveryMessage message={message} isOwn={isOwn} onApprove={handleApproveDelivery} />}
                   {message.type === 'payment_released' && <PaymentReleasedMessage message={message} />}
+                  {message.type === 'payment_confirmed' && <PaymentConfirmedMessage message={message} />}
                 </div>
               );
             })}

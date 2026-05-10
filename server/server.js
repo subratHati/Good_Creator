@@ -16,6 +16,8 @@ const openingRoutes = require('./routes/opening.routes');
 const applicationRoutes = require('./routes/application.routes');
 const enquiriesRoutes = require('./routes/enquiry.routes');
 const chatRoutes = require('./routes/chat.routes');
+const paymentRoutes = require('./routes/payment.routes');
+
 
 
 connectDB();
@@ -77,6 +79,7 @@ app.use('/api/openings', openingRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/enquiries', enquiriesRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // health check 
 app.get('/api/health', (req, res) => {

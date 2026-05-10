@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Save, Upload } from 'lucide-react';
 import Navbar from '../../components/Navbar';
+import BankDetailsForm from '../../components/BankDetailsForm';
 import {
   getInstagramAuthUrl,
   syncInstagram,
@@ -638,6 +639,8 @@ const CreatorProfile = () => {
               </div>
             )}
           </div>
+
+          <BankDetailsForm />
 
           {/* save button */}
           <button
