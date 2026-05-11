@@ -12,5 +12,8 @@ export const getMessages = (conversationId) =>
 export const sendMessage = (conversationId, data) =>
   axiosInstance.post(`/chat/conversations/${conversationId}/messages`, data);
 
+export const getConversationById = (conversationId) =>
+  axiosInstance.get(`/chat/conversations/${conversationId}`);
+
 export const getUnreadCount = () =>
   axiosInstance.get('/chat/unread');

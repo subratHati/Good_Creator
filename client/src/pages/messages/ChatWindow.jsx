@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Send } from 'lucide-react';
 import { io } from 'socket.io-client';
-import { getMessages, sendMessage } from '../../api/chat';
+import { getMessages, sendMessage, getConversationById } from '../../api/chat';
 import { createPaymentOrder, verifyPayment, releasePayment } from '../../api/payment';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -24,6 +24,8 @@ const formatDate = (date) => {
   if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 };
+
+// ─── MESSAGE COMPONENTS ───────────────────────────────────────────────────────
 
 const TextMessage = ({ message, isOwn }) => (
   <div className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2.5 rounded-2xl ${
@@ -50,6 +52,14 @@ const EnquiryMessage = ({ message, isOwn }) => (
 
 const PaymentRequestMessage = ({ message, isOwn, onPay }) => {
   const status = message.paymentRequest?.status;
+  const pr = message.paymentRequest;
+  const deliverableList = [
+    pr?.deliverables?.reels > 0 && `${pr.deliverables.reels} Reel${pr.deliverables.reels > 1 ? 's' : ''}`,
+    pr?.deliverables?.posts > 0 && `${pr.deliverables.posts} Post${pr.deliverables.posts > 1 ? 's' : ''}`,
+    pr?.deliverables?.stories > 0 && `${pr.deliverables.stories} Stor${pr.deliverables.stories > 1 ? 'ies' : 'y'}`,
+    pr?.deliverables?.ugc > 0 && `${pr.deliverables.ugc} UGC`,
+  ].filter(Boolean);
+
   return (
     <div className="max-w-xs md:max-w-sm rounded-2xl overflow-hidden border border-gray-200 bg-white">
       <div className="bg-green-50 px-4 py-2 flex items-center gap-2">
@@ -57,20 +67,27 @@ const PaymentRequestMessage = ({ message, isOwn, onPay }) => {
         <span className="text-xs font-bold text-green-700 uppercase tracking-wide">Payment Request</span>
       </div>
       <div className="px-4 py-3">
-        <div className="text-2xl font-bold text-gray-900 mb-1">₹{message.paymentRequest?.amount?.toLocaleString('en-IN')}</div>
-        <div className="text-sm text-gray-600 mb-1">{message.paymentRequest?.description}</div>
-        {message.paymentRequest?.contentType && (
-          <div className="text-xs text-gray-400 mb-3 capitalize">Content: {message.paymentRequest.contentType}</div>
+        <div className="text-2xl font-bold text-gray-900 mb-1">₹{pr?.amount?.toLocaleString('en-IN')}</div>
+        {deliverableList.length > 0 && (
+          <div className="text-xs text-gray-600 mb-1">📦 {deliverableList.join(', ')}</div>
+        )}
+        {pr?.deadline && (
+          <div className="text-xs text-gray-500 mb-1">
+            📅 Due {new Date(pr.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </div>
+        )}
+        {pr?.description && (
+          <div className="text-xs text-gray-500 mb-2 italic">{pr.description}</div>
         )}
         {status === 'pending' && !isOwn && (
-          <button onClick={() => onPay(message)} className="w-full py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors">
+          <button onClick={() => onPay(message)} className="w-full py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors mt-2">
             Pay Now
           </button>
         )}
         {status === 'paid' && (
           <div className="flex items-center gap-2 text-green-600 text-sm font-semibold"><span>✅</span> Payment confirmed</div>
         )}
-        {status === 'pending' && isOwn && <div className="text-xs text-gray-400">Waiting for payment...</div>}
+        {status === 'pending' && isOwn && <div className="text-xs text-gray-400 mt-1">Waiting for payment...</div>}
         <p className="text-xs text-gray-400 mt-2">{formatTime(message.createdAt)}</p>
       </div>
     </div>
@@ -117,53 +134,300 @@ const PaymentReleasedMessage = ({ message }) => (
   </div>
 );
 
-const PaymentConfirmedMessage = ({ message }) => (
-  <div className="max-w-xs rounded-2xl overflow-hidden border border-blue-200 bg-blue-50">
-    <div className="px-4 py-3 text-center">
-      <div className="text-2xl mb-1">✅</div>
-      <div className="font-bold text-blue-800 text-sm">Payment Confirmed!</div>
-      <div className="text-xs text-blue-600 mt-1 leading-relaxed">{message.text}</div>
-      <p className="text-xs text-gray-400 mt-2">{formatTime(message.createdAt)}</p>
+const PaymentConfirmedMessage = ({ message, conversation }) => {
+  const generatePDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+      const pr = message.paymentRequest;
+      const platformFee = Math.round((pr?.amount || 0) * 0.15);
+      const creatorAmount = (pr?.amount || 0) - platformFee;
+      const brandName = conversation?.brandId?.brandName || 'Brand';
+      const creatorName = conversation?.creatorId?.name || 'Creator';
+
+      // header bg
+      doc.setFillColor(17, 24, 39);
+      doc.rect(0, 0, 210, 30, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('GoodCreator', 14, 14);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Work Agreement & Payment Receipt', 14, 22);
+      doc.setFontSize(9);
+      doc.text(`Generated: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, 130, 22);
+
+      // parties
+      doc.setTextColor(17, 24, 39);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Parties', 14, 42);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60, 60, 60);
+      doc.text(`Brand: ${brandName}`, 14, 52);
+      doc.text(`Creator: ${creatorName}`, 14, 60);
+
+      doc.setDrawColor(229, 231, 235);
+      doc.line(14, 67, 196, 67);
+
+      // deliverables
+      doc.setTextColor(17, 24, 39);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Deliverables', 14, 78);
+
+      let y = 88;
+      const deliverables = pr?.deliverables || {};
+      const items = [
+        { key: 'reels', label: 'Reels' },
+        { key: 'posts', label: 'Posts' },
+        { key: 'stories', label: 'Stories' },
+        { key: 'ugc', label: 'UGC Videos' },
+      ].filter(d => deliverables[d.key] > 0);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+
+      items.forEach(item => {
+        doc.text(`• ${deliverables[item.key]}x ${item.label}`, 14, y);
+        y += 8;
+      });
+
+      if (pr?.deadline) {
+        doc.text(`• Deadline: ${new Date(pr.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, 14, y);
+        y += 8;
+      }
+      if (pr?.description) {
+        doc.text(`• Notes: ${pr.description}`, 14, y);
+        y += 8;
+      }
+
+      y += 4;
+      doc.setDrawColor(229, 231, 235);
+      doc.line(14, y, 196, y);
+      y += 10;
+
+      // payment
+      doc.setTextColor(17, 24, 39);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Payment Details', 14, y);
+      y += 12;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+
+      doc.text('Total Amount Paid:', 14, y);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(17, 24, 39);
+      doc.text(`Rs. ${pr?.amount?.toLocaleString('en-IN') || '0'}`, 100, y);
+      y += 8;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(60, 60, 60);
+      doc.text('Platform Fee (15%):', 14, y);
+      doc.text(`Rs. ${platformFee.toLocaleString('en-IN')}`, 100, y);
+      y += 8;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(22, 163, 74);
+      doc.text('Creator Payout:', 14, y);
+      doc.text(`Rs. ${creatorAmount.toLocaleString('en-IN')}`, 100, y);
+      y += 8;
+
+      if (pr?.razorpayPaymentId) {
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(60, 60, 60);
+        doc.text('Payment ID:', 14, y);
+        doc.text(pr.razorpayPaymentId, 100, y);
+        y += 8;
+      }
+      if (pr?.paidAt) {
+        doc.text('Paid On:', 14, y);
+        doc.text(new Date(pr.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }), 100, y);
+        y += 8;
+      }
+
+      y += 4;
+      doc.setFillColor(220, 252, 231);
+      doc.roundedRect(14, y, 55, 10, 3, 3, 'F');
+      doc.setTextColor(22, 163, 74);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PAYMENT CONFIRMED', 17, y + 7);
+
+      y += 18;
+      doc.setDrawColor(229, 231, 235);
+      doc.line(14, y, 196, y);
+      y += 10;
+
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.text('The creator agreed to deliver the content as described above by the deadline.', 14, y); y += 6;
+      doc.text('Payment will be released upon brand approval of the delivered content.', 14, y); y += 6;
+      doc.text('This document serves as a binding work agreement between both parties.', 14, y);
+
+      doc.setFillColor(249, 250, 251);
+      doc.rect(0, 270, 210, 27, 'F');
+      doc.setTextColor(150, 150, 150);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text("GoodCreator — India's Creator Marketplace", 14, 280);
+      doc.text('goodcreator.vercel.app', 14, 287);
+      doc.text(`Generated on ${new Date().toLocaleString('en-IN')}`, 120, 280);
+
+      doc.save(`GoodCreator_Agreement_${brandName}_${creatorName}.pdf`);
+      toast.success('Agreement downloaded!');
+    } catch (err) {
+      console.error('PDF error:', err);
+      toast.error('Failed to generate PDF');
+    }
+  };
+
+  return (
+    <div className="max-w-xs rounded-2xl overflow-hidden border border-blue-200 bg-blue-50">
+      <div className="px-4 py-3 text-center">
+        <div className="text-2xl mb-1">✅</div>
+        <div className="font-bold text-blue-800 text-sm">Payment Confirmed!</div>
+        <div className="text-xs text-blue-600 mt-1 leading-relaxed">{message.text}</div>
+        <p className="text-xs text-gray-400 mt-2">{formatTime(message.createdAt)}</p>
+        <button
+          onClick={generatePDF}
+          className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors"
+        >
+          📄 Download Agreement PDF
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+// ─── MODALS ───────────────────────────────────────────────────────────────────
 
 const PaymentRequestModal = ({ onClose, onSend }) => {
-  const [form, setForm] = useState({ amount: '', description: '', contentType: 'reel' });
+  const [form, setForm] = useState({
+    amount: '',
+    description: '',
+    deadline: '',
+    deliverables: { reels: 0, posts: 0, stories: 0, ugc: 0 },
+    agreedToTerms: false,
+  });
   const [sending, setSending] = useState(false);
+
+  const handleDeliverable = (key, value) => {
+    const num = Math.max(0, parseInt(value) || 0);
+    setForm(prev => ({ ...prev, deliverables: { ...prev.deliverables, [key]: num } }));
+  };
+
+  const totalDeliverables = Object.values(form.deliverables).reduce((a, b) => a + b, 0);
+
   const handleSend = async () => {
-    if (!form.amount || !form.description) return toast.error('Please fill all fields');
+    if (!form.amount) return toast.error('Please enter the amount');
+    if (totalDeliverables === 0) return toast.error('Please add at least one deliverable');
+    if (!form.deadline) return toast.error('Please set a deadline');
+    if (!form.agreedToTerms) return toast.error('Please agree to the terms');
     setSending(true);
     await onSend(form);
     setSending(false);
   };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4" onClick={onClose}>
-      <div className="bg-white rounded-t-2xl md:rounded-2xl p-6 w-full md:max-w-md" onClick={e => e.stopPropagation()}>
-        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden" />
-        <h3 className="font-bold text-gray-900 text-lg mb-4">Send Payment Request</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
-            <input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="e.g. 5000" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+      <div
+        className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-lg overflow-y-auto"
+        style={{ maxHeight: '90vh', paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-6">
+          <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden" />
+          <h3 className="font-bold text-gray-900 text-lg mb-1">Send Payment Request</h3>
+          <p className="text-xs text-gray-400 mb-5">This will serve as a work agreement between you and the brand.</p>
+
+          <div className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹) <span className="text-red-500">*</span></label>
+              <input
+                type="number"
+                value={form.amount}
+                onChange={e => setForm({ ...form, amount: e.target.value })}
+                placeholder="e.g. 5000"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Deliverables <span className="text-red-500">*</span></label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { key: 'reels', label: '🎬 Reels' },
+                  { key: 'posts', label: '📷 Posts' },
+                  { key: 'stories', label: '⏱ Stories' },
+                  { key: 'ugc', label: '🎥 UGC' },
+                ].map(({ key, label }) => (
+                  <div key={key} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-200">
+                    <span className="text-sm text-gray-700">{label}</span>
+                    <div className="flex items-center gap-2">
+                      <button type="button" onClick={() => handleDeliverable(key, form.deliverables[key] - 1)}
+                        className="w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-bold hover:bg-gray-300">−</button>
+                      <span className="w-4 text-center text-sm font-semibold text-gray-900">{form.deliverables[key]}</span>
+                      <button type="button" onClick={() => handleDeliverable(key, form.deliverables[key] + 1)}
+                        className="w-6 h-6 rounded-full bg-gray-900 text-white flex items-center justify-center text-sm font-bold hover:bg-gray-800">+</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Delivery deadline <span className="text-red-500">*</span></label>
+              <input
+                type="date"
+                value={form.deadline}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={e => setForm({ ...form, deadline: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Additional notes <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <textarea
+                value={form.description}
+                onChange={e => setForm({ ...form, description: e.target.value })}
+                rows={2}
+                placeholder="Any specific requirements or notes..."
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+              />
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.agreedToTerms}
+                  onChange={e => setForm({ ...form, agreedToTerms: e.target.checked })}
+                  className="w-4 h-4 accent-blue-600 mt-0.5 flex-shrink-0"
+                />
+                <span className="text-xs text-blue-800 leading-relaxed">
+                  I agree to deliver the content as described above by the deadline. I understand that payment will be released only after the brand approves the delivery. This request serves as a binding work agreement.
+                </span>
+              </label>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Content type</label>
-            <select value={form.contentType} onChange={e => setForm({ ...form, contentType: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-              <option value="reel">Reel</option>
-              <option value="post">Post</option>
-              <option value="story">Story</option>
-              <option value="ugc">UGC</option>
-            </select>
+
+          <div className="flex gap-3 mt-6">
+            <button onClick={onClose} className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600">Cancel</button>
+            <button onClick={handleSend} disabled={sending} className="flex-1 py-3 bg-green-600 text-white rounded-xl text-sm font-semibold disabled:opacity-60">
+              {sending ? 'Sending...' : 'Send Request'}
+            </button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Describe the deliverable..." className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none" />
-          </div>
-        </div>
-        <div className="flex gap-3 mt-5">
-          <button onClick={onClose} className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600">Cancel</button>
-          <button onClick={handleSend} disabled={sending} className="flex-1 py-3 bg-green-600 text-white rounded-xl text-sm font-semibold disabled:opacity-60">{sending ? 'Sending...' : 'Send Request'}</button>
         </div>
       </div>
     </div>
@@ -203,6 +467,8 @@ const DeliveryModal = ({ onClose, onSend }) => {
   );
 };
 
+// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+
 const ChatWindow = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -221,8 +487,12 @@ const ChatWindow = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await getMessages(id);
-        setMessages(res.data.messages);
+        const [msgRes, convRes] = await Promise.all([
+          getMessages(id),
+          getConversationById(id),
+        ]);
+        setMessages(msgRes.data.messages);
+        setConversation(convRes.data.conversation);
       } catch {
         toast.error('Failed to load messages');
       }
@@ -293,7 +563,14 @@ const ChatWindow = () => {
     try {
       const res = await sendMessage(id, {
         type: 'payment_request',
-        paymentRequest: { amount: Number(form.amount), description: form.description, contentType: form.contentType, status: 'pending' },
+        paymentRequest: {
+          amount: Number(form.amount),
+          description: form.description,
+          deliverables: form.deliverables,
+          deadline: form.deadline,
+          agreedToTerms: form.agreedToTerms,
+          status: 'pending',
+        },
       });
       setMessages(prev => {
         if (prev.find(m => m._id === res.data.message._id)) return prev;
@@ -323,77 +600,68 @@ const ChatWindow = () => {
     }
   };
 
-const handlePay = async (message) => {
-  try {
-    if (!window.Razorpay) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.onload = resolve;
-        script.onerror = reject;
-        document.body.appendChild(script);
+  const handlePay = async (message) => {
+    try {
+      if (!window.Razorpay) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+      }
+      const orderRes = await createPaymentOrder({
+        messageId: message._id,
+        conversationId: id,
+        amount: message.paymentRequest.amount,
       });
+      const { orderId, amount, keyId, description } = orderRes.data;
+      const options = {
+        key: keyId,
+        amount,
+        currency: 'INR',
+        name: 'GoodCreator',
+        description,
+        order_id: orderId,
+        handler: async (response) => {
+          try {
+            await verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              messageId: message._id,
+              conversationId: id,
+              amount,
+            });
+            toast.success('Payment successful! 🎉');
+            const res = await getMessages(id);
+            setMessages(res.data.messages);
+          } catch {
+            toast.error('Payment verification failed. Contact support.');
+          }
+        },
+        theme: { color: '#111827' },
+        modal: { ondismiss: () => { toast('Payment cancelled'); } },
+      };
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (error) {
+      toast.error('Failed to initiate payment');
+      console.error('[PAY] error:', error);
     }
-
-    const orderRes = await createPaymentOrder({
-      messageId: message._id,
-      conversationId: id,
-      amount: message.paymentRequest.amount,
-    });
-
-    const { orderId, amount, keyId, description } = orderRes.data;
-
-    const options = {
-      key: keyId,
-      amount: amount,
-      currency: 'INR',
-      name: 'GoodCreator',
-      description: description,
-      order_id: orderId,
-      handler: async (response) => {
-        try {
-          await verifyPayment({
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-            messageId: message._id,
-            conversationId: id,
-            amount: amount,
-          });
-          toast.success('Payment successful! 🎉');
-          const res = await getMessages(id);
-          setMessages(res.data.messages);
-        } catch {
-          toast.error('Payment verification failed. Contact support.');
-        }
-      },
-      theme: { color: '#111827' },
-      modal: {
-        ondismiss: () => { toast('Payment cancelled'); },
-      },
-    };
-
-    const rzp = new window.Razorpay(options);
-    rzp.open();
-  } catch (error) {
-    toast.error('Failed to initiate payment');
-    console.error('[PAY] error:', error);
-  }
-};
+  };
 
   const handleApproveDelivery = async (message) => {
-  try {
-    await releasePayment({
-      conversationId: id,
-      deliveryMessageId: message._id,
-    });
-    toast.success('Delivery approved! Payment will be released within 24 hours. 🎉');
-    const res = await getMessages(id);
-    setMessages(res.data.messages);
-  } catch {
-    toast.error('Failed to approve delivery');
-  }
-};
+    try {
+      await releasePayment({ conversationId: id, deliveryMessageId: message._id });
+      toast.success('Delivery approved! Payment will be released within 24 hours. 🎉');
+      const res = await getMessages(id);
+      setMessages(res.data.messages);
+    } catch {
+      toast.error('Failed to approve delivery');
+    }
+  };
 
   const groupedMessages = messages.reduce((groups, message) => {
     const date = formatDate(message.createdAt);
@@ -416,7 +684,6 @@ const handlePay = async (message) => {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      {/* header */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
         <button onClick={() => navigate('/messages')} className="p-1 text-gray-500 hover:text-gray-700">
           <ArrowLeft size={20} />
@@ -433,7 +700,6 @@ const handlePay = async (message) => {
         </div>
       </div>
 
-      {/* messages — pb-20 on mobile to clear bottom nav */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-20 md:pb-4">
         {Object.entries(groupedMessages).map(([date, msgs]) => (
           <div key={date}>
@@ -449,7 +715,7 @@ const handlePay = async (message) => {
                   {message.type === 'payment_request' && <PaymentRequestMessage message={message} isOwn={isOwn} onPay={handlePay} />}
                   {message.type === 'delivery' && <DeliveryMessage message={message} isOwn={isOwn} onApprove={handleApproveDelivery} />}
                   {message.type === 'payment_released' && <PaymentReleasedMessage message={message} />}
-                  {message.type === 'payment_confirmed' && <PaymentConfirmedMessage message={message} />}
+                  {message.type === 'payment_confirmed' && <PaymentConfirmedMessage message={message} conversation={conversation} />}
                 </div>
               );
             })}
@@ -458,7 +724,6 @@ const handlePay = async (message) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* action buttons */}
       <div className="bg-white border-t border-gray-100 px-4 py-2 flex gap-2 flex-shrink-0">
         {user.role === 'creator' && (
           <>
@@ -472,9 +737,7 @@ const handlePay = async (message) => {
         )}
       </div>
 
-      {/* input — extra bottom padding on mobile for bottom nav */}
-      <div
-        className="bg-white border-t border-gray-200 px-4 py-3 flex items-end gap-3 flex-shrink-0"
+      <div className="bg-white border-t border-gray-200 px-4 py-3 flex items-end gap-3 flex-shrink-0"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 72px)' }}
       >
         <textarea

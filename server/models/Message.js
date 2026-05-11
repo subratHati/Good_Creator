@@ -27,6 +27,14 @@ const messageSchema = new mongoose.Schema({
     amount: Number,
     description: String,
     contentType: String,
+    deliverables: {
+      reels: { type: Number, default: 0 },
+      posts: { type: Number, default: 0 },
+      stories: { type: Number, default: 0 },
+      ugc: { type: Number, default: 0 },
+    },
+    deadline: Date,
+    agreedToTerms: { type: Boolean, default: false },
     status: {
       type: String,
       enum: ['pending', 'paid', 'cancelled'],

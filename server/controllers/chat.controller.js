@@ -145,8 +145,8 @@ const sendMessage = async (req, res) => {
     // update conversation last message
     const lastMessageText = type === 'enquiry' ? '📋 Enquiry about opening'
       : type === 'payment_request' ? `💰 Payment request ₹${paymentRequest?.amount}`
-      : type === 'delivery' ? '📦 Delivery submitted'
-      : text;
+        : type === 'delivery' ? '📦 Delivery submitted'
+          : text;
 
     const unreadUpdate = req.user.role === 'brand'
       ? { unreadByCreator: conversation.unreadByCreator + 1 }
@@ -212,10 +212,24 @@ const getUnreadCount = async (req, res) => {
   }
 };
 
+const getConversationById = async (req, res) => {
+  try {
+    const conversation = await Conversation.findById(req.params.id)
+      .populate('brandId', 'brandName logo')
+      .populate('creatorId', 'name profilePhoto');
+    if (!conversation) return res.status(404).json({ message: 'Not found' });
+    res.json({ conversation });
+  } catch (error) {
+    console.error('getConversationById error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getConversations,
   getOrCreateConversation,
   getMessages,
   sendMessage,
   getUnreadCount,
+  getConversationById,
 };
