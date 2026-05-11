@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { getOpeningApplicants, updateApplicationStatus } from '../../api/applications';
+import { getOrCreateConversation } from '../../api/chat';
 import toast from 'react-hot-toast';
 
 const statusColors = {
@@ -23,6 +24,16 @@ const ViewApplicants = () => {
   const [applications, setApplications] = useState([]);
   const [opening, setOpening] = useState(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const handleMessage = async (creatorId) => {
+    try {
+      const res = await getOrCreateConversation(creatorId);
+      navigate(`/messages/${res.data.conversation._id}`);
+    } catch {
+      toast.error('Failed to open chat');
+    }
+  };
 
   useEffect(() => {
     const fetch = async () => {
@@ -143,7 +154,7 @@ const ViewApplicants = () => {
                         </select>
 
                         {app.creatorId?.instagram?.handle && (
-                          
+
                           <a
                             href={"https://instagram.com/" + app.creatorId.instagram.handle}
                             target="_blank"
@@ -154,6 +165,14 @@ const ViewApplicants = () => {
                             Instagram
                           </a>
                         )}
+
+                        <button
+                          onClick={() => handleMessage(app.creatorId?._id)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors"
+                        >
+                          💬 Message
+                        </button>
+                        
                       </div>
                     </div>
 

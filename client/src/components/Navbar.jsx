@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronDown, User, LogOut, Settings } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import NotificationBell from './NotificationBell';
+import { getUnreadCount } from '../api/chat';
 import toast from 'react-hot-toast';
 
 const LogoutConfirmModal = ({ onConfirm, onCancel }) => (
@@ -22,16 +23,10 @@ const LogoutConfirmModal = ({ onConfirm, onCancel }) => (
         You will be logged out of your account. You can always log back in.
       </p>
       <div className="flex gap-3">
-        <button
-          onClick={onCancel}
-          className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-        >
+        <button onClick={onCancel} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
           Cancel
         </button>
-        <button
-          onClick={onConfirm}
-          className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold hover:bg-red-600 transition-colors"
-        >
+        <button onClick={onConfirm} className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold hover:bg-red-600 transition-colors">
           Yes, log out
         </button>
       </div>
@@ -45,7 +40,22 @@ const Navbar = () => {
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef(null);
+
+  // fetch unread count
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = async () => {
+      try {
+        const res = await getUnreadCount();
+        setUnreadCount(res.data.unreadCount);
+      } catch { }
+    };
+    fetchUnread(); 
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -73,7 +83,6 @@ const Navbar = () => {
     { label: 'Browse Brands', path: '/creator/browse-brands' },
     { label: 'Messages', path: '/messages' },
     { label: 'Applications', path: '/creator/applications' },
-    { label: 'Enquiries', path: '/creator/enquiries' },
   ];
 
   const brandLinks = [
@@ -105,19 +114,39 @@ const Navbar = () => {
             Good<span className="text-blue-600">Creator</span>
           </Link>
 
-          {/* desktop nav links — hidden on mobile */}
+          {/* desktop nav links */}
           {user && (
             <div className="hidden md:flex items-center gap-1">
               {links.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isActive(link.path)
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${link.label === 'Messages' && unreadCount > 0
+                    ? 'text-white bg-red-500 hover:bg-red-600'
+                    : isActive(link.path)
                       ? 'text-blue-600 bg-blue-50'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                     }`}
                 >
-                  {link.label}
+                  {link.label === 'Messages' && unreadCount > 0 ? (
+                    <span className="flex items-center gap-1.5">
+                      Messages
+                      <span style={{
+                        backgroundColor: 'white',
+                        color: '#EF4444',
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        borderRadius: '10px',
+                        padding: '1px 5px',
+                        minWidth: '18px',
+                        textAlign: 'center',
+                      }}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    </span>
+                  ) : (
+                    link.label
+                  )}
                 </Link>
               ))}
             </div>
@@ -125,21 +154,15 @@ const Navbar = () => {
 
           {/* right side */}
           <div className="flex items-center gap-1.5 md:gap-2">
-
             {user ? (
               <>
-                {/* role badge — desktop only */}
-                <span className={`hidden md:block text-xs font-semibold px-3 py-1 rounded-full ${user.role === 'creator'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-orange-100 text-orange-700'
+                <span className={`hidden md:block text-xs font-semibold px-3 py-1 rounded-full ${user.role === 'creator' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
                   }`}>
                   {user.role}
                 </span>
 
-                {/* notification bell */}
                 <NotificationBell />
 
-                {/* profile dropdown */}
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -191,18 +214,11 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              /* not logged in */
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => navigate('/login')}
-                  className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
-                >
+                <button onClick={() => navigate('/login')} className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
                   Log in
                 </button>
-                <button
-                  onClick={() => navigate('/register')}
-                  className="px-3 py-1.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition-colors"
-                >
+                <button onClick={() => navigate('/register')} className="px-3 py-1.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition-colors">
                   Join free
                 </button>
               </div>

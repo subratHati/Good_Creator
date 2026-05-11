@@ -13,7 +13,7 @@ const contentTypeColors = {
 };
 
 const OpeningCard = ({ opening, onApply, applied }) => {
-  const [showModal, setShowModal] = useState(false);
+  const [showApplyModal, setShowApplyModal] = useState(false);
   const [coverNote, setCoverNote] = useState('');
   const [applying, setApplying] = useState(false);
 
@@ -21,7 +21,7 @@ const OpeningCard = ({ opening, onApply, applied }) => {
     setApplying(true);
     try {
       await onApply(opening._id, coverNote);
-      setShowModal(false);
+      setShowApplyModal(false);
       setCoverNote('');
     } finally {
       setApplying(false);
@@ -96,7 +96,7 @@ const OpeningCard = ({ opening, onApply, applied }) => {
             </a>
           )}
           <button
-            onClick={() => applied ? null : setShowModal(true)}
+            onClick={() => applied ? null : setShowApplyModal(true)}
             disabled={applied}
             className={`flex-1 py-2 text-xs font-semibold rounded-xl transition-colors ${
               applied
@@ -110,9 +110,9 @@ const OpeningCard = ({ opening, onApply, applied }) => {
       </div>
 
       {/* apply modal */}
-      {showModal && (
+      {showApplyModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4"
-          onClick={() => setShowModal(false)}
+          onClick={() => setShowApplyModal(false)}
         >
           <div
             className="bg-white rounded-t-2xl md:rounded-2xl p-6 w-full md:max-w-md"
@@ -135,7 +135,7 @@ const OpeningCard = ({ opening, onApply, applied }) => {
               />
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setShowModal(false)} className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600">
+              <button onClick={() => setShowApplyModal(false)} className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600">
                 Cancel
               </button>
               <button onClick={handleApply} disabled={applying} className="flex-1 py-3 bg-gray-900 text-white rounded-xl text-sm font-semibold disabled:opacity-60">
@@ -149,7 +149,6 @@ const OpeningCard = ({ opening, onApply, applied }) => {
   );
 };
 
-// Mobile filter sheet
 const FilterSheet = ({ open, onClose, filters, onFilterChange, onApply, onClear }) => {
   if (!open) return null;
   return (
@@ -163,23 +162,17 @@ const FilterSheet = ({ open, onClose, filters, onFilterChange, onApply, onClear 
           <button onClick={onClose}><X size={20} className="text-gray-400" /></button>
         </div>
         <div className="p-5 space-y-5">
-          {/* content type */}
           <div>
             <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Content type</div>
             <div className="flex flex-wrap gap-2">
               {['', 'reel', 'post', 'story', 'ugc'].map((type) => (
-                <button
-                  key={type}
-                  onClick={() => onFilterChange('contentType', type)}
+                <button key={type} onClick={() => onFilterChange('contentType', type)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border capitalize transition-all ${
                     filters.contentType === type ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600'
-                  }`}
-                >{type || 'All'}</button>
+                  }`}>{type || 'All'}</button>
               ))}
             </div>
           </div>
-
-          {/* budget */}
           <div>
             <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Budget (₹)</div>
             <div className="flex gap-3">
@@ -189,8 +182,6 @@ const FilterSheet = ({ open, onClose, filters, onFilterChange, onApply, onClear 
                 className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
-
-          {/* barter */}
           <label className="flex items-center justify-between cursor-pointer">
             <span className="text-sm font-medium text-gray-700">Barter only</span>
             <input type="checkbox" checked={filters.isBarter === 'true'}
@@ -241,21 +232,20 @@ const BrowseBrands = () => {
 
   useEffect(() => { fetchOpenings(); }, []);
 
- const handleApply = async (openingId, coverNote) => {
-  try {
-    await applyToOpening(openingId, { coverNote });
-    setAppliedIds((prev) => [...prev, openingId]);
-    toast.success('Application submitted!');
-    // move applied opening to end of list
-    setOpenings((prev) => {
-      const applied = prev.find((o) => o._id === openingId);
-      const rest = prev.filter((o) => o._id !== openingId);
-      return applied ? [...rest, applied] : prev;
-    });
-  } catch (error) {
-    toast.error(error.response?.data?.message || 'Failed to apply');
-  }
-};
+  const handleApply = async (openingId, coverNote) => {
+    try {
+      await applyToOpening(openingId, { coverNote });
+      setAppliedIds((prev) => [...prev, openingId]);
+      toast.success('Application submitted!');
+      setOpenings((prev) => {
+        const applied = prev.find((o) => o._id === openingId);
+        const rest = prev.filter((o) => o._id !== openingId);
+        return applied ? [...rest, applied] : prev;
+      });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to apply');
+    }
+  };
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -285,7 +275,6 @@ const BrowseBrands = () => {
       {/* MOBILE top bar */}
       <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 sticky top-14 z-30">
         <div className="flex items-center gap-2">
-          {/* content type pills */}
           <div className="flex gap-2 overflow-x-auto flex-1 pb-0.5" style={{ scrollbarWidth: 'none' }}>
             {['', 'reel', 'post', 'story', 'ugc'].map((type) => (
               <button
@@ -297,7 +286,6 @@ const BrowseBrands = () => {
               >{type || 'All'}</button>
             ))}
           </div>
-
           <button
             onClick={() => setShowFilterSheet(true)}
             className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-full text-xs font-semibold text-gray-600 bg-white relative"
@@ -326,8 +314,6 @@ const BrowseBrands = () => {
               <p className="text-gray-500 text-sm mt-1">Find brands looking for creators like you</p>
             </div>
           </div>
-
-          {/* desktop inline filters */}
           <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap gap-3 items-end">
             <div>
               <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Content type</label>
@@ -353,12 +339,8 @@ const BrowseBrands = () => {
               <input type="checkbox" checked={filters.isBarter === 'true'} onChange={(e) => handleFilterChange('isBarter', e.target.checked ? 'true' : '')} className="w-4 h-4 accent-blue-600" />
               <span className="text-sm text-gray-700">Barter only</span>
             </label>
-            <button onClick={() => fetchOpenings(filters)} className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors">
-              Apply
-            </button>
-            <button onClick={handleClear} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">
-              Clear
-            </button>
+            <button onClick={() => fetchOpenings(filters)} className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors">Apply</button>
+            <button onClick={handleClear} className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors">Clear</button>
           </div>
         </div>
 
@@ -378,7 +360,6 @@ const BrowseBrands = () => {
             <div className="text-sm text-gray-500">Try adjusting your filters or check back later.</div>
           </div>
         ) : (
-          // 1 col mobile, 2 col tablet, 3 col desktop
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
             {openings.map((opening) => (
               <OpeningCard

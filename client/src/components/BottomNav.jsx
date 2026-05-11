@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
-import { MessageCircle } from 'lucide-react';
+import { getUnreadCount } from '../api/chat';
 
 const HomeIcon = ({ active }) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -47,11 +48,25 @@ const MessagesIcon = ({ active }) => (
   </svg>
 );
 
-
 const BottomNav = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // fetch unread count on mount and every 30 seconds
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = async () => {
+      try {
+        const res = await getUnreadCount();
+        setUnreadCount(res.data.unreadCount);
+      } catch { }
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   if (!user) return null;
 
@@ -91,10 +106,39 @@ const BottomNav = () => {
               key={path}
               onClick={() => navigate(path)}
               className="flex-1 flex flex-col items-center justify-center gap-1 transition-colors"
-              style={{ color: active ? '#1A2E4A' : '#9CA3AF' }}
+              style={{
+                color: label === 'Messages' && unreadCount > 0 ? 'white' : active ? '#1A2E4A' : '#9CA3AF',
+                position: 'relative',
+              }}
             >
-              <Icon active={active} />
-              <span className="text-xs font-medium" style={{ fontSize: '10px', letterSpacing: '0.02em' }}>
+              <div style={{
+                position: 'relative',
+                backgroundColor: label === 'Messages' && unreadCount > 0 ? '#EF4444' : 'transparent',
+                borderRadius: '12px',
+                padding: label === 'Messages' && unreadCount > 0 ? '4px 8px' : '0',
+                transition: 'all 0.2s',
+              }}>
+                <Icon active={active} />
+                {label === 'Messages' && unreadCount > 0 && (
+                  <span style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-6px',
+                    backgroundColor: 'white',
+                    color: '#EF4444',
+                    fontSize: '9px',
+                    fontWeight: 700,
+                    borderRadius: '10px',
+                    padding: '1px 4px',
+                    minWidth: '16px',
+                    textAlign: 'center',
+                    lineHeight: '14px',
+                  }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
+              <span style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.02em' }}>
                 {label}
               </span>
             </button>
