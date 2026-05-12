@@ -28,8 +28,7 @@ const formatDate = (date) => {
 // ─── MESSAGE COMPONENTS ───────────────────────────────────────────────────────
 
 const TextMessage = ({ message, isOwn }) => (
-  <div className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2.5 rounded-2xl ${isOwn ? 'bg-gray-900 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm'
-    }`}>
+  <div className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2.5 rounded-2xl ${isOwn ? 'bg-gray-900 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm'}`}>
     <p className="text-sm leading-relaxed">{message.text}</p>
     <p className="text-xs mt-1 text-gray-400">{formatTime(message.createdAt)}</p>
   </div>
@@ -67,25 +66,17 @@ const PaymentRequestMessage = ({ message, isOwn, onPay }) => {
       </div>
       <div className="px-4 py-3">
         <div className="text-2xl font-bold text-gray-900 mb-1">₹{pr?.amount?.toLocaleString('en-IN')}</div>
-        {deliverableList.length > 0 && (
-          <div className="text-xs text-gray-600 mb-1">📦 {deliverableList.join(', ')}</div>
-        )}
+        {deliverableList.length > 0 && <div className="text-xs text-gray-600 mb-1">📦 {deliverableList.join(', ')}</div>}
         {pr?.deadline && (
           <div className="text-xs text-gray-500 mb-1">
             📅 Due {new Date(pr.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
           </div>
         )}
-        {pr?.description && (
-          <div className="text-xs text-gray-500 mb-2 italic">{pr.description}</div>
-        )}
+        {pr?.description && <div className="text-xs text-gray-500 mb-2 italic">{pr.description}</div>}
         {status === 'pending' && !isOwn && (
-          <button onClick={() => onPay(message)} className="w-full py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors mt-2">
-            Pay Now
-          </button>
+          <button onClick={() => onPay(message)} className="w-full py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors mt-2">Pay Now</button>
         )}
-        {status === 'paid' && (
-          <div className="flex items-center gap-2 text-green-600 text-sm font-semibold"><span>✅</span> Payment confirmed</div>
-        )}
+        {status === 'paid' && <div className="flex items-center gap-2 text-green-600 text-sm font-semibold"><span>✅</span> Payment confirmed</div>}
         {status === 'pending' && isOwn && <div className="text-xs text-gray-400 mt-1">Waiting for payment...</div>}
         <p className="text-xs text-gray-400 mt-2">{formatTime(message.createdAt)}</p>
       </div>
@@ -103,19 +94,13 @@ const DeliveryMessage = ({ message, isOwn, onApprove }) => {
       </div>
       <div className="px-4 py-3">
         {message.delivery?.contentLink && (
-          <a href={message.delivery.contentLink} target="_blank" rel="noreferrer" className="text-blue-600 text-sm underline break-all mb-2 block">
-            View content →
-          </a>
+          <a href={message.delivery.contentLink} target="_blank" rel="noreferrer" className="text-blue-600 text-sm underline break-all mb-2 block">View content →</a>
         )}
         {message.delivery?.note && <p className="text-sm text-gray-600 mb-2">{message.delivery.note}</p>}
         {status === 'pending' && !isOwn && (
-          <button onClick={() => onApprove(message)} className="w-full py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition-colors mt-2">
-            Approve Delivery
-          </button>
+          <button onClick={() => onApprove(message)} className="w-full py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition-colors mt-2">Approve Delivery</button>
         )}
-        {status === 'approved' && (
-          <div className="flex items-center gap-2 text-green-600 text-sm font-semibold"><span>✅</span> Delivery approved</div>
-        )}
+        {status === 'approved' && <div className="flex items-center gap-2 text-green-600 text-sm font-semibold"><span>✅</span> Delivery approved</div>}
         <p className="text-xs text-gray-400 mt-2">{formatTime(message.createdAt)}</p>
       </div>
     </div>
@@ -144,7 +129,6 @@ const PaymentConfirmedMessage = ({ message, conversation }) => {
       const brandName = conversation?.brandId?.brandName || 'Brand';
       const creatorName = conversation?.creatorId?.name || 'Creator';
 
-      // header bg
       doc.setFillColor(17, 24, 39);
       doc.rect(0, 0, 210, 30, 'F');
       doc.setTextColor(255, 255, 255);
@@ -157,7 +141,6 @@ const PaymentConfirmedMessage = ({ message, conversation }) => {
       doc.setFontSize(9);
       doc.text(`Generated: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, 130, 22);
 
-      // parties
       doc.setTextColor(17, 24, 39);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
@@ -171,7 +154,6 @@ const PaymentConfirmedMessage = ({ message, conversation }) => {
       doc.setDrawColor(229, 231, 235);
       doc.line(14, 67, 196, 67);
 
-      // deliverables
       doc.setTextColor(17, 24, 39);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
@@ -190,26 +172,15 @@ const PaymentConfirmedMessage = ({ message, conversation }) => {
       doc.setFontSize(10);
       doc.setTextColor(60, 60, 60);
 
-      items.forEach(item => {
-        doc.text(`• ${deliverables[item.key]}x ${item.label}`, 14, y);
-        y += 8;
-      });
-
-      if (pr?.deadline) {
-        doc.text(`• Deadline: ${new Date(pr.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, 14, y);
-        y += 8;
-      }
-      if (pr?.description) {
-        doc.text(`• Notes: ${pr.description}`, 14, y);
-        y += 8;
-      }
+      items.forEach(item => { doc.text(`• ${deliverables[item.key]}x ${item.label}`, 14, y); y += 8; });
+      if (pr?.deadline) { doc.text(`• Deadline: ${new Date(pr.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, 14, y); y += 8; }
+      if (pr?.description) { doc.text(`• Notes: ${pr.description}`, 14, y); y += 8; }
 
       y += 4;
       doc.setDrawColor(229, 231, 235);
       doc.line(14, y, 196, y);
       y += 10;
 
-      // payment
       doc.setTextColor(17, 24, 39);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
@@ -219,7 +190,6 @@ const PaymentConfirmedMessage = ({ message, conversation }) => {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(60, 60, 60);
-
       doc.text('Total Amount Paid:', 14, y);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(17, 24, 39);
@@ -295,10 +265,7 @@ const PaymentConfirmedMessage = ({ message, conversation }) => {
         <div className="font-bold text-blue-800 text-sm">Payment Confirmed!</div>
         <div className="text-xs text-blue-600 mt-1 leading-relaxed">{message.text}</div>
         <p className="text-xs text-gray-400 mt-2">{formatTime(message.createdAt)}</p>
-        <button
-          onClick={generatePDF}
-          className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors"
-        >
+        <button onClick={generatePDF} className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors">
           📄 Download Agreement PDF
         </button>
       </div>
@@ -310,9 +277,7 @@ const PaymentConfirmedMessage = ({ message, conversation }) => {
 
 const PaymentRequestModal = ({ onClose, onSend }) => {
   const [form, setForm] = useState({
-    amount: '',
-    description: '',
-    deadline: '',
+    amount: '', description: '', deadline: '',
     deliverables: { reels: 0, posts: 0, stories: 0, ugc: 0 },
     agreedToTerms: false,
   });
@@ -337,95 +302,54 @@ const PaymentRequestModal = ({ onClose, onSend }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4" onClick={onClose}>
-      <div
-        className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-lg overflow-y-auto"
+      <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-lg overflow-y-auto"
         style={{ maxHeight: '90vh', paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}
-        onClick={e => e.stopPropagation()}
-      >
+        onClick={e => e.stopPropagation()}>
         <div className="p-6">
           <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden" />
           <h3 className="font-bold text-gray-900 text-lg mb-1">Send Payment Request</h3>
           <p className="text-xs text-gray-400 mb-5">This will serve as a work agreement between you and the brand.</p>
-
           <div className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹) <span className="text-red-500">*</span></label>
-              <input
-                type="number"
-                value={form.amount}
-                onChange={e => setForm({ ...form, amount: e.target.value })}
-                placeholder="e.g. 5000"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
+              <input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="e.g. 5000"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Deliverables <span className="text-red-500">*</span></label>
               <div className="grid grid-cols-2 gap-3">
-                {[
-                  { key: 'reels', label: '🎬 Reels' },
-                  { key: 'posts', label: '📷 Posts' },
-                  { key: 'stories', label: '⏱ Stories' },
-                  { key: 'ugc', label: '🎥 UGC' },
-                ].map(({ key, label }) => (
+                {[{ key: 'reels', label: '🎬 Reels' }, { key: 'posts', label: '📷 Posts' }, { key: 'stories', label: '⏱ Stories' }, { key: 'ugc', label: '🎥 UGC' }].map(({ key, label }) => (
                   <div key={key} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5 border border-gray-200">
                     <span className="text-sm text-gray-700">{label}</span>
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => handleDeliverable(key, form.deliverables[key] - 1)}
-                        className="w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-bold hover:bg-gray-300">−</button>
+                      <button type="button" onClick={() => handleDeliverable(key, form.deliverables[key] - 1)} className="w-6 h-6 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center text-sm font-bold hover:bg-gray-300">−</button>
                       <span className="w-4 text-center text-sm font-semibold text-gray-900">{form.deliverables[key]}</span>
-                      <button type="button" onClick={() => handleDeliverable(key, form.deliverables[key] + 1)}
-                        className="w-6 h-6 rounded-full bg-gray-900 text-white flex items-center justify-center text-sm font-bold hover:bg-gray-800">+</button>
+                      <button type="button" onClick={() => handleDeliverable(key, form.deliverables[key] + 1)} className="w-6 h-6 rounded-full bg-gray-900 text-white flex items-center justify-center text-sm font-bold hover:bg-gray-800">+</button>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Delivery deadline <span className="text-red-500">*</span></label>
-              <input
-                type="date"
-                value={form.deadline}
-                min={new Date().toISOString().split('T')[0]}
-                onChange={e => setForm({ ...form, deadline: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
+              <input type="date" value={form.deadline} min={new Date().toISOString().split('T')[0]} onChange={e => setForm({ ...form, deadline: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Additional notes <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <textarea
-                value={form.description}
-                onChange={e => setForm({ ...form, description: e.target.value })}
-                rows={2}
-                placeholder="Any specific requirements or notes..."
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Additional notes <span className="text-gray-400 font-normal">(optional)</span></label>
+              <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Any specific requirements or notes..."
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none" />
             </div>
-
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.agreedToTerms}
-                  onChange={e => setForm({ ...form, agreedToTerms: e.target.checked })}
-                  className="w-4 h-4 accent-blue-600 mt-0.5 flex-shrink-0"
-                />
-                <span className="text-xs text-blue-800 leading-relaxed">
-                  I agree to deliver the content as described above by the deadline. I understand that payment will be released only after the brand approves the delivery. This request serves as a binding work agreement.
-                </span>
+                <input type="checkbox" checked={form.agreedToTerms} onChange={e => setForm({ ...form, agreedToTerms: e.target.checked })} className="w-4 h-4 accent-blue-600 mt-0.5 flex-shrink-0" />
+                <span className="text-xs text-blue-800 leading-relaxed">I agree to deliver the content as described above by the deadline. I understand that payment will be released only after the brand approves the delivery. This request serves as a binding work agreement.</span>
               </label>
             </div>
           </div>
-
           <div className="flex gap-3 mt-6">
             <button onClick={onClose} className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600">Cancel</button>
-            <button onClick={handleSend} disabled={sending} className="flex-1 py-3 bg-green-600 text-white rounded-xl text-sm font-semibold disabled:opacity-60">
-              {sending ? 'Sending...' : 'Send Request'}
-            </button>
+            <button onClick={handleSend} disabled={sending} className="flex-1 py-3 bg-green-600 text-white rounded-xl text-sm font-semibold disabled:opacity-60">{sending ? 'Sending...' : 'Send Request'}</button>
           </div>
         </div>
       </div>
@@ -450,11 +374,13 @@ const DeliveryModal = ({ onClose, onSend }) => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Content link</label>
-            <input type="url" value={form.contentLink} onChange={e => setForm({ ...form, contentLink: e.target.value })} placeholder="https://instagram.com/p/..." className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+            <input type="url" value={form.contentLink} onChange={e => setForm({ ...form, contentLink: e.target.value })} placeholder="https://instagram.com/p/..."
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label>
-            <textarea value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} rows={2} placeholder="Any notes for the brand..." className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none" />
+            <textarea value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} rows={2} placeholder="Any notes for the brand..."
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none" />
           </div>
         </div>
         <div className="flex gap-3 mt-5">
@@ -480,9 +406,14 @@ const ChatWindow = () => {
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
-  const isInitialLoad = useRef(true);
+  const messagesAreaRef = useRef(null);
   const socketRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const initialScrollDone = useRef(false);
+
+  const scrollToBottom = (behavior = 'instant') => {
+    messagesEndRef.current?.scrollIntoView({ behavior });
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -493,6 +424,11 @@ const ChatWindow = () => {
         ]);
         setMessages(msgRes.data.messages);
         setConversation(convRes.data.conversation);
+        // scroll instantly after messages are set
+        setTimeout(() => {
+          scrollToBottom('instant');
+          initialScrollDone.current = true;
+        }, 0);
       } catch {
         toast.error('Failed to load messages');
       }
@@ -514,9 +450,8 @@ const ChatWindow = () => {
         if (prev.find(m => m._id === message._id)) return prev;
         return [...prev, message];
       });
-      // mark as read instantly if message is from other party
       if (message.senderRole !== user.role) {
-        getMessages(id); // this API call marks messages as read on backend
+        getMessages(id);
       }
     });
 
@@ -530,12 +465,10 @@ const ChatWindow = () => {
     };
   }, [id]);
 
+  // smooth scroll for new messages after initial load
   useEffect(() => {
-    if (isInitialLoad.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
-      isInitialLoad.current = false;
-    } else {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (initialScrollDone.current) {
+      scrollToBottom('smooth');
     }
   }, [messages]);
 
@@ -626,28 +559,17 @@ const ChatWindow = () => {
           document.body.appendChild(script);
         });
       }
-      const orderRes = await createPaymentOrder({
-        messageId: message._id,
-        conversationId: id,
-        amount: message.paymentRequest.amount,
-      });
+      const orderRes = await createPaymentOrder({ messageId: message._id, conversationId: id, amount: message.paymentRequest.amount });
       const { orderId, amount, keyId, description } = orderRes.data;
       const options = {
-        key: keyId,
-        amount,
-        currency: 'INR',
-        name: 'GoodCreator',
-        description,
-        order_id: orderId,
+        key: keyId, amount, currency: 'INR', name: 'GoodCreator', description, order_id: orderId,
         handler: async (response) => {
           try {
             await verifyPayment({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
-              messageId: message._id,
-              conversationId: id,
-              amount,
+              messageId: message._id, conversationId: id, amount,
             });
             toast.success('Payment successful! 🎉');
             const res = await getMessages(id);
@@ -698,8 +620,11 @@ const ChatWindow = () => {
   };
 
   return (
-    <div className="flex flex-col bg-gray-50" style={{ height: '100dvh' }}>
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
+    // KEY FIX: position fixed on mobile so keyboard doesn't push header off screen
+    <div className="fixed inset-0 flex flex-col bg-gray-50 md:relative md:inset-auto md:h-screen">
+
+      {/* HEADER — always visible, never pushed off screen */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0 z-10">
         <button onClick={() => navigate('/messages')} className="p-1 text-gray-500 hover:text-gray-700">
           <ArrowLeft size={20} />
         </button>
@@ -715,7 +640,8 @@ const ChatWindow = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-20 md:pb-4">
+      {/* MESSAGES — scrollable middle area */}
+      <div ref={messagesAreaRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {Object.entries(groupedMessages).map(([date, msgs]) => (
           <div key={date}>
             <div className="flex items-center justify-center mb-4">
@@ -739,22 +665,20 @@ const ChatWindow = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="bg-white border-t border-gray-100 px-4 py-2 flex gap-2 flex-shrink-0">
-        {user.role === 'creator' && (
-          <>
-            <button onClick={() => setShowPaymentModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-semibold border border-green-200 hover:bg-green-100 transition-colors">
-              💰 Request Payment
-            </button>
-            <button onClick={() => setShowDeliveryModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-semibold border border-purple-200 hover:bg-purple-100 transition-colors">
-              📦 Submit Delivery
-            </button>
-          </>
-        )}
-      </div>
+      {/* ACTION BUTTONS */}
+      {user.role === 'creator' && (
+        <div className="bg-white border-t border-gray-100 px-4 py-2 flex gap-2 flex-shrink-0">
+          <button onClick={() => setShowPaymentModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-semibold border border-green-200 hover:bg-green-100 transition-colors">
+            💰 Request Payment
+          </button>
+          <button onClick={() => setShowDeliveryModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-semibold border border-purple-200 hover:bg-purple-100 transition-colors">
+            📦 Submit Delivery
+          </button>
+        </div>
+      )}
 
-      <div className="bg-white border-t border-gray-200 px-4 py-3 flex items-end gap-3 flex-shrink-0"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 72px)' }}
-      >
+      {/* INPUT — sticks above keyboard on mobile */}
+      <div className="bg-white border-t border-gray-200 px-4 py-3 flex items-end gap-3 flex-shrink-0">
         <textarea
           value={text}
           onChange={handleTyping}
