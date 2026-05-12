@@ -50,22 +50,32 @@ const MessagesPage = () => {
       withCredentials: true,
       transports: ['websocket', 'polling'],
     });
+
     socket.emit('join_user', user.id);
 
-    socket.on('conversation_updated', ({ conversationId, lastMessage, lastMessageAt }) => {
+    socket.on('conversation_updated', async ({ conversationId, lastMessage, lastMessageAt }) => {
       setConversations(prev => {
+        const exists = prev.find(c => c._id === conversationId);
+
+        if (!exists) {
+          // conversation not in list yet — refetch all
+          getConversations().then(res => {
+            setConversations(res.data.conversations);
+          }).catch(() => { });
+          return prev;
+        }
+
         const updated = prev.map(c => {
           if (c._id === conversationId) {
             return {
               ...c,
               lastMessage,
               lastMessageAt,
-              unreadCount: c.unreadCount + 1,
+              unreadCount: (c.unreadCount || 0) + 1,
             };
           }
           return c;
         });
-        // sort by latest message
         return [...updated].sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
       });
     });
