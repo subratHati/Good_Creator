@@ -480,6 +480,7 @@ const ChatWindow = () => {
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const isInitialLoad = useRef(true);
   const socketRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
@@ -530,7 +531,12 @@ const ChatWindow = () => {
   }, [id]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isInitialLoad.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+      isInitialLoad.current = false;
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   const handleSend = async () => {
@@ -692,7 +698,7 @@ const ChatWindow = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="flex flex-col bg-gray-50" style={{ height: '100dvh' }}>
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
         <button onClick={() => navigate('/messages')} className="p-1 text-gray-500 hover:text-gray-700">
           <ArrowLeft size={20} />
