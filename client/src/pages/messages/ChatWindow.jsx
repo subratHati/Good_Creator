@@ -513,6 +513,10 @@ const ChatWindow = () => {
         if (prev.find(m => m._id === message._id)) return prev;
         return [...prev, message];
       });
+      // mark as read instantly if message is from other party
+      if (message.senderRole !== user.role) {
+        getMessages(id); // this API call marks messages as read on backend
+      }
     });
 
     socketRef.current.on('user_typing', ({ isTyping }) => {

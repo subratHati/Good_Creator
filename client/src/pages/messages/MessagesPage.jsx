@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { getConversations } from '../../api/chat';
 import useAuth from '../../hooks/useAuth';
+import { io } from 'socket.io-client';
 import useCreatorProfileGuard from '../../hooks/useCreatorProfileGuard';
 
 const formatTime = (date) => {
@@ -27,6 +28,8 @@ const MessagesPage = () => {
   const [loading, setLoading] = useState(true);
   const { checking } = useCreatorProfileGuard();
 
+  const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+
   useEffect(() => {
     const fetch = async () => {
       try {
@@ -40,6 +43,35 @@ const MessagesPage = () => {
     };
     fetch();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const socket = io(SOCKET_URL, {
+      withCredentials: true,
+      transports: ['websocket', 'polling'],
+    });
+    socket.emit('join_user', user.id);
+
+    socket.on('conversation_updated', ({ conversationId, lastMessage, lastMessageAt }) => {
+      setConversations(prev => {
+        const updated = prev.map(c => {
+          if (c._id === conversationId) {
+            return {
+              ...c,
+              lastMessage,
+              lastMessageAt,
+              unreadCount: c.unreadCount + 1,
+            };
+          }
+          return c;
+        });
+        // sort by latest message
+        return [...updated].sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt));
+      });
+    });
+
+    return () => socket.disconnect();
+  }, [user]);
 
   const getOtherParty = (conv) => {
     if (user.role === 'brand') {
