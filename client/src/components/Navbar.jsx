@@ -53,7 +53,7 @@ const Navbar = () => {
       } catch { }
     };
     fetchUnread(); 
-    const interval = setInterval(fetchUnread, 30000);
+    const interval = setInterval(fetchUnread, 5000);
     return () => clearInterval(interval);
   }, [user]);
 

@@ -28,9 +28,8 @@ const formatDate = (date) => {
 // ─── MESSAGE COMPONENTS ───────────────────────────────────────────────────────
 
 const TextMessage = ({ message, isOwn }) => (
-  <div className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2.5 rounded-2xl ${
-    isOwn ? 'bg-gray-900 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm'
-  }`}>
+  <div className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2.5 rounded-2xl ${isOwn ? 'bg-gray-900 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm'
+    }`}>
     <p className="text-sm leading-relaxed">{message.text}</p>
     <p className="text-xs mt-1 text-gray-400">{formatTime(message.createdAt)}</p>
   </div>
@@ -499,7 +498,13 @@ const ChatWindow = () => {
     };
     load();
 
-    socketRef.current = io(SOCKET_URL, { withCredentials: true });
+    socketRef.current = io(SOCKET_URL, {
+      withCredentials: true,
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
     socketRef.current.emit('join_user', user.id);
     socketRef.current.emit('join_conversation', id);
 

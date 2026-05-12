@@ -268,15 +268,8 @@ const CreatorHome = () => {
         {/* TOP — dark bg only for carousel */}
         <div style={{ backgroundColor: '#101828', borderBottomLeftRadius: '32px', borderBottomRightRadius: '32px', boxShadow: '0 12px 40px rgba(0,0,0,0.15)' }} className="px-4 pt-4 pb-6 space-y-3">
           {/* landscape image */}
-          <div className="rounded-3xl overflow-hidden relative" style={{ height: '28vh' }}>
-            <img src={slides[0].src} alt="slide" className="w-full h-full object-cover" />
-            {/* dots */}
-            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2">
-              {slides.map((_, i) => (
-                <div key={i} className="rounded-full"
-                  style={{ width: i === 0 ? '20px' : '7px', height: '7px', backgroundColor: i === 0 ? '#FFE234' : 'rgba(255,255,255,0.4)' }} />
-              ))}
-            </div>
+          <div style={{ height: '28vh' }}>
+            <Carousel height="h-full" />
           </div>
 
           {/* text area — separate, centered */}
