@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { getUnreadCount } from '../api/chat';
+import { getMyCreatorProfile } from '../api/creator';
+import { getMyBrandProfile } from '../api/brand';
+import toast from 'react-hot-toast';
 
 const HomeIcon = ({ active }) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -53,6 +56,7 @@ const BottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [profileExists, setProfileExists] = useState(true);
 
   // fetch unread count on mount and every 30 seconds
   useEffect(() => {
@@ -68,7 +72,30 @@ const BottomNav = () => {
     return () => clearInterval(interval);
   }, [user]);
 
+  // check if profile exists on mount
+  useEffect(() => {
+    if (!user) return;
+    const check = async () => {
+      try {
+        if (user.role === 'creator') await getMyCreatorProfile();
+        else await getMyBrandProfile();
+        setProfileExists(true);
+      } catch {
+        setProfileExists(false);
+      }
+    };
+    check();
+  }, [user]);
+
+  // listen for profileCreated event from setup modals
+  useEffect(() => {
+    const handler = () => setProfileExists(true);
+    window.addEventListener('profileCreated', handler);
+    return () => window.removeEventListener('profileCreated', handler);
+  }, []);
+
   if (!user) return null;
+  if (!profileExists) return null;
 
   const creatorTabs = [
     { label: 'Home', path: '/', icon: HomeIcon },

@@ -3,6 +3,7 @@ import { ExternalLink, SlidersHorizontal, X } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { searchOpenings } from '../../api/openings';
 import { applyToOpening } from '../../api/applications';
+import useCreatorProfileGuard from '../../hooks/useCreatorProfileGuard';
 import toast from 'react-hot-toast';
 
 const contentTypeColors = {
@@ -204,6 +205,7 @@ const BrowseBrands = () => {
   const [loading, setLoading] = useState(true);
   const [appliedIds, setAppliedIds] = useState([]);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
+  const { checking } = useCreatorProfileGuard();
 
   const [filters, setFilters] = useState({
     contentType: '',
@@ -258,6 +260,8 @@ const BrowseBrands = () => {
   };
 
   const activeFilterCount = [filters.contentType, filters.isBarter, filters.minBudget].filter(Boolean).length;
+
+   if (checking) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
     <div className="min-h-screen bg-gray-50">

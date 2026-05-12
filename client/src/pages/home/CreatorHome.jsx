@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, TrendingUp, Users, Eye, Star, Bookmark, ExternalLink, Bell } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
 import Navbar from '../../components/Navbar';
-import { getMyCreatorProfile, searchCreators } from '../../api/creator';
+import { CreatorSetupModal } from '../../components/ProfileSetupModals';
+import { getMyCreatorProfile } from '../../api/creator';
 import { searchOpenings } from '../../api/openings';
-import { getMyApplications } from '../../api/applications';
 import useAuth from '../../hooks/useAuth';
 
 const formatNumber = (num) => {
@@ -14,324 +14,456 @@ const formatNumber = (num) => {
   return num.toString();
 };
 
-const statusColors = {
-  pending: { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-400' },
-  viewed: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500' },
-  shortlisted: { bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
-  rejected: { bg: 'bg-red-50', text: 'text-red-600', dot: 'bg-red-400' },
+// ─── HERO SLIDES ──────────────────────────────────────────────────────────────
+const slides = [
+  { src: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&q=80' },
+  { src: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&q=80' },
+  { src: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&q=80' },
+];
+
+// ─── TIPS ─────────────────────────────────────────────────────────────────────
+const tips = [
+  { src: 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=400&q=80', emoji: '⏰', title: 'Post at Peak Hours', desc: 'Reels posted between 7–9pm get 3x more reach on weekdays.' },
+  { src: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&q=80', emoji: '🎯', title: 'Niche = More Money', desc: 'Focused creators earn 2x more per post than general ones.' },
+  { src: 'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=400&q=80', emoji: '💬', title: 'Reply to Comments', desc: 'Engagement in the first hour boosts your reach on the feed.' },
+  { src: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=400&q=80', emoji: '📊', title: 'Track Your Stats', desc: 'Creators who track analytics consistently grow 40% faster.' },
+];
+
+// ─── CAROUSEL ─────────────────────────────────────────────────────────────────
+const Carousel = ({ height = 'h-full' }) => {
+  const [current, setCurrent] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setCurrent(p => (p + 1) % slides.length), 4000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className={`relative ${height} rounded-3xl overflow-hidden select-none`}>
+      <img src={slides[current].src} alt="slide" className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700" />
+      {/* subtle bottom gradient for dots visibility only */}
+      <div className="absolute bottom-0 left-0 right-0 h-16" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 100%)' }} />
+      <div className="absolute bottom-4 left-5 flex gap-2">
+        {slides.map((_, i) => (
+          <button key={i} onClick={() => setCurrent(i)}
+            className="rounded-full transition-all"
+            style={{ width: i === current ? '24px' : '8px', height: '8px', backgroundColor: i === current ? '#FFE234' : 'rgba(255,255,255,0.5)', border: 'none', cursor: 'pointer' }} />
+        ))}
+      </div>
+    </div>
+  );
 };
 
+// ─── INSTAGRAM PANEL ─────────────────────────────────────────────────────────
+const InstagramPanel = ({ ig, onConnect }) => {
+  const engagementGood = ig?.engagementRate >= 3;
+
+  return (
+    <div className="rounded-3xl overflow-hidden border border-gray-100" style={{ backgroundColor: 'white' }}>
+      {/* IG gradient header bar */}
+
+      <div className="p-4">
+        {/* 2 stat stacks */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {/* Followers */}
+          <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: '#F8FAFF' }}>
+            <div className="text-xl font-black" style={{ color: '#155DFC' }}>
+              {ig?.isConnected ? formatNumber(ig.followersCount) : '—'}
+            </div>
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Followers</div>
+          </div>
+
+          {/* Engagement with animation */}
+          <div className="rounded-2xl p-3 text-center relative overflow-hidden" style={{ backgroundColor: '#F8FAFF' }}>
+            <div className="flex items-center justify-center gap-1">
+              <div className="text-xl font-black" style={{ color: ig?.isConnected ? (engagementGood ? '#22C55E' : '#FF3D57') : '#9CA3AF' }}>
+                {ig?.isConnected ? (ig.engagementRate ? `${ig.engagementRate}%` : '—') : '—'}
+              </div>
+              {ig?.isConnected && ig?.engagementRate && (
+                <div style={{ animation: 'bounce 1s infinite' }}>
+                  {engagementGood
+                    ? <TrendingUp size={14} color="#22C55E" />
+                    : <TrendingDown size={14} color="#FF3D57" />
+                  }
+                </div>
+              )}
+            </div>
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Engagement</div>
+            {ig?.isConnected && ig?.engagementRate && (
+              <div className="text-xs font-black mt-0.5" style={{ color: engagementGood ? '#22C55E' : '#FF3D57' }}>
+                {engagementGood ? '↑ Great!' : '↓ Improve'}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Connect button or connected state */}
+        {ig?.isConnected ? (
+          <div className="flex items-center justify-center gap-2 py-2.5 rounded-2xl"
+            style={{ backgroundColor: '#F0FFF4' }}>
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#22C55E' }} />
+            <span className="text-xs font-black" style={{ color: '#166534' }}>@{ig.handle} · Instagram Connected</span>
+          </div>
+        ) : (
+          <button onClick={onConnect}
+            className="w-full py-3 rounded-2xl font-black text-white text-sm transition-opacity hover:opacity-90"
+            style={{ background: 'linear-gradient(90deg, #833AB4, #E1306C, #F77737)' }}>
+            Connect Instagram →
+          </button>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 const CreatorHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [openings, setOpenings] = useState([]);
-  const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showSetupModal, setShowSetupModal] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [profileRes, openingsRes, appsRes] = await Promise.allSettled([
+        const [profileRes, openingsRes] = await Promise.allSettled([
           getMyCreatorProfile(),
-          searchOpenings({ limit: 4 }),
-          getMyApplications(),
+          searchOpenings({ limit: 6 }),
         ]);
-
-        if (profileRes.status === 'fulfilled') setProfile(profileRes.value.data.creator);
-        if (openingsRes.status === 'fulfilled') setOpenings(openingsRes.value.data.openings?.slice(0, 4) || []);
-        if (appsRes.status === 'fulfilled') setApplications(appsRes.value.data.applications?.slice(0, 3) || []);
-      } catch {
-        // silent
-      } finally {
-        setLoading(false);
-      }
+        if (profileRes.status === 'fulfilled') { setProfile(profileRes.value.data.creator); setShowSetupModal(false); }
+        else { setProfile(null); setShowSetupModal(true); }
+        if (openingsRes.status === 'fulfilled') setOpenings(openingsRes.value.data.openings?.slice(0, 6) || []);
+      } catch { }
+      finally { setLoading(false); }
     };
     fetchAll();
   }, []);
 
   const ig = profile?.instagram;
-  const greeting = () => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+
+  const contentTypeColors = {
+    reel: { bg: '#EFF6FF', color: '#1D4ED8' },
+    post: { bg: '#F0FFF4', color: '#166534' },
+    story: { bg: '#FFF7ED', color: '#B45309' },
+    ugc: { bg: '#F5F3FF', color: '#6D28D9' },
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-white">
         <Navbar />
         <div className="flex items-center justify-center h-96">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <div className="w-10 h-10 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar />
+  // ── BRAND OPENINGS shared content ──
+  const OpeningCards = ({ size = 'md' }) => (
+    openings.length === 0 ? (
+      <div className="rounded-2xl p-8 text-center border-2 border-dashed border-gray-100">
+        <div className="text-3xl mb-2">📋</div>
+        <div className="font-black text-gray-900 text-sm">No openings yet</div>
+        <div className="text-xs text-gray-400 mt-1">Brands are posting daily — check back soon!</div>
+      </div>
+    ) : (
+      <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+        {openings.map((opening) => {
+          const deliverables = [];
+          if (opening.requirements?.reels > 0) deliverables.push(`${opening.requirements.reels} Reel${opening.requirements.reels > 1 ? 's' : ''}`);
+          if (opening.requirements?.posts > 0) deliverables.push(`${opening.requirements.posts} Post${opening.requirements.posts > 1 ? 's' : ''}`);
+          if (opening.requirements?.stories > 0) deliverables.push(`${opening.requirements.stories} Stor${opening.requirements.stories > 1 ? 'ies' : 'y'}`);
+          if (opening.requirements?.ugc > 0) deliverables.push(`${opening.requirements.ugc} UGC`);
+          if (deliverables.length === 0) deliverables.push(`1 ${opening.contentType?.charAt(0).toUpperCase() + opening.contentType?.slice(1) || 'Content'}`);
 
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 md:py-8 space-y-6 pb-20 md:pb-0">
+          const tagColors = [
+            { bg: '#EFF6FF', color: '#1D4ED8' },
+            { bg: '#F0FFF4', color: '#166534' },
+            { bg: '#F5F3FF', color: '#6D28D9' },
+            { bg: '#FFF7ED', color: '#B45309' },
+          ];
 
-        {/* PROFILE HERO STRIP */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 md:p-6">
-          <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
+          const w = size === 'sm' ? 'w-44' : 'w-64';
 
-            {/* avatar + info */}
-            <div className="flex items-center gap-4 flex-1">
-              <div className="relative flex-shrink-0">
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-blue-700 flex items-center justify-center text-white font-bold text-2xl">
-                  {profile?.profilePhoto
-                    ? <img src={profile.profilePhoto} alt={profile.name} className="w-full h-full object-cover" />
-                    : profile?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()
+          return (
+            <div key={opening._id}
+              onClick={() => navigate('/creator/browse-brands')}
+              className="flex-shrink-0 rounded-2xl overflow-hidden cursor-pointer transition-transform hover:scale-95"
+              style={{
+                backgroundColor: 'white',
+                border: '1.5px solid #F0F0F0',
+                boxShadow: '0 2px 0 0 #E5E5E5',
+                width: size === 'sm' ? '176px' : '256px'
+              }}>
+
+              {/* top image — exact same h-28 as tips card */}
+              <div style={{
+                height: size === 'sm' ? '156px' : '172px',
+                width: '100%',
+                overflow: 'hidden',
+                backgroundColor: '#F0F5FF',
+              }}>
+                {opening.brandId?.logo
+                  ? <img src={opening.brandId.logo} alt="brand" style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block', minWidth: '100%', minHeight: '100%' }} />
+                  : <span style={{ fontSize: size === 'sm' ? '40px' : '52px' }}>🏷️</span>
+                }
+              </div>
+
+              {/* body — exact same p-3 bg-white as tips card */}
+              <div className="p-3 bg-white">
+                <div className="font-black text-sm mb-0.5 truncate" style={{ color: '#101828' }}>
+                  {opening.brandId?.brandName || 'Brand'}
+                </div>
+                <div className="text-sm truncate mb-2" style={{ color: '#9CA3AF' }}>
+                  {opening.brandId?.category ? `${opening.brandId.category.charAt(0).toUpperCase() + opening.brandId.category.slice(1)}` : ''}
+                  {opening.brandId?.location?.city ? ` · ${opening.brandId.location.city}` : ''}
+                </div>
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {deliverables.map((d, i) => {
+                    const tc = tagColors[i % tagColors.length];
+                    return (
+                      <span key={i} className="text-sm font-bold px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: tc.bg, color: tc.color }}>
+                        {d}
+                      </span>
+                    );
+                  })}
+                </div>
+                <div className="font-black text-sm mb-2" style={{ color: '#155DFC' }}>
+                  {opening.budgetMin > 0 && opening.budgetMax > 0
+                    ? `₹${opening.budgetMin.toLocaleString('en-IN')} – ₹${opening.budgetMax.toLocaleString('en-IN')}`
+                    : opening.budgetMax > 0
+                      ? `Up to ₹${opening.budgetMax.toLocaleString('en-IN')}`
+                      : 'Budget on discussion'
                   }
                 </div>
-                {ig?.isConnected && (
-                  <div className="absolute bottom-0 right-0 w-5 h-5 bg-green-500 rounded-full border-2 border-white" title="Instagram connected" />
-                )}
-              </div>
-              <div>
-                <div className="text-xs text-gray-400 mb-0.5">{greeting()},</div>
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900">
-                  {profile?.name || user?.email?.split('@')[0]}
-                </h1>
-                {ig?.handle && (
-                  <div className="text-sm text-gray-400">@{ig.handle}</div>
-                )}
-                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                  <span className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${
-                    profile?.isOpenForCollab ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${profile?.isOpenForCollab ? 'bg-green-500' : 'bg-gray-400'}`} />
-                    {profile?.isOpenForCollab ? 'Open for collab' : 'Closed'}
-                  </span>
-                  {profile?.barterEnabled && (
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">Barter ✓</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* stats */}
-            {ig?.isConnected ? (
-              <div className="flex items-start gap-4 md:gap-8 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
-                <div className="text-center">
-                  <div className="text-xl md:text-2xl font-bold text-amber-600">{formatNumber(ig.followersCount)}</div>
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Followers</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl md:text-2xl font-bold text-red-800">{ig.engagementRate ? `${ig.engagementRate}%` : '—'}</div>
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Engagement</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl md:text-2xl font-bold text-blue-800">{formatNumber(ig.avgViews)}</div>
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Avg Views</div>
-                </div>
-              </div>
-            ) : (
-              <button
-                onClick={() => navigate('/creator/profile')}
-                className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors flex-shrink-0"
-              >
-                Connect Instagram
-              </button>
-            )}
-
-            {/* edit profile */}
-            <button
-              onClick={() => navigate('/creator/profile')}
-              className="hidden md:flex items-center gap-1.5 px-4 py-2.5 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors flex-shrink-0"
-            >
-              Edit profile <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-
-        {/* profile incomplete warning */}
-        {!profile && (
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center justify-between gap-4">
-            <div>
-              <div className="font-semibold text-blue-900 text-sm">Complete your profile</div>
-              <div className="text-xs text-blue-700 mt-0.5">Set up your creator profile so brands can discover you.</div>
-            </div>
-            <button
-              onClick={() => navigate('/creator/profile')}
-              className="flex-shrink-0 px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-xl hover:bg-blue-700 transition-colors"
-            >
-              Set up now
-            </button>
-          </div>
-        )}
-
-        {/* QUICK ACTIONS */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { label: 'Browse Openings', desc: 'Find brands hiring', icon: '🔍', path: '/creator/browse-brands', color: 'bg-blue-50' },
-            { label: 'My Applications', desc: 'Track your collabs', icon: '📋', path: '/creator/applications', color: 'bg-amber-50' },
-            { label: 'Enquiries', desc: 'Brand messages', icon: '💬', path: '/creator/enquiries', color: 'bg-green-50' },
-            { label: 'Edit Profile', desc: 'Update your info', icon: '✏️', path: '/creator/profile', color: 'bg-purple-50' },
-          ].map(({ label, desc, icon, path, color }) => (
-            <button
-              key={path}
-              onClick={() => navigate(path)}
-              className="bg-white border border-gray-200 rounded-2xl p-4 text-left hover:shadow-md hover:-translate-y-0.5 transition-all group"
-            >
-              <div className={`w-10 h-10 ${color} rounded-xl flex items-center justify-center text-xl mb-3`}>{icon}</div>
-              <div className="text-sm font-semibold text-gray-900">{label}</div>
-              <div className="text-xs text-gray-400 mt-0.5">{desc}</div>
-            </button>
-          ))}
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-
-          {/* MATCHING OPENINGS */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="font-bold text-gray-900">Openings for you</h2>
-                <div className="text-xs text-gray-400 mt-0.5">Latest brand opportunities</div>
-              </div>
-              <button
-                onClick={() => navigate('/creator/browse-brands')}
-                className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
-              >
-                See all <ArrowRight size={12} />
-              </button>
-            </div>
-
-            {openings.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-3xl mb-2">📋</div>
-                <div className="text-sm text-gray-500">No openings yet. Check back soon.</div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {openings.map((opening) => (
-                  <div
-                    key={opening._id}
-                    onClick={() => navigate('/creator/browse-brands')}
-                    className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors border border-gray-100"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {opening.brandId?.logo
-                        ? <img src={opening.brandId.logo} alt="brand" className="w-full h-full object-cover" />
-                        : <span className="text-base">🏷️</span>
-                      }
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-semibold text-gray-900 truncate">{opening.title}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        {opening.brandId?.brandName || 'Brand'}
-                        {opening.budgetMax > 0 ? ` · ₹${opening.budgetMin?.toLocaleString('en-IN')}–₹${opening.budgetMax?.toLocaleString('en-IN')}` : ''}
-                      </div>
-                    </div>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 capitalize ${
-                      opening.contentType === 'reel' ? 'bg-blue-50 text-blue-700' :
-                      opening.contentType === 'post' ? 'bg-purple-50 text-purple-700' :
-                      opening.contentType === 'story' ? 'bg-orange-50 text-orange-700' :
-                      'bg-teal-50 text-teal-700'
-                    }`}>
-                      {opening.contentType}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* RECENT APPLICATIONS */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="font-bold text-gray-900">Recent applications</h2>
-                <div className="text-xs text-gray-400 mt-0.5">Track your collab status</div>
-              </div>
-              <button
-                onClick={() => navigate('/creator/applications')}
-                className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
-              >
-                See all <ArrowRight size={12} />
-              </button>
-            </div>
-
-            {applications.length === 0 ? (
-              <div className="text-center py-8">
-                <div className="text-3xl mb-2">📝</div>
-                <div className="text-sm text-gray-500 mb-3">No applications yet.</div>
-                <button
-                  onClick={() => navigate('/creator/browse-brands')}
-                  className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-gray-800 transition-colors"
-                >
-                  Browse openings
+                <button className="w-full py-2 rounded-xl text-sm font-black text-white"
+                  style={{ backgroundColor: '#101828' }}>
+                  Apply Now
                 </button>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {applications.map((app) => {
-                  const s = statusColors[app.status] || statusColors.pending;
-                  return (
-                    <div key={app._id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100">
-                      <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {app.brandId?.logo
-                          ? <img src={app.brandId.logo} alt="brand" className="w-full h-full object-cover" />
-                          : <span className="text-base">🏷️</span>
-                        }
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-gray-900 truncate">
-                          {app.openingId?.title || 'Opening'}
-                        </div>
-                        <div className="text-xs text-gray-400">{app.brandId?.brandName || 'Brand'}</div>
-                      </div>
-                      <span className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0 capitalize ${s.bg} ${s.text}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-                        {app.status}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            </div>
+          );
+        })}
+      </div>
+    )
+  );
+
+  return (
+    <div className="min-h-screen bg-white">
+      <Navbar />
+
+      {/* ══ MOBILE LAYOUT ══ */}
+      <div className="md:hidden">
+
+        {/* TOP — dark bg only for carousel */}
+        {/* TOP — dark bg only for carousel */}
+        <div style={{ backgroundColor: '#101828', borderBottomLeftRadius: '32px', borderBottomRightRadius: '32px', boxShadow: '0 12px 40px rgba(0,0,0,0.15)' }} className="px-4 pt-4 pb-6 space-y-3">
+          {/* landscape image */}
+          <div className="rounded-3xl overflow-hidden relative" style={{ height: '28vh' }}>
+            <img src={slides[0].src} alt="slide" className="w-full h-full object-cover" />
+            {/* dots */}
+            <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-2">
+              {slides.map((_, i) => (
+                <div key={i} className="rounded-full"
+                  style={{ width: i === 0 ? '20px' : '7px', height: '7px', backgroundColor: i === 0 ? '#FFE234' : 'rgba(255,255,255,0.4)' }} />
+              ))}
+            </div>
+          </div>
+
+          {/* text area — separate, centered */}
+          <div className="text-center py-2">
+            <button
+              onClick={() => navigate('/creator/browse-brands')}
+              className="inline-block text-xs font-black px-3 py-1.5 rounded-full mb-3"
+              style={{ backgroundColor: '#155DFC', color: 'white' }}>
+              Brand Deals →
+            </button>
+            <h2 className="text-xl font-black text-white leading-tight mb-2">
+              Get Discovered by<br />Top Indian Brands
+            </h2>
+            <p className="text-xs font-medium mx-auto" style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '260px' }}>
+              1,000+ creators landing paid collabs every month on GoodCreator
+            </p>
           </div>
         </div>
 
-        {/* INSTAGRAM STATS DETAIL */}
-        {ig?.isConnected && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-4">
+        {/* WHITE section starts here — Instagram + CTAs */}
+        <div className="bg-white px-4 pt-4 pb-24 space-y-6">
+
+          {/* Instagram panel */}
+          <InstagramPanel ig={ig} onConnect={() => navigate('/creator/profile')} />
+
+
+
+          {/* Brand Openings */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="font-bold text-gray-900">Instagram performance</h2>
-                <div className="text-xs text-gray-400 mt-0.5">
-                  Based on last {ig.reelsAnalysed || 'recent'} reels/videos ·
-                  Synced {ig.lastSynced ? new Date(ig.lastSynced).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'never'}
-                </div>
+                <div className="text-xs font-black uppercase tracking-widest mb-0.5" style={{ color: '#155DFC' }}>Curated for You</div>
+                <h2 className="text-xl font-black" style={{ color: '#101828' }}>Brand Openings</h2>
               </div>
-              <button
-                onClick={() => navigate('/creator/profile')}
-                className="text-xs font-semibold text-blue-600 hover:underline"
-              >
-                Sync now
+              <button onClick={() => navigate('/creator/browse-brands')} className="flex items-center gap-1 text-xs font-black" style={{ color: '#155DFC' }}>
+                See all <ArrowRight size={12} />
               </button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                { label: 'Avg Likes', value: formatNumber(ig.avgLikes), color: 'text-amber-600' },
-                { label: 'Avg Comments', value: formatNumber(ig.avgComments), color: 'text-blue-600' },
-                { label: 'Avg Reach', value: formatNumber(ig.avgReach), color: 'text-green-600' },
-                { label: 'Avg Saves', value: formatNumber(ig.avgSaved), color: 'text-purple-600' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="bg-gray-50 rounded-xl p-3 text-center">
-                  <div className={`text-xl font-bold ${color}`}>{value}</div>
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-1">{label}</div>
+            <OpeningCards size="sm" />
+          </div>
+
+          {/* Tips */}
+          <div>
+            <div className="text-xs font-black uppercase tracking-widest mb-0.5" style={{ color: '#155DFC' }}>Creator Academy</div>
+            <h2 className="text-xl font-black mb-3" style={{ color: '#101828' }}>Level Up Your Content</h2>
+            <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+              {tips.map((tip, i) => (
+                <div key={i} className="flex-shrink-0 w-44 rounded-2xl overflow-hidden" style={{ border: '1.5px solid #F0F0F0', boxShadow: '0 2px 0 0 #E5E5E5' }}>
+                  <div className="h-28 overflow-hidden">
+                    <img src={tip.src} alt={tip.title} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="p-3 bg-white">
+                    <div className="text-lg mb-1">{tip.emoji}</div>
+                    <div className="font-black text-xs" style={{ color: '#101828' }}>{tip.title}</div>
+                    <div className="text-xs text-gray-400 mt-1 line-clamp-2">{tip.desc}</div>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
-        )}
+
+          {/* Motivational banner */}
+          <div className="rounded-3xl overflow-hidden relative" style={{ backgroundColor: '#101828' }}>
+            <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80" alt="creators"
+              className="absolute inset-0 w-full h-full object-cover opacity-20" />
+            <div className="relative z-10 p-6">
+              <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>You've got this 💪</div>
+              <h2 className="text-xl font-black text-white leading-tight mb-2">Your next viral<br />collab starts here 🚀</h2>
+              <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.6)' }}>Join 1,000+ creators landing brand deals every month.</p>
+              <button onClick={() => navigate('/creator/browse-brands')}
+                className="w-full py-3 rounded-2xl font-black text-sm text-white"
+                style={{ backgroundColor: '#155DFC' }}>
+                Find Brand Deals →
+              </button>
+            </div>
+          </div>
+
+        </div>
       </div>
+
+      {/* ══ DESKTOP LAYOUT ══ */}
+      <div className="hidden md:block">
+        <div className="max-w-6xl mx-auto px-6 pb-10">
+
+          {/* HERO — 60vh, 2 columns */}
+          <div className="grid grid-cols-2 gap-5 pt-6" style={{ minHeight: '60vh' }}>
+            {/* LEFT — Carousel */}
+            <div style={{ minHeight: '400px' }}>
+              <Carousel height="h-full" />
+            </div>
+
+            {/* RIGHT — stacked */}
+            <div className="flex flex-col gap-4">
+              <div className="flex-1">
+                <InstagramPanel ig={ig} onConnect={() => navigate('/creator/profile')} />
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => navigate('/creator/browse-brands')}
+                  className="flex-1 py-4 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2 transition-transform hover:scale-95"
+                  style={{ backgroundColor: '#155DFC' }}>
+                  Find Brand Deals 🚀
+                </button>
+                <button onClick={() => navigate('/creator/profile')}
+                  className="px-6 py-4 rounded-2xl font-black text-sm flex items-center gap-1 transition-transform hover:scale-95"
+                  style={{ backgroundColor: 'white', color: '#101828', border: '2px solid #101828' }}>
+                  Edit Profile <ArrowRight size={14} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* BRAND OPENINGS */}
+          <div className="mt-12">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <div className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: '#155DFC' }}>Curated for You</div>
+                <h2 className="text-2xl font-black" style={{ color: '#101828' }}>Brand Openings</h2>
+              </div>
+              <button onClick={() => navigate('/creator/browse-brands')} className="flex items-center gap-1 text-sm font-black hover:underline" style={{ color: '#155DFC' }}>
+                See all <ArrowRight size={14} />
+              </button>
+            </div>
+            <OpeningCards size="md" />
+          </div>
+
+          {/* TIPS */}
+          <div className="mt-12">
+            <div className="mb-5">
+              <div className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: '#155DFC' }}>Creator Academy</div>
+              <h2 className="text-2xl font-black" style={{ color: '#101828' }}>Level Up Your Content</h2>
+            </div>
+            <div className="grid grid-cols-4 gap-4">
+              {tips.map((tip, i) => (
+                <div key={i} className="rounded-3xl overflow-hidden cursor-pointer transition-transform hover:scale-95"
+                  style={{ border: '1.5px solid #F0F0F0', boxShadow: '0 4px 0 0 #E5E5E5' }}>
+                  <div className="h-36 overflow-hidden">
+                    <img src={tip.src} alt={tip.title} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="p-4 bg-white">
+                    <div className="text-2xl mb-2">{tip.emoji}</div>
+                    <div className="font-black text-sm mb-1" style={{ color: '#101828' }}>{tip.title}</div>
+                    <div className="text-xs text-gray-400 leading-relaxed mb-3">{tip.desc}</div>
+                    <div className="flex items-center gap-1 text-xs font-black" style={{ color: '#155DFC' }}>Read More <ArrowRight size={11} /></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* MOTIVATIONAL BANNER */}
+          <div className="mt-12 rounded-3xl overflow-hidden relative" style={{ backgroundColor: '#101828' }}>
+            <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&q=80" alt="creators collaborating"
+              className="absolute inset-0 w-full h-full object-cover opacity-25" />
+            <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(16,24,40,0.95) 40%, rgba(16,24,40,0.4) 100%)' }} />
+            <div className="relative z-10 p-10">
+              <div className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.5)' }}>You've got this 💪</div>
+              <h2 className="text-3xl font-black text-white leading-tight mb-3">Your next viral collab<br />starts here 🚀</h2>
+              <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.6)' }}>Join 1,000+ creators landing brand deals on GoodCreator every month.</p>
+              <div className="flex gap-3">
+                <button onClick={() => navigate('/creator/browse-brands')}
+                  className="px-6 py-3 rounded-2xl font-black text-sm text-white transition-transform hover:scale-95"
+                  style={{ backgroundColor: '#155DFC' }}>
+                  Find Brand Deals
+                </button>
+                <button onClick={() => navigate('/creator/profile')}
+                  className="px-6 py-3 rounded-2xl font-black text-sm transition-transform hover:scale-95"
+                  style={{ border: '2px solid rgba(255,255,255,0.3)', color: 'white', backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                  Complete Profile
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {showSetupModal && (
+        <CreatorSetupModal
+          onComplete={async () => {
+            try {
+              const res = await getMyCreatorProfile();
+              setProfile(res.data.creator);
+              setShowSetupModal(false);
+            } catch { setShowSetupModal(true); }
+          }}
+        />
+      )}
     </div>
   );
 };

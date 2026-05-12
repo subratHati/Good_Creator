@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
 import { getMyApplications } from '../../api/applications';
+import useCreatorProfileGuard from '../../hooks/useCreatorProfileGuard';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -19,6 +20,7 @@ const contentTypeColors = {
 const MyApplications = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { checking } = useCreatorProfileGuard();
 
   useEffect(() => {
     const fetch = async () => {
@@ -33,6 +35,12 @@ const MyApplications = () => {
     };
     fetch();
   }, []);
+
+  if (checking) return (
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
   if (loading) {
     return (

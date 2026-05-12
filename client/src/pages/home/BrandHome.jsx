@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Plus, Users, MapPin, ExternalLink } from 'lucide-react';
 import Navbar from '../../components/Navbar';
+import { BrandSetupModal } from '../../components/ProfileSetupModals';
 import { getMyBrandProfile, getSavedCreators } from '../../api/brand';
 import { getMyOpenings } from '../../api/openings';
 import { searchCreators } from '../../api/creator';
@@ -35,6 +36,18 @@ const BrandHome = () => {
   const [savedCreators, setSavedCreators] = useState([]);
   const [suggestedCreators, setSuggestedCreators] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showSetupModal, setShowSetupModal] = useState(false);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await getMyBrandProfile();
+      setProfile(res.data.brand);
+      setShowSetupModal(false);
+    } catch {
+      setProfile(null);
+      setShowSetupModal(true);
+    }
+  };
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -49,11 +62,15 @@ const BrandHome = () => {
         if (profileRes.status === 'fulfilled') {
           brandProfile = profileRes.value.data.brand;
           setProfile(brandProfile);
+          setShowSetupModal(false);
+        } else {
+          setProfile(null);
+          setShowSetupModal(true);
         }
+
         if (openingsRes.status === 'fulfilled') setOpenings(openingsRes.value.data.openings?.slice(0, 4) || []);
         if (savedRes.status === 'fulfilled') setSavedCreators(savedRes.value.data.savedCreators?.slice(0, 3) || []);
 
-        // fetch suggested creators based on brand category
         const category = brandProfile?.category;
         const creatorsRes = await searchCreators({
           ...(category ? { category } : {}),
@@ -79,7 +96,6 @@ const BrandHome = () => {
   };
 
   const activeOpenings = openings.filter(o => o.status === 'active');
-  const totalApplications = 0; // placeholder — add later when we aggregate
 
   if (loading) {
     return (
@@ -101,8 +117,6 @@ const BrandHome = () => {
         {/* BRAND HERO STRIP */}
         <div className="bg-white rounded-2xl border border-gray-200 p-5 md:p-6">
           <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6">
-
-            {/* logo + info */}
             <div className="flex items-center gap-4 flex-1">
               <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0 border border-gray-200">
                 {profile?.logo
@@ -127,7 +141,6 @@ const BrandHome = () => {
               </div>
             </div>
 
-            {/* quick stats */}
             <div className="flex items-start gap-6 md:gap-10 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-700">{activeOpenings.length}</div>
@@ -139,7 +152,6 @@ const BrandHome = () => {
               </div>
             </div>
 
-            {/* post opening CTA */}
             <button
               onClick={() => navigate('/brand/openings/create')}
               className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition-colors flex-shrink-0"
@@ -149,22 +161,6 @@ const BrandHome = () => {
             </button>
           </div>
         </div>
-
-        {/* profile incomplete */}
-        {!profile && (
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 flex items-center justify-between gap-4">
-            <div>
-              <div className="font-semibold text-blue-900 text-sm">Complete your brand profile</div>
-              <div className="text-xs text-blue-700 mt-0.5">Creators can see your brand details when you post openings.</div>
-            </div>
-            <button
-              onClick={() => navigate('/brand/profile')}
-              className="flex-shrink-0 px-4 py-2 bg-blue-600 text-white text-xs font-semibold rounded-xl hover:bg-blue-700 transition-colors"
-            >
-              Set up now
-            </button>
-          </div>
-        )}
 
         {/* QUICK ACTIONS */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -195,10 +191,7 @@ const BrandHome = () => {
                 <h2 className="font-bold text-gray-900">Active openings</h2>
                 <div className="text-xs text-gray-400 mt-0.5">{activeOpenings.length} currently live</div>
               </div>
-              <button
-                onClick={() => navigate('/brand/openings')}
-                className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
-              >
+              <button onClick={() => navigate('/brand/openings')} className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1">
                 Manage <ArrowRight size={12} />
               </button>
             </div>
@@ -207,19 +200,14 @@ const BrandHome = () => {
               <div className="text-center py-8">
                 <div className="text-3xl mb-2">📢</div>
                 <div className="text-sm text-gray-500 mb-3">No openings yet. Post your first one.</div>
-                <button
-                  onClick={() => navigate('/brand/openings/create')}
-                  className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-gray-800 transition-colors"
-                >
+                <button onClick={() => navigate('/brand/openings/create')} className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-gray-800 transition-colors">
                   Post opening
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
                 {openings.map((opening) => (
-                  <div
-                    key={opening._id}
-                    onClick={() => navigate(`/brand/openings/${opening._id}/applicants`)}
+                  <div key={opening._id} onClick={() => navigate(`/brand/openings/${opening._id}/applicants`)}
                     className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors border border-gray-100"
                   >
                     <div className="flex-1 min-w-0">
@@ -231,12 +219,8 @@ const BrandHome = () => {
                       </div>
                       <div className="flex items-center gap-3 text-xs text-gray-400">
                         <span className={`font-semibold capitalize ${statusColors[opening.status]?.split(' ')[1]}`}>{opening.status}</span>
-                        {opening.budgetMax > 0 && (
-                          <span>₹{opening.budgetMin?.toLocaleString('en-IN')}–₹{opening.budgetMax?.toLocaleString('en-IN')}</span>
-                        )}
-                        {opening.deadline && (
-                          <span>Due {new Date(opening.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
-                        )}
+                        {opening.budgetMax > 0 && <span>₹{opening.budgetMin?.toLocaleString('en-IN')}–₹{opening.budgetMax?.toLocaleString('en-IN')}</span>}
+                        {opening.deadline && <span>Due {new Date(opening.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0 bg-gray-50 px-2.5 py-1 rounded-lg">
@@ -256,10 +240,7 @@ const BrandHome = () => {
                 <h2 className="font-bold text-gray-900">Saved creators</h2>
                 <div className="text-xs text-gray-400 mt-0.5">Your shortlist</div>
               </div>
-              <button
-                onClick={() => navigate('/brand/saved-creators')}
-                className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
-              >
+              <button onClick={() => navigate('/brand/saved-creators')} className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1">
                 See all <ArrowRight size={12} />
               </button>
             </div>
@@ -268,19 +249,14 @@ const BrandHome = () => {
               <div className="text-center py-8">
                 <div className="text-3xl mb-2">🔖</div>
                 <div className="text-sm text-gray-500 mb-3">No saved creators yet.</div>
-                <button
-                  onClick={() => navigate('/brand/browse-creators')}
-                  className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-gray-800 transition-colors"
-                >
+                <button onClick={() => navigate('/brand/browse-creators')} className="px-4 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-gray-800 transition-colors">
                   Browse creators
                 </button>
               </div>
             ) : (
               <div className="space-y-3">
                 {savedCreators.map((creator) => (
-                  <div
-                    key={creator._id}
-                    onClick={() => navigate(`/creator/${creator._id}`)}
+                  <div key={creator._id} onClick={() => navigate(`/creator/${creator._id}`)}
                     className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 cursor-pointer transition-colors border border-gray-100"
                   >
                     <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
@@ -297,13 +273,8 @@ const BrandHome = () => {
                       </div>
                     </div>
                     {creator.instagram?.handle && (
-                      <a
-                        href={"https://instagram.com/" + creator.instagram.handle}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-                      >
+                      <a href={"https://instagram.com/" + creator.instagram.handle} target="_blank" rel="noreferrer"
+                        onClick={(e) => e.stopPropagation()} className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0">
                         <ExternalLink size={14} />
                       </a>
                     )}
@@ -324,10 +295,7 @@ const BrandHome = () => {
               </h2>
               <div className="text-xs text-gray-400 mt-0.5">Open for collab, sorted by engagement</div>
             </div>
-            <button
-              onClick={() => navigate('/brand/browse-creators')}
-              className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
-            >
+            <button onClick={() => navigate('/brand/browse-creators')} className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1">
               Browse all <ArrowRight size={12} />
             </button>
           </div>
@@ -340,9 +308,7 @@ const BrandHome = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               {suggestedCreators.map((creator) => (
-                <div
-                  key={creator._id}
-                  onClick={() => navigate(`/creator/${creator._id}`)}
+                <div key={creator._id} onClick={() => navigate(`/creator/${creator._id}`)}
                   className="border border-gray-200 rounded-2xl p-4 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer"
                 >
                   <div className="flex items-center gap-3 mb-3">
@@ -354,36 +320,26 @@ const BrandHome = () => {
                     </div>
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-gray-900 truncate">{creator.name}</div>
-                      <div className="text-xs text-gray-400 truncate">
-                        {creator.instagram?.handle ? `@${creator.instagram.handle}` : '—'}
-                      </div>
+                      <div className="text-xs text-gray-400 truncate">{creator.instagram?.handle ? `@${creator.instagram.handle}` : '—'}</div>
                     </div>
                   </div>
-
                   <div className="flex gap-2 mb-3">
                     <div className="flex-1 text-center">
                       <div className="text-sm font-bold text-amber-600">{formatNumber(creator.instagram?.followersCount)}</div>
                       <div className="text-xs text-gray-400">Followers</div>
                     </div>
                     <div className="flex-1 text-center">
-                      <div className="text-sm font-bold text-red-700">
-                        {creator.instagram?.engagementRate ? `${creator.instagram.engagementRate}%` : '—'}
-                      </div>
+                      <div className="text-sm font-bold text-red-700">{creator.instagram?.engagementRate ? `${creator.instagram.engagementRate}%` : '—'}</div>
                       <div className="text-xs text-gray-400">Engage</div>
                     </div>
                   </div>
-
                   <div className="flex flex-wrap gap-1 mb-3">
                     {creator.categories?.slice(0, 2).map((cat) => (
                       <span key={cat} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 capitalize">{cat}</span>
                     ))}
                   </div>
-
                   {creator.instagram?.handle && (
-                    <a
-                      href={"https://instagram.com/" + creator.instagram.handle}
-                      target="_blank"
-                      rel="noreferrer"
+                    <a href={"https://instagram.com/" + creator.instagram.handle} target="_blank" rel="noreferrer"
                       onClick={(e) => e.stopPropagation()}
                       className="w-full flex items-center justify-center gap-1.5 py-2 bg-gray-900 text-white text-xs font-semibold rounded-xl hover:bg-gray-800 transition-colors"
                     >
@@ -403,8 +359,7 @@ const BrandHome = () => {
 
         {/* mobile post opening button */}
         <div className="md:hidden">
-          <button
-            onClick={() => navigate('/brand/openings/create')}
+          <button onClick={() => navigate('/brand/openings/create')}
             className="w-full flex items-center justify-center gap-2 py-3.5 bg-gray-900 text-white text-sm font-semibold rounded-2xl hover:bg-gray-800 transition-colors"
           >
             <Plus size={16} />
@@ -413,6 +368,21 @@ const BrandHome = () => {
         </div>
 
       </div>
+
+      {/* brand profile setup modal — cannot be dismissed */}
+      {showSetupModal && (
+        <BrandSetupModal
+          onComplete={async () => {
+            try {
+              const res = await getMyBrandProfile();
+              setProfile(res.data.brand);
+              setShowSetupModal(false);
+            } catch {
+              setShowSetupModal(true);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

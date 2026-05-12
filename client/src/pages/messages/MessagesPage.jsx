@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import { getConversations } from '../../api/chat';
 import useAuth from '../../hooks/useAuth';
+import useCreatorProfileGuard from '../../hooks/useCreatorProfileGuard';
 
 const formatTime = (date) => {
   if (!date) return '';
@@ -24,6 +25,7 @@ const MessagesPage = () => {
   const navigate = useNavigate();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { checking } = useCreatorProfileGuard();
 
   useEffect(() => {
     const fetch = async () => {
@@ -53,6 +55,12 @@ const MessagesPage = () => {
       sub: conv.brandId?.category || '',
     };
   };
+
+  if (checking) return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   if (loading) {
     return (
@@ -101,9 +109,8 @@ const MessagesPage = () => {
                 <div
                   key={conv._id}
                   onClick={() => navigate(`/messages/${conv._id}`)}
-                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    index !== conversations.length - 1 ? 'border-b border-gray-100' : ''
-                  }`}
+                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors ${index !== conversations.length - 1 ? 'border-b border-gray-100' : ''
+                    }`}
                 >
                   {/* avatar */}
                   <div className="relative flex-shrink-0">
