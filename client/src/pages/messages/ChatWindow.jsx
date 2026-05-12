@@ -25,8 +25,6 @@ const formatDate = (date) => {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-// ─── MESSAGE COMPONENTS ───────────────────────────────────────────────────────
-
 const TextMessage = ({ message, isOwn }) => (
   <div className={`max-w-xs md:max-w-md lg:max-w-lg px-4 py-2.5 rounded-2xl ${isOwn ? 'bg-gray-900 text-white rounded-br-sm' : 'bg-white border border-gray-200 text-gray-900 rounded-bl-sm'}`}>
     <p className="text-sm leading-relaxed">{message.text}</p>
@@ -57,7 +55,6 @@ const PaymentRequestMessage = ({ message, isOwn, onPay }) => {
     pr?.deliverables?.stories > 0 && `${pr.deliverables.stories} Stor${pr.deliverables.stories > 1 ? 'ies' : 'y'}`,
     pr?.deliverables?.ugc > 0 && `${pr.deliverables.ugc} UGC`,
   ].filter(Boolean);
-
   return (
     <div className="max-w-xs md:max-w-sm rounded-2xl overflow-hidden border border-gray-200 bg-white">
       <div className="bg-green-50 px-4 py-2 flex items-center gap-2">
@@ -67,15 +64,9 @@ const PaymentRequestMessage = ({ message, isOwn, onPay }) => {
       <div className="px-4 py-3">
         <div className="text-2xl font-bold text-gray-900 mb-1">₹{pr?.amount?.toLocaleString('en-IN')}</div>
         {deliverableList.length > 0 && <div className="text-xs text-gray-600 mb-1">📦 {deliverableList.join(', ')}</div>}
-        {pr?.deadline && (
-          <div className="text-xs text-gray-500 mb-1">
-            📅 Due {new Date(pr.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </div>
-        )}
+        {pr?.deadline && <div className="text-xs text-gray-500 mb-1">📅 Due {new Date(pr.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>}
         {pr?.description && <div className="text-xs text-gray-500 mb-2 italic">{pr.description}</div>}
-        {status === 'pending' && !isOwn && (
-          <button onClick={() => onPay(message)} className="w-full py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors mt-2">Pay Now</button>
-        )}
+        {status === 'pending' && !isOwn && <button onClick={() => onPay(message)} className="w-full py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors mt-2">Pay Now</button>}
         {status === 'paid' && <div className="flex items-center gap-2 text-green-600 text-sm font-semibold"><span>✅</span> Payment confirmed</div>}
         {status === 'pending' && isOwn && <div className="text-xs text-gray-400 mt-1">Waiting for payment...</div>}
         <p className="text-xs text-gray-400 mt-2">{formatTime(message.createdAt)}</p>
@@ -93,13 +84,9 @@ const DeliveryMessage = ({ message, isOwn, onApprove }) => {
         <span className="text-xs font-bold text-purple-700 uppercase tracking-wide">Delivery Submitted</span>
       </div>
       <div className="px-4 py-3">
-        {message.delivery?.contentLink && (
-          <a href={message.delivery.contentLink} target="_blank" rel="noreferrer" className="text-blue-600 text-sm underline break-all mb-2 block">View content →</a>
-        )}
+        {message.delivery?.contentLink && <a href={message.delivery.contentLink} target="_blank" rel="noreferrer" className="text-blue-600 text-sm underline break-all mb-2 block">View content →</a>}
         {message.delivery?.note && <p className="text-sm text-gray-600 mb-2">{message.delivery.note}</p>}
-        {status === 'pending' && !isOwn && (
-          <button onClick={() => onApprove(message)} className="w-full py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition-colors mt-2">Approve Delivery</button>
-        )}
+        {status === 'pending' && !isOwn && <button onClick={() => onApprove(message)} className="w-full py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition-colors mt-2">Approve Delivery</button>}
         {status === 'approved' && <div className="flex items-center gap-2 text-green-600 text-sm font-semibold"><span>✅</span> Delivery approved</div>}
         <p className="text-xs text-gray-400 mt-2">{formatTime(message.createdAt)}</p>
       </div>
@@ -128,136 +115,43 @@ const PaymentConfirmedMessage = ({ message, conversation }) => {
       const creatorAmount = (pr?.amount || 0) - platformFee;
       const brandName = conversation?.brandId?.brandName || 'Brand';
       const creatorName = conversation?.creatorId?.name || 'Creator';
-
-      doc.setFillColor(17, 24, 39);
-      doc.rect(0, 0, 210, 30, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.text('GoodCreator', 14, 14);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Work Agreement & Payment Receipt', 14, 22);
-      doc.setFontSize(9);
-      doc.text(`Generated: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, 130, 22);
-
-      doc.setTextColor(17, 24, 39);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Parties', 14, 42);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(60, 60, 60);
-      doc.text(`Brand: ${brandName}`, 14, 52);
-      doc.text(`Creator: ${creatorName}`, 14, 60);
-
-      doc.setDrawColor(229, 231, 235);
-      doc.line(14, 67, 196, 67);
-
-      doc.setTextColor(17, 24, 39);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Deliverables', 14, 78);
-
+      doc.setFillColor(17, 24, 39); doc.rect(0, 0, 210, 30, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.text('GoodCreator', 14, 14);
+      doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.text('Work Agreement & Payment Receipt', 14, 22);
+      doc.setFontSize(9); doc.text(`Generated: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, 130, 22);
+      doc.setTextColor(17, 24, 39); doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.text('Parties', 14, 42);
+      doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60);
+      doc.text(`Brand: ${brandName}`, 14, 52); doc.text(`Creator: ${creatorName}`, 14, 60);
+      doc.setDrawColor(229, 231, 235); doc.line(14, 67, 196, 67);
+      doc.setTextColor(17, 24, 39); doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.text('Deliverables', 14, 78);
       let y = 88;
       const deliverables = pr?.deliverables || {};
-      const items = [
-        { key: 'reels', label: 'Reels' },
-        { key: 'posts', label: 'Posts' },
-        { key: 'stories', label: 'Stories' },
-        { key: 'ugc', label: 'UGC Videos' },
-      ].filter(d => deliverables[d.key] > 0);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(60, 60, 60);
-
-      items.forEach(item => { doc.text(`• ${deliverables[item.key]}x ${item.label}`, 14, y); y += 8; });
+      [{ key: 'reels', label: 'Reels' }, { key: 'posts', label: 'Posts' }, { key: 'stories', label: 'Stories' }, { key: 'ugc', label: 'UGC Videos' }]
+        .filter(d => deliverables[d.key] > 0)
+        .forEach(item => { doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(60, 60, 60); doc.text(`• ${deliverables[item.key]}x ${item.label}`, 14, y); y += 8; });
       if (pr?.deadline) { doc.text(`• Deadline: ${new Date(pr.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}`, 14, y); y += 8; }
       if (pr?.description) { doc.text(`• Notes: ${pr.description}`, 14, y); y += 8; }
-
-      y += 4;
-      doc.setDrawColor(229, 231, 235);
-      doc.line(14, y, 196, y);
-      y += 10;
-
-      doc.setTextColor(17, 24, 39);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Payment Details', 14, y);
-      y += 12;
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.setTextColor(60, 60, 60);
-      doc.text('Total Amount Paid:', 14, y);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(17, 24, 39);
-      doc.text(`Rs. ${pr?.amount?.toLocaleString('en-IN') || '0'}`, 100, y);
-      y += 8;
-
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(60, 60, 60);
-      doc.text('Platform Fee (15%):', 14, y);
-      doc.text(`Rs. ${platformFee.toLocaleString('en-IN')}`, 100, y);
-      y += 8;
-
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(22, 163, 74);
-      doc.text('Creator Payout:', 14, y);
-      doc.text(`Rs. ${creatorAmount.toLocaleString('en-IN')}`, 100, y);
-      y += 8;
-
-      if (pr?.razorpayPaymentId) {
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(60, 60, 60);
-        doc.text('Payment ID:', 14, y);
-        doc.text(pr.razorpayPaymentId, 100, y);
-        y += 8;
-      }
-      if (pr?.paidAt) {
-        doc.text('Paid On:', 14, y);
-        doc.text(new Date(pr.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }), 100, y);
-        y += 8;
-      }
-
-      y += 4;
-      doc.setFillColor(220, 252, 231);
-      doc.roundedRect(14, y, 55, 10, 3, 3, 'F');
-      doc.setTextColor(22, 163, 74);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PAYMENT CONFIRMED', 17, y + 7);
-
-      y += 18;
-      doc.setDrawColor(229, 231, 235);
-      doc.line(14, y, 196, y);
-      y += 10;
-
-      doc.setTextColor(100, 100, 100);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'italic');
+      y += 4; doc.setDrawColor(229, 231, 235); doc.line(14, y, 196, y); y += 10;
+      doc.setTextColor(17, 24, 39); doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.text('Payment Details', 14, y); y += 12;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(60, 60, 60);
+      doc.text('Total Amount Paid:', 14, y); doc.setFont('helvetica', 'bold'); doc.setTextColor(17, 24, 39); doc.text(`Rs. ${pr?.amount?.toLocaleString('en-IN') || '0'}`, 100, y); y += 8;
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60); doc.text('Platform Fee (15%):', 14, y); doc.text(`Rs. ${platformFee.toLocaleString('en-IN')}`, 100, y); y += 8;
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(22, 163, 74); doc.text('Creator Payout:', 14, y); doc.text(`Rs. ${creatorAmount.toLocaleString('en-IN')}`, 100, y); y += 8;
+      if (pr?.razorpayPaymentId) { doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60); doc.text('Payment ID:', 14, y); doc.text(pr.razorpayPaymentId, 100, y); y += 8; }
+      if (pr?.paidAt) { doc.text('Paid On:', 14, y); doc.text(new Date(pr.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }), 100, y); y += 8; }
+      y += 4; doc.setFillColor(220, 252, 231); doc.roundedRect(14, y, 55, 10, 3, 3, 'F'); doc.setTextColor(22, 163, 74); doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.text('PAYMENT CONFIRMED', 17, y + 7);
+      y += 18; doc.setDrawColor(229, 231, 235); doc.line(14, y, 196, y); y += 10;
+      doc.setTextColor(100, 100, 100); doc.setFontSize(8); doc.setFont('helvetica', 'italic');
       doc.text('The creator agreed to deliver the content as described above by the deadline.', 14, y); y += 6;
       doc.text('Payment will be released upon brand approval of the delivered content.', 14, y); y += 6;
       doc.text('This document serves as a binding work agreement between both parties.', 14, y);
-
-      doc.setFillColor(249, 250, 251);
-      doc.rect(0, 270, 210, 27, 'F');
-      doc.setTextColor(150, 150, 150);
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text("GoodCreator — India's Creator Marketplace", 14, 280);
-      doc.text('goodcreator.vercel.app', 14, 287);
+      doc.setFillColor(249, 250, 251); doc.rect(0, 270, 210, 27, 'F'); doc.setTextColor(150, 150, 150); doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+      doc.text("GoodCreator — India's Creator Marketplace", 14, 280); doc.text('goodcreator.vercel.app', 14, 287);
       doc.text(`Generated on ${new Date().toLocaleString('en-IN')}`, 120, 280);
-
       doc.save(`GoodCreator_Agreement_${brandName}_${creatorName}.pdf`);
       toast.success('Agreement downloaded!');
-    } catch (err) {
-      console.error('PDF error:', err);
-      toast.error('Failed to generate PDF');
-    }
+    } catch (err) { console.error('PDF error:', err); toast.error('Failed to generate PDF'); }
   };
-
   return (
     <div className="max-w-xs rounded-2xl overflow-hidden border border-blue-200 bg-blue-50">
       <div className="px-4 py-3 text-center">
@@ -265,46 +159,27 @@ const PaymentConfirmedMessage = ({ message, conversation }) => {
         <div className="font-bold text-blue-800 text-sm">Payment Confirmed!</div>
         <div className="text-xs text-blue-600 mt-1 leading-relaxed">{message.text}</div>
         <p className="text-xs text-gray-400 mt-2">{formatTime(message.createdAt)}</p>
-        <button onClick={generatePDF} className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors">
-          📄 Download Agreement PDF
-        </button>
+        <button onClick={generatePDF} className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-blue-700 transition-colors">📄 Download Agreement PDF</button>
       </div>
     </div>
   );
 };
 
-// ─── MODALS ───────────────────────────────────────────────────────────────────
-
 const PaymentRequestModal = ({ onClose, onSend }) => {
-  const [form, setForm] = useState({
-    amount: '', description: '', deadline: '',
-    deliverables: { reels: 0, posts: 0, stories: 0, ugc: 0 },
-    agreedToTerms: false,
-  });
+  const [form, setForm] = useState({ amount: '', description: '', deadline: '', deliverables: { reels: 0, posts: 0, stories: 0, ugc: 0 }, agreedToTerms: false });
   const [sending, setSending] = useState(false);
-
-  const handleDeliverable = (key, value) => {
-    const num = Math.max(0, parseInt(value) || 0);
-    setForm(prev => ({ ...prev, deliverables: { ...prev.deliverables, [key]: num } }));
-  };
-
+  const handleDeliverable = (key, value) => { const num = Math.max(0, parseInt(value) || 0); setForm(prev => ({ ...prev, deliverables: { ...prev.deliverables, [key]: num } })); };
   const totalDeliverables = Object.values(form.deliverables).reduce((a, b) => a + b, 0);
-
   const handleSend = async () => {
     if (!form.amount) return toast.error('Please enter the amount');
     if (totalDeliverables === 0) return toast.error('Please add at least one deliverable');
     if (!form.deadline) return toast.error('Please set a deadline');
     if (!form.agreedToTerms) return toast.error('Please agree to the terms');
-    setSending(true);
-    await onSend(form);
-    setSending(false);
+    setSending(true); await onSend(form); setSending(false);
   };
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4" onClick={onClose}>
-      <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-lg overflow-y-auto"
-        style={{ maxHeight: '90vh', paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}
-        onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-lg overflow-y-auto" style={{ maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
         <div className="p-6">
           <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden" />
           <h3 className="font-bold text-gray-900 text-lg mb-1">Send Payment Request</h3>
@@ -312,8 +187,7 @@ const PaymentRequestModal = ({ onClose, onSend }) => {
           <div className="space-y-5">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹) <span className="text-red-500">*</span></label>
-              <input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="e.g. 5000"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+              <input type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="e.g. 5000" className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Deliverables <span className="text-red-500">*</span></label>
@@ -332,13 +206,11 @@ const PaymentRequestModal = ({ onClose, onSend }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Delivery deadline <span className="text-red-500">*</span></label>
-              <input type="date" value={form.deadline} min={new Date().toISOString().split('T')[0]} onChange={e => setForm({ ...form, deadline: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+              <input type="date" value={form.deadline} min={new Date().toISOString().split('T')[0]} onChange={e => setForm({ ...form, deadline: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Additional notes <span className="text-gray-400 font-normal">(optional)</span></label>
-              <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Any specific requirements or notes..."
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none" />
+              <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} placeholder="Any specific requirements or notes..." className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none" />
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
               <label className="flex items-start gap-3 cursor-pointer">
@@ -360,28 +232,15 @@ const PaymentRequestModal = ({ onClose, onSend }) => {
 const DeliveryModal = ({ onClose, onSend }) => {
   const [form, setForm] = useState({ contentLink: '', note: '' });
   const [sending, setSending] = useState(false);
-  const handleSend = async () => {
-    if (!form.contentLink) return toast.error('Please add content link');
-    setSending(true);
-    await onSend(form);
-    setSending(false);
-  };
+  const handleSend = async () => { if (!form.contentLink) return toast.error('Please add content link'); setSending(true); await onSend(form); setSending(false); };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4" onClick={onClose}>
       <div className="bg-white rounded-t-2xl md:rounded-2xl p-6 w-full md:max-w-md" onClick={e => e.stopPropagation()}>
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden" />
         <h3 className="font-bold text-gray-900 text-lg mb-4">Submit Delivery</h3>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Content link</label>
-            <input type="url" value={form.contentLink} onChange={e => setForm({ ...form, contentLink: e.target.value })} placeholder="https://instagram.com/p/..."
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label>
-            <textarea value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} rows={2} placeholder="Any notes for the brand..."
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none" />
-          </div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Content link</label><input type="url" value={form.contentLink} onChange={e => setForm({ ...form, contentLink: e.target.value })} placeholder="https://instagram.com/p/..." className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" /></div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label><textarea value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} rows={2} placeholder="Any notes for the brand..." className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none" /></div>
         </div>
         <div className="flex gap-3 mt-5">
           <button onClick={onClose} className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-medium text-gray-600">Cancel</button>
@@ -391,8 +250,6 @@ const DeliveryModal = ({ onClose, onSend }) => {
     </div>
   );
 };
-
-// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 const ChatWindow = () => {
   const { id } = useParams();
@@ -406,71 +263,45 @@ const ChatWindow = () => {
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
-  const messagesAreaRef = useRef(null);
   const socketRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const initialScrollDone = useRef(false);
 
-  const scrollToBottom = (behavior = 'instant') => {
+  const scrollToBottom = (behavior = 'smooth') => {
     messagesEndRef.current?.scrollIntoView({ behavior });
   };
 
   useEffect(() => {
+    initialScrollDone.current = false;
     const load = async () => {
       try {
-        const [msgRes, convRes] = await Promise.all([
-          getMessages(id),
-          getConversationById(id),
-        ]);
+        const [msgRes, convRes] = await Promise.all([getMessages(id), getConversationById(id)]);
         setMessages(msgRes.data.messages);
         setConversation(convRes.data.conversation);
-        // scroll instantly after messages are set
-        setTimeout(() => {
-          scrollToBottom('instant');
-          initialScrollDone.current = true;
-        }, 0);
-      } catch {
-        toast.error('Failed to load messages');
-      }
+      } catch { toast.error('Failed to load messages'); }
     };
     load();
 
-    socketRef.current = io(SOCKET_URL, {
-      withCredentials: true,
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-    });
+    socketRef.current = io(SOCKET_URL, { withCredentials: true, transports: ['websocket', 'polling'], reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 1000 });
     socketRef.current.emit('join_user', user.id);
     socketRef.current.emit('join_conversation', id);
-
     socketRef.current.on('new_message', (message) => {
-      setMessages(prev => {
-        if (prev.find(m => m._id === message._id)) return prev;
-        return [...prev, message];
-      });
-      if (message.senderRole !== user.role) {
-        getMessages(id);
-      }
+      setMessages(prev => { if (prev.find(m => m._id === message._id)) return prev; return [...prev, message]; });
+      if (message.senderRole !== user.role) getMessages(id);
     });
-
-    socketRef.current.on('user_typing', ({ isTyping }) => {
-      setIsTyping(isTyping);
-    });
-
-    return () => {
-      socketRef.current.emit('leave_conversation', id);
-      socketRef.current.disconnect();
-    };
+    socketRef.current.on('user_typing', ({ isTyping }) => setIsTyping(isTyping));
+    return () => { socketRef.current.emit('leave_conversation', id); socketRef.current.disconnect(); };
   }, [id]);
 
-  // smooth scroll for new messages after initial load
-  useEffect(() => {
-    if (initialScrollDone.current) {
-      scrollToBottom('smooth');
-    }
-  }, [messages]);
+ useEffect(() => {
+  if (messages.length === 0) return;
+  if (!initialScrollDone.current) {
+    scrollToBottom('instant');   // first load — instant, no animation
+    initialScrollDone.current = true;
+  } else {
+    scrollToBottom('smooth');    // new messages — smooth scroll
+  }
+}, [messages]);
 
   const handleSend = async () => {
     if (!text.trim()) return;
@@ -479,85 +310,40 @@ const ChatWindow = () => {
     setText('');
     try {
       const res = await sendMessage(id, { text: tempText, type: 'text' });
-      setMessages(prev => {
-        if (prev.find(m => m._id === res.data.message._id)) return prev;
-        return [...prev, res.data.message];
-      });
-    } catch {
-      toast.error('Failed to send message');
-      setText(tempText);
-    } finally {
-      setSending(false);
-    }
+      setMessages(prev => { if (prev.find(m => m._id === res.data.message._id)) return prev; return [...prev, res.data.message]; });
+    } catch { toast.error('Failed to send message'); setText(tempText); }
+    finally { setSending(false); }
   };
 
   const handleTyping = (e) => {
     setText(e.target.value);
     socketRef.current?.emit('typing', { conversationId: id, userId: user.id, isTyping: true });
     clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => {
-      socketRef.current?.emit('typing', { conversationId: id, userId: user.id, isTyping: false });
-    }, 1500);
+    typingTimeoutRef.current = setTimeout(() => { socketRef.current?.emit('typing', { conversationId: id, userId: user.id, isTyping: false }); }, 1500);
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+  const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
 
   const handleSendPaymentRequest = async (form) => {
     try {
-      const res = await sendMessage(id, {
-        type: 'payment_request',
-        paymentRequest: {
-          amount: Number(form.amount),
-          description: form.description,
-          deliverables: form.deliverables,
-          deadline: form.deadline,
-          agreedToTerms: form.agreedToTerms,
-          status: 'pending',
-        },
-      });
-      setMessages(prev => {
-        if (prev.find(m => m._id === res.data.message._id)) return prev;
-        return [...prev, res.data.message];
-      });
-      setShowPaymentModal(false);
-      toast.success('Payment request sent');
-    } catch {
-      toast.error('Failed to send payment request');
-    }
+      const res = await sendMessage(id, { type: 'payment_request', paymentRequest: { amount: Number(form.amount), description: form.description, deliverables: form.deliverables, deadline: form.deadline, agreedToTerms: form.agreedToTerms, status: 'pending' } });
+      setMessages(prev => { if (prev.find(m => m._id === res.data.message._id)) return prev; return [...prev, res.data.message]; });
+      setShowPaymentModal(false); toast.success('Payment request sent');
+    } catch { toast.error('Failed to send payment request'); }
   };
 
   const handleSendDelivery = async (form) => {
     try {
-      const res = await sendMessage(id, {
-        type: 'delivery',
-        delivery: { contentLink: form.contentLink, note: form.note, status: 'pending' },
-      });
-      setMessages(prev => {
-        if (prev.find(m => m._id === res.data.message._id)) return prev;
-        return [...prev, res.data.message];
-      });
-      setShowDeliveryModal(false);
-      toast.success('Delivery submitted');
-    } catch {
-      toast.error('Failed to submit delivery');
-    }
+      const res = await sendMessage(id, { type: 'delivery', delivery: { contentLink: form.contentLink, note: form.note, status: 'pending' } });
+      setMessages(prev => { if (prev.find(m => m._id === res.data.message._id)) return prev; return [...prev, res.data.message]; });
+      setShowDeliveryModal(false); toast.success('Delivery submitted');
+    } catch { toast.error('Failed to submit delivery'); }
   };
 
   const handlePay = async (message) => {
     try {
       if (!window.Razorpay) {
-        await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-          script.onload = resolve;
-          script.onerror = reject;
-          document.body.appendChild(script);
-        });
+        await new Promise((resolve, reject) => { const script = document.createElement('script'); script.src = 'https://checkout.razorpay.com/v1/checkout.js'; script.onload = resolve; script.onerror = reject; document.body.appendChild(script); });
       }
       const orderRes = await createPaymentOrder({ messageId: message._id, conversationId: id, amount: message.paymentRequest.amount });
       const { orderId, amount, keyId, description } = orderRes.data;
@@ -565,39 +351,23 @@ const ChatWindow = () => {
         key: keyId, amount, currency: 'INR', name: 'GoodCreator', description, order_id: orderId,
         handler: async (response) => {
           try {
-            await verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              messageId: message._id, conversationId: id, amount,
-            });
+            await verifyPayment({ razorpay_order_id: response.razorpay_order_id, razorpay_payment_id: response.razorpay_payment_id, razorpay_signature: response.razorpay_signature, messageId: message._id, conversationId: id, amount });
             toast.success('Payment successful! 🎉');
-            const res = await getMessages(id);
-            setMessages(res.data.messages);
-          } catch {
-            toast.error('Payment verification failed. Contact support.');
-          }
+            const res = await getMessages(id); setMessages(res.data.messages);
+          } catch { toast.error('Payment verification failed. Contact support.'); }
         },
-        theme: { color: '#111827' },
-        modal: { ondismiss: () => { toast('Payment cancelled'); } },
+        theme: { color: '#111827' }, modal: { ondismiss: () => { toast('Payment cancelled'); } },
       };
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (error) {
-      toast.error('Failed to initiate payment');
-      console.error('[PAY] error:', error);
-    }
+      new window.Razorpay(options).open();
+    } catch (error) { toast.error('Failed to initiate payment'); console.error('[PAY] error:', error); }
   };
 
   const handleApproveDelivery = async (message) => {
     try {
       await releasePayment({ conversationId: id, deliveryMessageId: message._id });
       toast.success('Delivery approved! Payment will be released within 24 hours. 🎉');
-      const res = await getMessages(id);
-      setMessages(res.data.messages);
-    } catch {
-      toast.error('Failed to approve delivery');
-    }
+      const res = await getMessages(id); setMessages(res.data.messages);
+    } catch { toast.error('Failed to approve delivery'); }
   };
 
   const groupedMessages = messages.reduce((groups, message) => {
@@ -607,50 +377,41 @@ const ChatWindow = () => {
     return groups;
   }, {});
 
-  const getOtherPartyName = () => {
-    if (!conversation) return 'Chat';
-    if (user.role === 'brand') return conversation.creatorId?.name || 'Creator';
-    return conversation.brandId?.brandName || 'Brand';
-  };
-
-  const getOtherPartyPhoto = () => {
-    if (!conversation) return null;
-    if (user.role === 'brand') return conversation.creatorId?.profilePhoto;
-    return conversation.brandId?.logo;
-  };
+  const getOtherPartyName = () => { if (!conversation) return 'Chat'; if (user.role === 'brand') return conversation.creatorId?.name || 'Creator'; return conversation.brandId?.brandName || 'Brand'; };
+  const getOtherPartyPhoto = () => { if (!conversation) return null; if (user.role === 'brand') return conversation.creatorId?.profilePhoto; return conversation.brandId?.logo; };
 
   return (
-    // KEY FIX: position fixed on mobile so keyboard doesn't push header off screen
-    <div className="fixed inset-0 flex flex-col bg-gray-50 md:relative md:inset-auto md:h-screen">
+    // Use 100vh — works on both desktop and mobile
+    // On mobile, add the meta viewport tag in index.html:
+    // <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
+    // This tells mobile browsers to resize content when keyboard opens instead of overlapping it
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#F9FAFB' }}>
 
-      {/* HEADER — always visible, never pushed off screen */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0 z-10">
-        <button onClick={() => navigate('/messages')} className="p-1 text-gray-500 hover:text-gray-700">
+      {/* HEADER */}
+      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #F3F4F6', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+        <button onClick={() => navigate('/messages')} style={{ padding: '4px', color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer' }}>
           <ArrowLeft size={20} />
         </button>
-        <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold flex-shrink-0">
-          {getOtherPartyPhoto()
-            ? <img src={getOtherPartyPhoto()} alt="" className="w-full h-full object-cover" />
-            : getOtherPartyName()?.[0]?.toUpperCase()
-          }
+        <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg, #60A5FA, #3B82F6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', flexShrink: 0 }}>
+          {getOtherPartyPhoto() ? <img src={getOtherPartyPhoto()} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : getOtherPartyName()?.[0]?.toUpperCase()}
         </div>
-        <div className="flex-1">
-          <div className="font-semibold text-gray-900 text-sm">{getOtherPartyName()}</div>
-          {isTyping && <div className="text-xs text-gray-400">typing...</div>}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600, color: '#111827', fontSize: '14px' }}>{getOtherPartyName()}</div>
+          {isTyping && <div style={{ fontSize: '12px', color: '#9CA3AF' }}>typing...</div>}
         </div>
       </div>
 
-      {/* MESSAGES — scrollable middle area */}
-      <div ref={messagesAreaRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+      {/* MESSAGES */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {Object.entries(groupedMessages).map(([date, msgs]) => (
           <div key={date}>
-            <div className="flex items-center justify-center mb-4">
-              <div className="bg-gray-200 text-gray-500 text-xs font-medium px-3 py-1 rounded-full">{date}</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <div style={{ backgroundColor: '#E5E7EB', color: '#6B7280', fontSize: '12px', fontWeight: 500, padding: '4px 12px', borderRadius: '9999px' }}>{date}</div>
             </div>
             {msgs.map((message) => {
               const isOwn = message.senderRole === user.role;
               return (
-                <div key={message._id} className={`flex mb-3 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                <div key={message._id} style={{ display: 'flex', justifyContent: isOwn ? 'flex-end' : 'flex-start', marginBottom: '12px' }}>
                   {message.type === 'text' && <TextMessage message={message} isOwn={isOwn} />}
                   {message.type === 'enquiry' && <EnquiryMessage message={message} isOwn={isOwn} />}
                   {message.type === 'payment_request' && <PaymentRequestMessage message={message} isOwn={isOwn} onPay={handlePay} />}
@@ -667,31 +428,26 @@ const ChatWindow = () => {
 
       {/* ACTION BUTTONS */}
       {user.role === 'creator' && (
-        <div className="bg-white border-t border-gray-100 px-4 py-2 flex gap-2 flex-shrink-0">
-          <button onClick={() => setShowPaymentModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-semibold border border-green-200 hover:bg-green-100 transition-colors">
-            💰 Request Payment
-          </button>
-          <button onClick={() => setShowDeliveryModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-semibold border border-purple-200 hover:bg-purple-100 transition-colors">
-            📦 Submit Delivery
-          </button>
+        <div style={{ backgroundColor: 'white', borderTop: '1px solid #F3F4F6', padding: '8px 16px', display: 'flex', gap: '8px', flexShrink: 0 }}>
+          <button onClick={() => setShowPaymentModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-xs font-semibold border border-green-200">💰 Request Payment</button>
+          <button onClick={() => setShowDeliveryModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-semibold border border-purple-200">📦 Submit Delivery</button>
         </div>
       )}
 
-      {/* INPUT — sticks above keyboard on mobile */}
-      <div className="bg-white border-t border-gray-200 px-4 py-3 flex items-end gap-3 flex-shrink-0">
+      {/* INPUT */}
+      <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '12px 16px', display: 'flex', alignItems: 'flex-end', gap: '12px', flexShrink: 0 }}>
         <textarea
           value={text}
           onChange={handleTyping}
           onKeyDown={handleKeyDown}
           placeholder="Type a message..."
           rows={1}
-          className="flex-1 px-4 py-2.5 bg-gray-100 rounded-2xl text-sm focus:outline-none resize-none max-h-32"
-          style={{ overflowY: 'auto' }}
+          style={{ flex: 1, padding: '10px 16px', backgroundColor: '#F3F4F6', borderRadius: '20px', fontSize: '14px', border: 'none', outline: 'none', resize: 'none', maxHeight: '128px', overflowY: 'auto', fontFamily: 'inherit' }}
         />
         <button
           onClick={handleSend}
           disabled={!text.trim() || sending}
-          className="w-10 h-10 bg-gray-900 text-white rounded-full flex items-center justify-center disabled:opacity-40 hover:bg-gray-800 transition-colors flex-shrink-0"
+          style={{ width: '40px', height: '40px', backgroundColor: text.trim() ? '#111827' : '#D1D5DB', color: 'white', borderRadius: '50%', border: 'none', cursor: text.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background-color 0.2s' }}
         >
           <Send size={16} />
         </button>
