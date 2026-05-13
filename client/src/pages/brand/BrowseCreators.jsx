@@ -74,20 +74,20 @@ const CreatorCard = ({ creator, onSave, saved, onClick }) => {
         <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
           {/* followers */}
           <div style={{ flex: 1, borderRadius: '8px', padding: '4px 3px', textAlign: 'center', backgroundColor: '#FACC15', boxShadow: '0 2px 0 0 #B45309' }}>
-            <div style={{ fontSize: '12px', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>{formatNumber(creator.instagram?.followersCount)}</div>
-            <div style={{ fontSize: '7px', fontWeight: 700, color: '#78350F', textTransform: 'uppercase', marginTop: '2px' }}>Followers</div>
+            <div style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>{formatNumber(creator.instagram?.followersCount)}</div>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: '#78350F', textTransform: 'uppercase', marginTop: '2px' }}>Followers</div>
           </div>
           {/* engagement */}
           <div style={{ flex: 1, borderRadius: '8px', padding: '4px 3px', textAlign: 'center', backgroundColor: engagementGood ? '#DCFCE7' : '#FEE2E2', boxShadow: engagementGood ? '0 2px 0 0 #86EFAC' : '0 2px 0 0 #FCA5A5' }}>
-            <div style={{ fontSize: '12px', fontWeight: 900, color: engagementGood ? '#14532D' : '#7F1D1D', lineHeight: 1 }}>
+            <div style={{ fontSize: '14px', fontWeight: 900, color: engagementGood ? '#14532D' : '#7F1D1D', lineHeight: 1 }}>
               {creator.instagram?.engagementRate ? `${creator.instagram.engagementRate}%` : '—'}
             </div>
-            <div style={{ fontSize: '7px', fontWeight: 700, color: engagementGood ? '#166534' : '#991B1B', textTransform: 'uppercase', marginTop: '2px' }}>Engage</div>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: engagementGood ? '#166534' : '#991B1B', textTransform: 'uppercase', marginTop: '2px' }}>Engage</div>
           </div>
           {/* avg views */}
           <div style={{ flex: 1, borderRadius: '8px', padding: '4px 3px', textAlign: 'center', backgroundColor: '#EFF6FF', boxShadow: '0 2px 0 0 #BFDBFE' }}>
-            <div style={{ fontSize: '12px', fontWeight: 900, color: '#1E3A8A', lineHeight: 1 }}>{formatNumber(creator.instagram?.avgViews)}</div>
-            <div style={{ fontSize: '7px', fontWeight: 700, color: '#1D4ED8', textTransform: 'uppercase', marginTop: '2px' }}>Views</div>
+            <div style={{ fontSize: '14px', fontWeight: 900, color: '#1E3A8A', lineHeight: 1 }}>{formatNumber(creator.instagram?.avgViews)}</div>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: '#1D4ED8', textTransform: 'uppercase', marginTop: '2px' }}>Views</div>
           </div>
         </div>
 
