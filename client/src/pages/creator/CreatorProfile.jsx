@@ -353,10 +353,29 @@ const CreatorProfile = () => {
     finally { setSyncing(false); }
   };
 
-  const handleDisconnect = async () => {
-    try { await disconnectInstagram(); toast.success('Instagram disconnected'); setShowDisconnectConfirm(false); fetchProfile(); }
-    catch { toast.error('Failed to disconnect'); }
-  };
+ const handleDisconnect = async () => {
+  try {
+    await disconnectInstagram();
+    toast.success('Instagram disconnected');
+    setShowDisconnectConfirm(false);
+    // immediately clear instagram stats from local state
+    setProfile(prev => prev ? {
+      ...prev,
+      instagram: {
+        isConnected: false,
+        handle: null,
+        followersCount: 0,
+        engagementRate: null,
+        avgViews: 0,
+        avgLikes: 0,
+        avgComments: 0,
+        avgShares: 0,
+        avgReach: 0,
+      }
+    } : prev);
+    fetchProfile();
+  } catch { toast.error('Failed to disconnect'); }
+};
 
   const hasProfile = !!profile;
   const engGood = (profile?.instagram?.engagementRate || 0) >= 3;

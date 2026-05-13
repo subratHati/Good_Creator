@@ -739,9 +739,27 @@ const syncInstagram = async (req, res) => {
 const disconnectInstagram = async (req, res) => {
   try {
     if (req.user.role === 'creator') {
-      await Creator.findOneAndUpdate({ userId: req.user.id }, { 'instagram.accessToken': '', 'instagram.isConnected': false, 'instagram.userId': '' });
+      await Creator.findOneAndUpdate({ userId: req.user.id }, {
+        'instagram.accessToken': '',
+        'instagram.isConnected': false,
+        'instagram.userId': '',
+        'instagram.handle': '',
+        'instagram.followersCount': 0,
+        'instagram.engagementRate': null,
+        'instagram.avgViews': 0,
+        'instagram.avgLikes': 0,
+        'instagram.avgComments': 0,
+        'instagram.avgShares': 0,
+        'instagram.avgReach': 0,
+      });
     } else if (req.user.role === 'brand') {
-      await Brand.findOneAndUpdate({ userId: req.user.id }, { 'instagram.accessToken': '', 'instagram.isVerified': false, 'instagram.userId': '' });
+      await Brand.findOneAndUpdate({ userId: req.user.id }, {
+        'instagram.accessToken': '',
+        'instagram.isVerified': false,
+        'instagram.userId': '',
+        'instagram.handle': '',
+        'instagram.followersCount': 0,
+      });
     }
     res.json({ message: 'Instagram disconnected' });
   } catch (error) {
