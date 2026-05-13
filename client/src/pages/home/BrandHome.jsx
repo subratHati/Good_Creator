@@ -121,14 +121,14 @@ const CreatorCard = ({ creator, size = 'md', onClick }) => {
         {/* stat boxes */}
         <div style={{ display: 'flex', gap: '5px', marginBottom: '8px' }}>
           <div style={{ flex: 1, borderRadius: '10px', padding: '5px 4px', textAlign: 'center', backgroundColor: '#FACC15', boxShadow: '0 2px 0 0 #B45309' }}>
-            <div style={{ fontSize: size === 'sm' ? '12px' : '14px', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>{formatNumber(creator.instagram?.followersCount)}</div>
-            <div style={{ fontSize: '8px', fontWeight: 700, color: '#78350F', textTransform: 'uppercase', marginTop: '2px' }}>Followers</div>
+            <div style={{ fontSize: size === 'sm' ? '14px' : '14px', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>{formatNumber(creator.instagram?.followersCount)}</div>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#78350F', textTransform: 'uppercase', marginTop: '2px' }}>Followers</div>
           </div>
           <div style={{ flex: 1, borderRadius: '10px', padding: '5px 4px', textAlign: 'center', backgroundColor: engagementGood ? '#DCFCE7' : '#FEE2E2', boxShadow: engagementGood ? '0 2px 0 0 #86EFAC' : '0 2px 0 0 #FCA5A5' }}>
-            <div style={{ fontSize: size === 'sm' ? '12px' : '14px', fontWeight: 900, color: engagementGood ? '#14532D' : '#7F1D1D', lineHeight: 1 }}>
+            <div style={{ fontSize: size === 'sm' ? '14px' : '14px', fontWeight: 900, color: engagementGood ? '#14532D' : '#7F1D1D', lineHeight: 1 }}>
               {creator.instagram?.engagementRate ? `${creator.instagram.engagementRate}%` : '—'}
             </div>
-            <div style={{ fontSize: '8px', fontWeight: 700, color: engagementGood ? '#166534' : '#991B1B', textTransform: 'uppercase', marginTop: '2px' }}>Engage</div>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: engagementGood ? '#166534' : '#991B1B', textTransform: 'uppercase', marginTop: '2px' }}>Engage</div>
           </div>
         </div>
 
@@ -136,14 +136,14 @@ const CreatorCard = ({ creator, size = 'md', onClick }) => {
         {creator.categories?.length > 0 && (
           <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', flexWrap: 'wrap' }}>
             {creator.categories.slice(0, 2).map(cat => (
-              <span key={cat} style={{ fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '20px', backgroundColor: '#F1F5F9', color: '#475569', textTransform: 'capitalize' }}>{cat}</span>
+              <span key={cat} style={{ fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '20px', backgroundColor: '#F1F5F9', color: '#475569', textTransform: 'capitalize' }}>{cat}</span>
             ))}
           </div>
         )}
 
         {/* message button */}
         <button onClick={e => { e.stopPropagation(); onClick(); }}
-          style={{ width: '100%', padding: size === 'sm' ? '7px 0' : '9px 0', borderRadius: '12px', backgroundColor: '#155DFC', color: 'white', fontSize: size === 'sm' ? '10px' : '11px', fontWeight: 900, border: 'none', cursor: 'pointer', boxShadow: '0 3px 0 0 #0c3eb5' }}>
+          style={{ width: '100%', padding: size === 'sm' ? '8px 0' : '9px 0', borderRadius: '12px', backgroundColor: '#155DFC', color: 'white', fontSize: size === 'sm' ? '12px' : '11px', fontWeight: 900, border: 'none', cursor: 'pointer', boxShadow: '0 3px 0 0 #0c3eb5' }}>
           Message →
         </button>
       </div>

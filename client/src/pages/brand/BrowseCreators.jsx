@@ -95,7 +95,7 @@ const CreatorCard = ({ creator, onSave, saved, onClick }) => {
         {creator.categories?.length > 0 && (
           <div style={{ display: 'flex', gap: '3px', marginBottom: '8px', flexWrap: 'wrap' }}>
             {creator.categories.slice(0, 2).map(cat => (
-              <span key={cat} style={{ fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '20px', backgroundColor: '#F1F5F9', color: '#475569', textTransform: 'capitalize' }}>{cat}</span>
+              <span key={cat} style={{ fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '20px', backgroundColor: '#F1F5F9', color: '#475569', textTransform: 'capitalize' }}>{cat}</span>
             ))}
           </div>
         )}
@@ -110,7 +110,7 @@ const CreatorCard = ({ creator, onSave, saved, onClick }) => {
 
         {/* message button */}
         <button onClick={e => { e.stopPropagation(); onClick(); }}
-          style={{ width: '100%', padding: '8px 0', borderRadius: '12px', backgroundColor: '#155DFC', color: 'white', fontSize: '11px', fontWeight: 900, border: 'none', cursor: 'pointer', boxShadow: '0 3px 0 0 #0c3eb5' }}>
+          style={{ width: '100%', padding: '8px 0', borderRadius: '12px', backgroundColor: '#155DFC', color: 'white', fontSize: '13px', fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 3px 0 0 #0c3eb5' }}>
           Message →
         </button>
       </div>
