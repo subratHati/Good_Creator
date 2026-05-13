@@ -14,14 +14,26 @@ const formatNumber = (num) => {
   return num.toString();
 };
 
-// ─── HERO SLIDES ──────────────────────────────────────────────────────────────
+const categoryColors = {
+  fashion: { bg: '#FED7AA', color: '#7C2D12' },
+  beauty: { bg: '#FBCFE8', color: '#831843' },
+  food: { bg: '#FDE68A', color: '#78350F' },
+  tech: { bg: '#DDD6FE', color: '#4C1D95' },
+  fitness: { bg: '#BBF7D0', color: '#064E3B' },
+  lifestyle: { bg: '#BFDBFE', color: '#1E3A8A' },
+  travel: { bg: '#A7F3D0', color: '#064E3B' },
+  education: { bg: '#FDE68A', color: '#78350F' },
+  finance: { bg: '#BBF7D0', color: '#064E3B' },
+  gaming: { bg: '#DDD6FE', color: '#4C1D95' },
+  other: { bg: '#E5E7EB', color: '#1F2937' },
+};
+
 const slides = [
   { src: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&q=80' },
   { src: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&q=80' },
   { src: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&q=80' },
 ];
 
-// ─── TIPS ─────────────────────────────────────────────────────────────────────
 const tips = [
   { src: 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=400&q=80', emoji: '⏰', title: 'Post at Peak Hours', desc: 'Reels posted between 7–9pm get 3x more reach on weekdays.' },
   { src: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&q=80', emoji: '🎯', title: 'Niche = More Money', desc: 'Focused creators earn 2x more per post than general ones.' },
@@ -29,7 +41,6 @@ const tips = [
   { src: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=400&q=80', emoji: '📊', title: 'Track Your Stats', desc: 'Creators who track analytics consistently grow 40% faster.' },
 ];
 
-// ─── CAROUSEL ─────────────────────────────────────────────────────────────────
 const Carousel = ({ height = 'h-full' }) => {
   const [current, setCurrent] = useState(0);
   useEffect(() => {
@@ -39,7 +50,6 @@ const Carousel = ({ height = 'h-full' }) => {
   return (
     <div className={`relative ${height} rounded-3xl overflow-hidden select-none`}>
       <img src={slides[current].src} alt="slide" className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700" />
-      {/* subtle bottom gradient for dots visibility only */}
       <div className="absolute bottom-0 left-0 right-0 h-16" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 100%)' }} />
       <div className="absolute bottom-4 left-5 flex gap-2">
         {slides.map((_, i) => (
@@ -52,26 +62,18 @@ const Carousel = ({ height = 'h-full' }) => {
   );
 };
 
-// ─── INSTAGRAM PANEL ─────────────────────────────────────────────────────────
 const InstagramPanel = ({ ig, onConnect }) => {
   const engagementGood = ig?.engagementRate >= 3;
-
   return (
     <div className="rounded-3xl overflow-hidden border border-gray-100" style={{ backgroundColor: 'white' }}>
-      {/* IG gradient header bar */}
-
       <div className="p-4">
-        {/* 2 stat stacks */}
         <div className="grid grid-cols-2 gap-3 mb-4">
-          {/* Followers */}
           <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: '#F8FAFF' }}>
             <div className="text-xl font-black" style={{ color: '#155DFC' }}>
               {ig?.isConnected ? formatNumber(ig.followersCount) : '—'}
             </div>
             <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Followers</div>
           </div>
-
-          {/* Engagement with animation */}
           <div className="rounded-2xl p-3 text-center relative overflow-hidden" style={{ backgroundColor: '#F8FAFF' }}>
             <div className="flex items-center justify-center gap-1">
               <div className="text-xl font-black" style={{ color: ig?.isConnected ? (engagementGood ? '#22C55E' : '#FF3D57') : '#9CA3AF' }}>
@@ -79,10 +81,7 @@ const InstagramPanel = ({ ig, onConnect }) => {
               </div>
               {ig?.isConnected && ig?.engagementRate && (
                 <div style={{ animation: 'bounce 1s infinite' }}>
-                  {engagementGood
-                    ? <TrendingUp size={14} color="#22C55E" />
-                    : <TrendingDown size={14} color="#FF3D57" />
-                  }
+                  {engagementGood ? <TrendingUp size={14} color="#22C55E" /> : <TrendingDown size={14} color="#FF3D57" />}
                 </div>
               )}
             </div>
@@ -94,13 +93,10 @@ const InstagramPanel = ({ ig, onConnect }) => {
             )}
           </div>
         </div>
-
-        {/* Connect button or connected state */}
         {ig?.isConnected ? (
-          <div className="flex items-center justify-center gap-2 py-2.5 rounded-2xl"
-            style={{ backgroundColor: '#F0FFF4' }}>
+          <div className="flex items-center justify-center gap-2 py-2.5 rounded-2xl" style={{ backgroundColor: '#F0FFF4' }}>
             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#22C55E' }} />
-            <span className="text-xs font-black" style={{ color: '#166534' }}>@{ig.handle} · Instagram Connected</span>
+            <span className="text-xs font-black" style={{ color: '#166834' }}>@{ig.handle} · Instagram Connected</span>
           </div>
         ) : (
           <button onClick={onConnect}
@@ -110,18 +106,87 @@ const InstagramPanel = ({ ig, onConnect }) => {
           </button>
         )}
       </div>
-
-      <style>{`
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-3px); }
-        }
-      `}</style>
+      <style>{`@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }`}</style>
     </div>
   );
 };
 
-// ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
+// ─── OPENING CARD — matches BrowseBrands design exactly ──────────────────────
+const OpeningCard = ({ opening, size = 'md', onClick }) => {
+  const cat = opening.brandId?.category?.toLowerCase() || 'other';
+  const catStyle = categoryColors[cat] || categoryColors.other;
+
+  const d = opening.deliverables || {};
+  const boxes = [
+    { type: 'Reel', qty: d.reels || 0 },
+    { type: 'Post', qty: d.posts || 0 },
+    { type: 'Story', qty: d.stories || 0 },
+    { type: 'UGC', qty: d.ugc || 0 },
+  ].filter(b => b.qty > 0);
+  if (boxes.length === 0 && opening.contentType) {
+    boxes.push({ type: opening.contentType.charAt(0).toUpperCase() + opening.contentType.slice(1), qty: opening.quantity || 1 });
+  }
+
+  const w = size === 'sm' ? '173px' : '200px';
+  const imgH = size === 'sm' ? '130px' : '130px';
+
+  return (
+    <div onClick={onClick}
+      className="flex-shrink-0 rounded-2xl overflow-hidden cursor-pointer transition-transform hover:scale-95"
+      style={{ backgroundColor: 'white', border: '1.5px solid #F0F0F0', boxShadow: '0 2px 0 0 #E5E5E5', width: w }}>
+
+      {/* brand image */}
+      <div style={{ height: imgH, width: '100%', overflow: 'hidden', backgroundColor: '#F0F5FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {opening.brandId?.logo
+          ? <img src={opening.brandId.logo} alt="brand" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+          : <span style={{ fontSize: size === 'sm' ? '40px' : '52px' }}>🏷️</span>
+        }
+      </div>
+
+      <div style={{ padding: size === 'sm' ? '8px' : '12px' }}>
+        {/* brand name */}
+        <div style={{ fontWeight: 900, fontSize: size === 'sm' ? '11px' : '14px', color: '#0F172A', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {opening.brandId?.brandName || 'Brand'}
+        </div>
+
+        {/* category badge */}
+        <span style={{ display: 'inline-block', fontSize: '10px', fontWeight: 700, padding: '3px 9px', borderRadius: '20px', backgroundColor: catStyle.bg, color: catStyle.color, marginBottom: '10px', textTransform: 'capitalize' }}>
+          {opening.brandId?.category || opening.contentType || 'Brand'}
+        </span>
+
+        {/* deliverable boxes */}
+        {boxes.length > 0 && (
+          <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
+            {boxes.map((b, i) => (
+              <div key={i} style={{ flex: 1, backgroundColor: '#F8FAFF', border: '1.5px solid #DBEAFE', borderRadius: '8px', padding: size === 'sm' ? '3px 2px' : '5px 4px', textAlign: 'center' }}>
+                <div style={{ fontSize: size === 'sm' ? '8px' : '9px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '2px' }}>{b.type}</div>
+                <div style={{ fontSize: size === 'sm' ? '12px' : '15px', fontWeight: 800, color: '#1E3A8A', lineHeight: 1 }}>{b.qty}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* price box */}
+        <div style={{ backgroundColor: '#FACC15', borderRadius: '10px', padding: '7px 10px', marginBottom: '10px', boxShadow: '0 3px 0 0 #B45309' }}>
+          <div style={{ fontSize: size === 'sm' ? '11px' : '14px', fontWeight: 900, color: '#0F172A' }}>
+            {opening.budgetMin > 0 && opening.budgetMax > 0
+              ? `₹${opening.budgetMin.toLocaleString('en-IN')} – ₹${opening.budgetMax.toLocaleString('en-IN')}`
+              : opening.budgetMax > 0
+                ? `Up to ₹${opening.budgetMax.toLocaleString('en-IN')}`
+                : 'Budget on discussion'
+            }
+          </div>
+        </div>
+
+        {/* apply button */}
+        <button style={{ width: '100%', padding: size === 'sm' ? '6px 0' : '9px 0', borderRadius: '12px', backgroundColor: '#155DFC', color: 'white', fontSize: size === 'sm' ? '10px' : '11px', fontWeight: 900, border: 'none', cursor: 'pointer', boxShadow: '0 3px 0 0 #0C3EB5' }}>
+          Apply Now
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const CreatorHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -133,13 +198,22 @@ const CreatorHome = () => {
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [profileRes, openingsRes] = await Promise.allSettled([
-          getMyCreatorProfile(),
-          searchOpenings({ limit: 6 }),
-        ]);
-        if (profileRes.status === 'fulfilled') { setProfile(profileRes.value.data.creator); setShowSetupModal(false); }
-        else { setProfile(null); setShowSetupModal(true); }
-        if (openingsRes.status === 'fulfilled') setOpenings(openingsRes.value.data.openings?.slice(0, 6) || []);
+        const [profileRes] = await Promise.allSettled([getMyCreatorProfile()]);
+
+        let creatorProfile = null;
+        if (profileRes.status === 'fulfilled') {
+          creatorProfile = profileRes.value.data.creator;
+          setProfile(creatorProfile);
+          setShowSetupModal(false);
+        } else {
+          setProfile(null);
+          setShowSetupModal(true);
+        }
+
+        // fetch openings personalized by creator categories
+        const categories = creatorProfile?.categories?.join(',') || '';
+        const openingsRes = await searchOpenings({ limit: 6, ...(categories ? { categories } : {}) });
+        setOpenings(openingsRes.data.openings?.slice(0, 6) || []);
       } catch { }
       finally { setLoading(false); }
     };
@@ -147,13 +221,6 @@ const CreatorHome = () => {
   }, []);
 
   const ig = profile?.instagram;
-
-  const contentTypeColors = {
-    reel: { bg: '#EFF6FF', color: '#1D4ED8' },
-    post: { bg: '#F0FFF4', color: '#166534' },
-    story: { bg: '#FFF7ED', color: '#B45309' },
-    ugc: { bg: '#F5F3FF', color: '#6D28D9' },
-  };
 
   if (loading) {
     return (
@@ -166,7 +233,6 @@ const CreatorHome = () => {
     );
   }
 
-  // ── BRAND OPENINGS shared content ──
   const OpeningCards = ({ size = 'md' }) => (
     openings.length === 0 ? (
       <div className="rounded-2xl p-8 text-center border-2 border-dashed border-gray-100">
@@ -176,83 +242,9 @@ const CreatorHome = () => {
       </div>
     ) : (
       <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-        {openings.map((opening) => {
-          const deliverables = [];
-          if (opening.requirements?.reels > 0) deliverables.push(`${opening.requirements.reels} Reel${opening.requirements.reels > 1 ? 's' : ''}`);
-          if (opening.requirements?.posts > 0) deliverables.push(`${opening.requirements.posts} Post${opening.requirements.posts > 1 ? 's' : ''}`);
-          if (opening.requirements?.stories > 0) deliverables.push(`${opening.requirements.stories} Stor${opening.requirements.stories > 1 ? 'ies' : 'y'}`);
-          if (opening.requirements?.ugc > 0) deliverables.push(`${opening.requirements.ugc} UGC`);
-          if (deliverables.length === 0) deliverables.push(`1 ${opening.contentType?.charAt(0).toUpperCase() + opening.contentType?.slice(1) || 'Content'}`);
-
-          const tagColors = [
-            { bg: '#EFF6FF', color: '#1D4ED8' },
-            { bg: '#F0FFF4', color: '#166534' },
-            { bg: '#F5F3FF', color: '#6D28D9' },
-            { bg: '#FFF7ED', color: '#B45309' },
-          ];
-
-          const w = size === 'sm' ? 'w-44' : 'w-64';
-
-          return (
-            <div key={opening._id}
-              onClick={() => navigate('/creator/browse-brands')}
-              className="flex-shrink-0 rounded-2xl overflow-hidden cursor-pointer transition-transform hover:scale-95"
-              style={{
-                backgroundColor: 'white',
-                border: '1.5px solid #F0F0F0',
-                boxShadow: '0 2px 0 0 #E5E5E5',
-                width: size === 'sm' ? '176px' : '256px'
-              }}>
-
-              {/* top image — exact same h-28 as tips card */}
-              <div style={{
-                height: size === 'sm' ? '156px' : '172px',
-                width: '100%',
-                overflow: 'hidden',
-                backgroundColor: '#F0F5FF',
-              }}>
-                {opening.brandId?.logo
-                  ? <img src={opening.brandId.logo} alt="brand" style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', display: 'block', minWidth: '100%', minHeight: '100%' }} />
-                  : <span style={{ fontSize: size === 'sm' ? '40px' : '52px' }}>🏷️</span>
-                }
-              </div>
-
-              {/* body — exact same p-3 bg-white as tips card */}
-              <div className="p-3 bg-white">
-                <div className="font-black text-sm mb-0.5 truncate" style={{ color: '#101828' }}>
-                  {opening.brandId?.brandName || 'Brand'}
-                </div>
-                <div className="text-sm truncate mb-2" style={{ color: '#9CA3AF' }}>
-                  {opening.brandId?.category ? `${opening.brandId.category.charAt(0).toUpperCase() + opening.brandId.category.slice(1)}` : ''}
-                  {opening.brandId?.location?.city ? ` · ${opening.brandId.location.city}` : ''}
-                </div>
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {deliverables.map((d, i) => {
-                    const tc = tagColors[i % tagColors.length];
-                    return (
-                      <span key={i} className="text-sm font-bold px-2 py-0.5 rounded-full"
-                        style={{ backgroundColor: tc.bg, color: tc.color }}>
-                        {d}
-                      </span>
-                    );
-                  })}
-                </div>
-                <div className="font-black text-sm mb-2" style={{ color: '#155DFC' }}>
-                  {opening.budgetMin > 0 && opening.budgetMax > 0
-                    ? `₹${opening.budgetMin.toLocaleString('en-IN')} – ₹${opening.budgetMax.toLocaleString('en-IN')}`
-                    : opening.budgetMax > 0
-                      ? `Up to ₹${opening.budgetMax.toLocaleString('en-IN')}`
-                      : 'Budget on discussion'
-                  }
-                </div>
-                <button className="w-full py-2 rounded-xl text-sm font-black text-white"
-                  style={{ backgroundColor: '#101828' }}>
-                  Apply Now
-                </button>
-              </div>
-            </div>
-          );
-        })}
+        {openings.map(opening => (
+          <OpeningCard key={opening._id} opening={opening} size={size} onClick={() => navigate('/creator/browse-brands')} />
+        ))}
       </div>
     )
   );
@@ -261,49 +253,32 @@ const CreatorHome = () => {
     <div className="min-h-screen bg-white">
       <Navbar />
 
-      {/* ══ MOBILE LAYOUT ══ */}
+      {/* ══ MOBILE ══ */}
       <div className="md:hidden">
-
-        {/* TOP — dark bg only for carousel */}
-        {/* TOP — dark bg only for carousel */}
         <div style={{ backgroundColor: '#101828', borderBottomLeftRadius: '32px', borderBottomRightRadius: '32px', boxShadow: '0 12px 40px rgba(0,0,0,0.15)' }} className="px-4 pt-4 pb-6 space-y-3">
-          {/* landscape image */}
           <div style={{ height: '28vh' }}>
             <Carousel height="h-full" />
           </div>
-
-          {/* text area — separate, centered */}
           <div className="text-center py-2">
-            <button
-              onClick={() => navigate('/creator/browse-brands')}
+            <button onClick={() => navigate('/creator/browse-brands')}
               className="inline-block text-xs font-black px-3 py-1.5 rounded-full mb-3"
               style={{ backgroundColor: '#155DFC', color: 'white' }}>
               Brand Deals →
             </button>
-            <h2 className="text-xl font-black text-white leading-tight mb-2">
-              Get Discovered by<br />Top Indian Brands
-            </h2>
+            <h2 className="text-xl font-black text-white leading-tight mb-2">Get Discovered by<br />Top Indian Brands</h2>
             <p className="text-xs font-medium mx-auto" style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '260px' }}>
               1,000+ creators landing paid collabs every month on GoodCreator
             </p>
           </div>
         </div>
 
-        {/* WHITE section starts here — Instagram + CTAs */}
         <div className="bg-white px-4 pt-4 pb-24 space-y-6">
-
-          {/* Instagram panel */}
           <InstagramPanel ig={ig} onConnect={() => navigate('/creator/profile')} />
 
-
-
-          {/* Brand Openings */}
           <div>
+
             <div className="flex items-center justify-between mb-3">
-              <div>
-                <div className="text-xs font-black uppercase tracking-widest mb-0.5" style={{ color: '#155DFC' }}>Curated for You</div>
-                <h2 className="text-xl font-black" style={{ color: '#101828' }}>Brand Openings</h2>
-              </div>
+              <h2 className="text-base font-black" style={{ color: '#101828' }}>Brands Hiring Now</h2>
               <button onClick={() => navigate('/creator/browse-brands')} className="flex items-center gap-1 text-xs font-black" style={{ color: '#155DFC' }}>
                 See all <ArrowRight size={12} />
               </button>
@@ -311,7 +286,6 @@ const CreatorHome = () => {
             <OpeningCards size="sm" />
           </div>
 
-          {/* Tips */}
           <div>
             <div className="text-xs font-black uppercase tracking-widest mb-0.5" style={{ color: '#155DFC' }}>Creator Academy</div>
             <h2 className="text-xl font-black mb-3" style={{ color: '#101828' }}>Level Up Your Content</h2>
@@ -331,7 +305,6 @@ const CreatorHome = () => {
             </div>
           </div>
 
-          {/* Motivational banner */}
           <div className="rounded-3xl overflow-hidden relative" style={{ backgroundColor: '#101828' }}>
             <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80" alt="creators"
               className="absolute inset-0 w-full h-full object-cover opacity-20" />
@@ -346,22 +319,17 @@ const CreatorHome = () => {
               </button>
             </div>
           </div>
-
         </div>
       </div>
 
-      {/* ══ DESKTOP LAYOUT ══ */}
+      {/* ══ DESKTOP ══ */}
       <div className="hidden md:block">
         <div className="max-w-6xl mx-auto px-6 pb-10">
 
-          {/* HERO — 60vh, 2 columns */}
           <div className="grid grid-cols-2 gap-5 pt-6" style={{ minHeight: '60vh' }}>
-            {/* LEFT — Carousel */}
             <div style={{ minHeight: '400px' }}>
               <Carousel height="h-full" />
             </div>
-
-            {/* RIGHT — stacked */}
             <div className="flex flex-col gap-4">
               <div className="flex-1">
                 <InstagramPanel ig={ig} onConnect={() => navigate('/creator/profile')} />
@@ -381,13 +349,9 @@ const CreatorHome = () => {
             </div>
           </div>
 
-          {/* BRAND OPENINGS */}
           <div className="mt-12">
             <div className="flex items-center justify-between mb-5">
-              <div>
-                <div className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: '#155DFC' }}>Curated for You</div>
-                <h2 className="text-2xl font-black" style={{ color: '#101828' }}>Brand Openings</h2>
-              </div>
+              <h3 className="text-2xl font-black" style={{ color: '#101828' }}>Brands Hiring Now</h3>
               <button onClick={() => navigate('/creator/browse-brands')} className="flex items-center gap-1 text-sm font-black hover:underline" style={{ color: '#155DFC' }}>
                 See all <ArrowRight size={14} />
               </button>
@@ -395,7 +359,6 @@ const CreatorHome = () => {
             <OpeningCards size="md" />
           </div>
 
-          {/* TIPS */}
           <div className="mt-12">
             <div className="mb-5">
               <div className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: '#155DFC' }}>Creator Academy</div>
@@ -419,7 +382,6 @@ const CreatorHome = () => {
             </div>
           </div>
 
-          {/* MOTIVATIONAL BANNER */}
           <div className="mt-12 rounded-3xl overflow-hidden relative" style={{ backgroundColor: '#101828' }}>
             <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&q=80" alt="creators collaborating"
               className="absolute inset-0 w-full h-full object-cover opacity-25" />

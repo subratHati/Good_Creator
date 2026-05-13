@@ -94,6 +94,7 @@ const searchOpenings = async (req, res) => {
       isBarter,
       minBudget,
       maxBudget,
+      categories, // comma-separated e.g. "fashion,beauty,food"
       city,
       page = 1,
       limit = 12,
@@ -109,6 +110,14 @@ const searchOpenings = async (req, res) => {
       if (maxBudget) query.budgetMax.$lte = Number(maxBudget);
     }
 
+    // filter by brand category matching creator categories
+   if (categories) {
+  const categoryList = categories.split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
+  if (categoryList.length > 0) {
+    query['requirements.categories'] = { $in: categoryList };
+  }
+}
+
     const skip = (Number(page) - 1) * Number(limit);
 
     const [openings, total] = await Promise.all([
@@ -119,6 +128,21 @@ const searchOpenings = async (req, res) => {
         .limit(Number(limit)),
       Opening.countDocuments(query),
     ]);
+
+    // if category filter returned too few results, backfill with recent openings
+    
+    // let finalOpenings = openings;
+    // if (categories && openings.length < Number(limit)) {
+    //   const existingIds = openings.map(o => o._id.toString());
+    //   const backfill = await Opening.find({
+    //     status: 'active',
+    //     _id: { $nin: existingIds },
+    //   })
+    //     .populate('brandId', 'brandName logo category location instagram.handle instagram.followersCount')
+    //     .sort({ createdAt: -1 })
+    //     .limit(Number(limit) - openings.length);
+    //   finalOpenings = [...openings, ...backfill];
+    // }
 
     res.json({
       openings,

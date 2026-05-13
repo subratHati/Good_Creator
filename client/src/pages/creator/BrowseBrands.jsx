@@ -20,13 +20,6 @@ const categoryColors = {
   other:     { bg: '#E5E7EB', color: '#1F2937' },
 };
 
-const tagColors = [
-  { bg: '#DBEAFE', color: '#1E3A8A' },
-  { bg: '#D1FAE5', color: '#064E3B' },
-  { bg: '#EDE9FE', color: '#4C1D95' },
-  { bg: '#FCE7F3', color: '#831843' },
-];
-
 const OpeningCard = ({ opening, onApply, applied }) => {
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [coverNote, setCoverNote] = useState('');
@@ -46,12 +39,18 @@ const OpeningCard = ({ opening, onApply, applied }) => {
   const cat = opening.brandId?.category?.toLowerCase() || 'other';
   const catStyle = categoryColors[cat] || categoryColors.other;
 
-  const deliverables = [];
-  if (opening.requirements?.reels > 0) deliverables.push(`${opening.requirements.reels} Reel${opening.requirements.reels > 1 ? 's' : ''}`);
-  if (opening.requirements?.posts > 0) deliverables.push(`${opening.requirements.posts} Post${opening.requirements.posts > 1 ? 's' : ''}`);
-  if (opening.requirements?.stories > 0) deliverables.push(`${opening.requirements.stories} Stor${opening.requirements.stories > 1 ? 'ies' : 'y'}`);
-  if (opening.requirements?.ugc > 0) deliverables.push(`${opening.requirements.ugc} UGC`);
-  if (deliverables.length === 0) deliverables.push(`1 ${opening.contentType?.charAt(0).toUpperCase() + opening.contentType?.slice(1) || 'Content'}`);
+  // build deliverable boxes
+  const d = opening.deliverables || {};
+  const boxes = [
+    { type: 'Reel',  qty: d.reels   || 0 },
+    { type: 'Post',  qty: d.posts   || 0 },
+    { type: 'Story', qty: d.stories || 0 },
+    { type: 'UGC',   qty: d.ugc     || 0 },
+  ].filter(b => b.qty > 0);
+  // fallback for old openings
+  if (boxes.length === 0 && opening.contentType) {
+    boxes.push({ type: opening.contentType.charAt(0).toUpperCase() + opening.contentType.slice(1), qty: opening.quantity || 1 });
+  }
 
   return (
     <>
@@ -60,29 +59,38 @@ const OpeningCard = ({ opening, onApply, applied }) => {
         style={{ backgroundColor: 'white', border: '1.5px solid #F0F0F0', boxShadow: '0 2px 0 0 #E5E5E5' }}
         onClick={() => !applied && setShowApplyModal(true)}
       >
+        {/* brand image */}
         <div style={{ height: '150px', width: '100%', overflow: 'hidden', backgroundColor: '#F0F5FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {opening.brandId?.logo
             ? <img src={opening.brandId.logo} alt="brand" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
             : <span style={{ fontSize: '48px' }}>🏷️</span>
           }
         </div>
+
         <div style={{ padding: '12px' }}>
-          <div style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', backgroundColor: 'F1F5F9', borderRadius: '8px', padding: '4px 8px' }}>
+          {/* brand name */}
+          <div style={{ fontWeight: 900, fontSize: '14px', color: '#0F172A', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', backgroundColor: '#F1F5F9', borderRadius: '8px', padding: '4px 8px' }}>
             {opening.brandId?.brandName || 'Brand'}
           </div>
+
+          {/* category badge */}
           <span style={{ display: 'inline-block', fontSize: '10px', fontWeight: 700, padding: '3px 9px', borderRadius: '20px', backgroundColor: catStyle.bg, color: catStyle.color, marginBottom: '10px', textTransform: 'capitalize' }}>
             {opening.brandId?.category || opening.contentType || 'Brand'}
           </span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '10px' }}>
-            {deliverables.map((d, i) => {
-              const tc = tagColors[i % tagColors.length];
-              return (
-                <span key={i} style={{ fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', backgroundColor: tc.bg, color: tc.color }}>
-                  {d}
-                </span>
-              );
-            })}
-          </div>
+
+          {/* deliverable boxes */}
+          {boxes.length > 0 && (
+            <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
+              {boxes.map((b, i) => (
+                <div key={i} style={{ flex: 1, backgroundColor: '#F8FAFF', border: '1.5px solid #DBEAFE', borderRadius: '10px', padding: '5px 4px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '3px' }}>{b.type}</div>
+                  <div style={{ fontSize: '15px', fontWeight: 900, color: '#1E3A8A', lineHeight: 1 }}>{b.qty}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* price box */}
           <div style={{ backgroundColor: '#FACC15', borderRadius: '10px', padding: '7px 10px', marginBottom: '10px', boxShadow: '0 3px 0 0 #B45309' }}>
             <div style={{ fontSize: '9px', fontWeight: 700, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>Budget</div>
             <div style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A' }}>
@@ -94,6 +102,8 @@ const OpeningCard = ({ opening, onApply, applied }) => {
               }
             </div>
           </div>
+
+          {/* apply button */}
           <button
             onClick={e => { e.stopPropagation(); applied ? null : setShowApplyModal(true); }}
             disabled={applied}
@@ -103,7 +113,7 @@ const OpeningCard = ({ opening, onApply, applied }) => {
               color: applied ? '#166534' : 'white',
               fontSize: '11px', fontWeight: 900, border: 'none',
               cursor: applied ? 'default' : 'pointer',
-               boxShadow: applied ? 'none' : '0 3px 0 0 #0C3EB5',
+              boxShadow: applied ? 'none' : '0 3px 0 0 #0C3EB5',
             }}
           >
             {applied ? 'Applied ✓' : 'Apply Now'}
@@ -141,7 +151,6 @@ const OpeningCard = ({ opening, onApply, applied }) => {
   );
 };
 
-// ─── MOBILE FILTER SHEET ──────────────────────────────────────────────────────
 const FilterSheet = ({ open, onClose, filters, onFilterChange, onApply, onClear }) => {
   if (!open) return null;
   return (
@@ -190,39 +199,27 @@ const FilterSheet = ({ open, onClose, filters, onFilterChange, onApply, onClear 
   );
 };
 
-// ─── DESKTOP LEFT SIDEBAR FILTERS ────────────────────────────────────────────
 const DesktopSidebar = ({ filters, onFilterChange, onApply, onClear }) => (
   <div className="hidden md:block w-56 flex-shrink-0">
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden sticky top-24">
-      {/* sidebar header */}
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <span className="font-black text-sm" style={{ color: '#101828' }}>Filters</span>
         <button onClick={onClear} className="text-xs font-bold hover:underline" style={{ color: '#155DFC' }}>Clear all</button>
       </div>
-
       <div className="p-5 space-y-6">
-
-        {/* content type */}
         <div>
           <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Content Type</div>
           <div className="space-y-1">
             {['', 'reel', 'post', 'story', 'ugc'].map((type) => (
-              <button key={type}
-                onClick={() => onFilterChange('contentType', type)}
+              <button key={type} onClick={() => onFilterChange('contentType', type)}
                 className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold capitalize transition-all"
-                style={{
-                  backgroundColor: filters.contentType === type ? '#101828' : 'transparent',
-                  color: filters.contentType === type ? 'white' : '#6B7280',
-                }}>
+                style={{ backgroundColor: filters.contentType === type ? '#101828' : 'transparent', color: filters.contentType === type ? 'white' : '#6B7280' }}>
                 {type || 'All Types'}
               </button>
             ))}
           </div>
         </div>
-
         <div className="h-px bg-gray-100" />
-
-        {/* budget */}
         <div>
           <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Budget (₹)</div>
           <div className="space-y-2">
@@ -234,10 +231,7 @@ const DesktopSidebar = ({ filters, onFilterChange, onApply, onClear }) => (
               className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
         </div>
-
         <div className="h-px bg-gray-100" />
-
-        {/* barter */}
         <div>
           <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Availability</div>
           <label className="flex items-center gap-3 cursor-pointer">
@@ -247,8 +241,6 @@ const DesktopSidebar = ({ filters, onFilterChange, onApply, onClear }) => (
             <span className="text-sm font-semibold text-gray-700">Barter only</span>
           </label>
         </div>
-
-        {/* apply button */}
         <button onClick={onApply}
           className="w-full py-3 rounded-2xl text-sm font-black text-white transition-opacity hover:opacity-90"
           style={{ backgroundColor: '#155DFC' }}>
@@ -259,7 +251,6 @@ const DesktopSidebar = ({ filters, onFilterChange, onApply, onClear }) => (
   </div>
 );
 
-// ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 const BrowseBrands = () => {
   const [openings, setOpenings] = useState([]);
   const [total, setTotal] = useState(0);
@@ -268,12 +259,7 @@ const BrowseBrands = () => {
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const { checking } = useCreatorProfileGuard();
 
-  const [filters, setFilters] = useState({
-    contentType: '',
-    isBarter: '',
-    minBudget: '',
-    maxBudget: '',
-  });
+  const [filters, setFilters] = useState({ contentType: '', isBarter: '', minBudget: '', maxBudget: '' });
 
   const fetchOpenings = async (f = filters) => {
     setLoading(true);
@@ -286,11 +272,8 @@ const BrowseBrands = () => {
       const res = await searchOpenings(params);
       setOpenings(res.data.openings);
       setTotal(res.data.pagination.total);
-    } catch {
-      setOpenings([]);
-    } finally {
-      setLoading(false);
-    }
+    } catch { setOpenings([]); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { fetchOpenings(); }, []);
@@ -305,9 +288,7 @@ const BrowseBrands = () => {
         const rest = prev.filter(o => o._id !== openingId);
         return applied ? [...rest, applied] : prev;
       });
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to apply');
-    }
+    } catch (error) { toast.error(error.response?.data?.message || 'Failed to apply'); }
   };
 
   const handleFilterChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
@@ -326,18 +307,27 @@ const BrowseBrands = () => {
     </div>
   );
 
+  const EmptyState = () => (
+    <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+      <div className="text-4xl mb-4">📋</div>
+      <div className="font-black text-gray-900 mb-2">No openings found</div>
+      <div className="text-sm text-gray-500">Try adjusting your filters or check back later.</div>
+    </div>
+  );
+
+  const LoadingSpinner = () => (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-10 h-10 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
+    </div>
+  );
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F5F5F7' }}>
       <Navbar />
 
-      <FilterSheet
-        open={showFilterSheet}
-        onClose={() => setShowFilterSheet(false)}
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onApply={() => fetchOpenings(filters)}
-        onClear={handleClear}
-      />
+      <FilterSheet open={showFilterSheet} onClose={() => setShowFilterSheet(false)}
+        filters={filters} onFilterChange={handleFilterChange}
+        onApply={() => fetchOpenings(filters)} onClear={handleClear} />
 
       {/* mobile top bar */}
       <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 sticky top-14 z-30">
@@ -366,45 +356,23 @@ const BrowseBrands = () => {
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 md:py-8 pb-24 md:pb-8">
 
-        {/* desktop layout — sidebar + content */}
+        {/* DESKTOP — sidebar + content */}
         <div className="hidden md:flex gap-6 items-start">
-
-          {/* LEFT SIDEBAR */}
-          <DesktopSidebar
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onApply={() => fetchOpenings(filters)}
-            onClear={handleClear}
-          />
-
-          {/* RIGHT CONTENT */}
+          <DesktopSidebar filters={filters} onFilterChange={handleFilterChange}
+            onApply={() => fetchOpenings(filters)} onClear={handleClear} />
           <div className="flex-1 min-w-0">
-            {/* page header */}
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h1 className="text-2xl font-black" style={{ color: '#101828' }}>
                   Browse Openings
-                  <span className="ml-3 text-sm font-bold px-3 py-1 rounded-full" style={{ backgroundColor: '#EFF6FF', color: '#155DFC' }}>
-                    {total} active
-                  </span>
+                  <span className="ml-3 text-sm font-bold px-3 py-1 rounded-full" style={{ backgroundColor: '#EFF6FF', color: '#155DFC' }}>{total} active</span>
                 </h1>
                 <p className="text-sm mt-1 text-gray-400">Find brands looking for creators like you</p>
               </div>
             </div>
-
-            {loading ? (
-              <div className="flex items-center justify-center h-64">
-                <div className="w-10 h-10 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
-              </div>
-            ) : openings.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-                <div className="text-4xl mb-4">📋</div>
-                <div className="font-black text-gray-900 mb-2">No openings found</div>
-                <div className="text-sm text-gray-500">Try adjusting your filters or check back later.</div>
-              </div>
-            ) : (
+            {loading ? <LoadingSpinner /> : openings.length === 0 ? <EmptyState /> : (
               <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {openings.map((opening) => (
+                {openings.map(opening => (
                   <OpeningCard key={opening._id} opening={opening} onApply={handleApply} applied={appliedIds.includes(opening._id)} />
                 ))}
               </div>
@@ -412,25 +380,14 @@ const BrowseBrands = () => {
           </div>
         </div>
 
-        {/* MOBILE layout */}
+        {/* MOBILE */}
         <div className="md:hidden">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-black" style={{ color: '#101828' }}>{total} openings</span>
           </div>
-
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="w-10 h-10 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
-            </div>
-          ) : openings.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-              <div className="text-4xl mb-4">📋</div>
-              <div className="font-black text-gray-900 mb-2">No openings found</div>
-              <div className="text-sm text-gray-500">Try adjusting your filters or check back later.</div>
-            </div>
-          ) : (
+          {loading ? <LoadingSpinner /> : openings.length === 0 ? <EmptyState /> : (
             <div className="grid grid-cols-2 gap-3">
-              {openings.map((opening) => (
+              {openings.map(opening => (
                 <OpeningCard key={opening._id} opening={opening} onApply={handleApply} applied={appliedIds.includes(opening._id)} />
               ))}
             </div>
