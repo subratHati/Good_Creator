@@ -7,17 +7,17 @@ import useCreatorProfileGuard from '../../hooks/useCreatorProfileGuard';
 import toast from 'react-hot-toast';
 
 const categoryColors = {
-  fashion:   { bg: '#FED7AA', color: '#7C2D12' },
-  beauty:    { bg: '#FBCFE8', color: '#831843' },
-  food:      { bg: '#FDE68A', color: '#78350F' },
-  tech:      { bg: '#DDD6FE', color: '#4C1D95' },
-  fitness:   { bg: '#BBF7D0', color: '#064E3B' },
+  fashion: { bg: '#FED7AA', color: '#7C2D12' },
+  beauty: { bg: '#FBCFE8', color: '#831843' },
+  food: { bg: '#FDE68A', color: '#78350F' },
+  tech: { bg: '#DDD6FE', color: '#4C1D95' },
+  fitness: { bg: '#BBF7D0', color: '#064E3B' },
   lifestyle: { bg: '#BFDBFE', color: '#1E3A8A' },
-  travel:    { bg: '#A7F3D0', color: '#064E3B' },
+  travel: { bg: '#A7F3D0', color: '#064E3B' },
   education: { bg: '#FDE68A', color: '#78350F' },
-  finance:   { bg: '#BBF7D0', color: '#064E3B' },
-  gaming:    { bg: '#DDD6FE', color: '#4C1D95' },
-  other:     { bg: '#E5E7EB', color: '#1F2937' },
+  finance: { bg: '#BBF7D0', color: '#064E3B' },
+  gaming: { bg: '#DDD6FE', color: '#4C1D95' },
+  other: { bg: '#E5E7EB', color: '#1F2937' },
 };
 
 const OpeningCard = ({ opening, onApply, applied }) => {
@@ -42,10 +42,10 @@ const OpeningCard = ({ opening, onApply, applied }) => {
   // build deliverable boxes
   const d = opening.deliverables || {};
   const boxes = [
-    { type: 'Reel',  qty: d.reels   || 0 },
-    { type: 'Post',  qty: d.posts   || 0 },
+    { type: 'Reel', qty: d.reels || 0 },
+    { type: 'Post', qty: d.posts || 0 },
     { type: 'Story', qty: d.stories || 0 },
-    { type: 'UGC',   qty: d.ugc     || 0 },
+    { type: 'UGC', qty: d.ugc || 0 },
   ].filter(b => b.qty > 0);
   // fallback for old openings
   if (boxes.length === 0 && opening.contentType) {
@@ -69,8 +69,11 @@ const OpeningCard = ({ opening, onApply, applied }) => {
 
         <div style={{ padding: '12px' }}>
           {/* brand name */}
-          <div style={{ fontWeight: 900, fontSize: '14px', color: '#0F172A', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', backgroundColor: '#F1F5F9', borderRadius: '8px', padding: '4px 8px' }}>
-            {opening.brandId?.brandName || 'Brand'}
+          <div style={{ fontWeight: 900, fontSize: '13px', color: '#101828', marginBottom: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {opening.title || 'Campaign'}
+          </div>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#16A34A', marginBottom: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            By {opening.brandId?.brandName || 'Brand'}
           </div>
 
           {/* category badge */}
@@ -97,8 +100,8 @@ const OpeningCard = ({ opening, onApply, applied }) => {
               {opening.budgetMin > 0 && opening.budgetMax > 0
                 ? `₹${opening.budgetMin.toLocaleString('en-IN')} – ₹${opening.budgetMax.toLocaleString('en-IN')}`
                 : opening.budgetMax > 0
-                ? `Up to ₹${opening.budgetMax.toLocaleString('en-IN')}`
-                : opening.isBarter ? 'Barter' : 'Discuss'
+                  ? `Up to ₹${opening.budgetMax.toLocaleString('en-IN')}`
+                  : opening.isBarter ? 'Barter' : 'Discuss'
               }
             </div>
           </div>
@@ -128,7 +131,7 @@ const OpeningCard = ({ opening, onApply, applied }) => {
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}
             onClick={e => e.stopPropagation()}>
             <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden" />
-            <h3 className="font-bold text-gray-900 text-lg mb-1">Apply to opening</h3>
+            <h3 className="font-bold text-gray-900 text-lg mb-1">Apply to campaign</h3>
             <p className="text-sm text-gray-500 mb-4">{opening.title}</p>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -168,9 +171,8 @@ const FilterSheet = ({ open, onClose, filters, onFilterChange, onApply, onClear 
             <div className="flex flex-wrap gap-2">
               {['', 'reel', 'post', 'story', 'ugc'].map((type) => (
                 <button key={type} onClick={() => onFilterChange('contentType', type)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border capitalize transition-all ${
-                    filters.contentType === type ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600'
-                  }`}>{type || 'All'}</button>
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border capitalize transition-all ${filters.contentType === type ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600'
+                    }`}>{type || 'All'}</button>
               ))}
             </div>
           </div>
@@ -310,7 +312,7 @@ const BrowseBrands = () => {
   const EmptyState = () => (
     <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
       <div className="text-4xl mb-4">📋</div>
-      <div className="font-black text-gray-900 mb-2">No openings found</div>
+      <div className="font-black text-gray-900 mb-2">No campaings found</div>
       <div className="text-sm text-gray-500">Try adjusting your filters or check back later.</div>
     </div>
   );
@@ -336,9 +338,8 @@ const BrowseBrands = () => {
             {['', 'reel', 'post', 'story', 'ugc'].map((type) => (
               <button key={type}
                 onClick={() => { handleFilterChange('contentType', type); fetchOpenings({ ...filters, contentType: type }); }}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border capitalize transition-all ${
-                  filters.contentType === type ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600 bg-white'
-                }`}>{type || 'All'}</button>
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border capitalize transition-all ${filters.contentType === type ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600 bg-white'
+                  }`}>{type || 'All'}</button>
             ))}
           </div>
           <button onClick={() => setShowFilterSheet(true)}
@@ -364,7 +365,7 @@ const BrowseBrands = () => {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h1 className="text-2xl font-black" style={{ color: '#101828' }}>
-                  Browse Openings
+                  Browse Campaigns
                   <span className="ml-3 text-sm font-bold px-3 py-1 rounded-full" style={{ backgroundColor: '#EFF6FF', color: '#155DFC' }}>{total} active</span>
                 </h1>
                 <p className="text-sm mt-1 text-gray-400">Find brands looking for creators like you</p>
@@ -383,7 +384,7 @@ const BrowseBrands = () => {
         {/* MOBILE */}
         <div className="md:hidden">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-black" style={{ color: '#101828' }}>{total} openings</span>
+            <span className="text-sm font-black" style={{ color: '#101828' }}>{total} campaigns</span>
           </div>
           {loading ? <LoadingSpinner /> : openings.length === 0 ? <EmptyState /> : (
             <div className="grid grid-cols-2 gap-3">

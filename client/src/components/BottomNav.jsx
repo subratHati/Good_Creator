@@ -4,7 +4,6 @@ import useAuth from '../hooks/useAuth';
 import { getUnreadCount } from '../api/chat';
 import { getMyCreatorProfile } from '../api/creator';
 import { getMyBrandProfile } from '../api/brand';
-import toast from 'react-hot-toast';
 
 const HomeIcon = ({ active }) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -30,7 +29,7 @@ const ApplicationsIcon = ({ active }) => (
   </svg>
 );
 
-const OpeningsIcon = ({ active }) => (
+const CampaignsIcon = ({ active }) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="3" width="20" height="14" rx="2" />
     <line x1="8" y1="21" x2="16" y2="21" />
@@ -58,7 +57,6 @@ const BottomNav = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [profileExists, setProfileExists] = useState(true);
 
-  // fetch unread count on mount and every 30 seconds
   useEffect(() => {
     if (!user) return;
     const fetchUnread = async () => {
@@ -72,7 +70,6 @@ const BottomNav = () => {
     return () => clearInterval(interval);
   }, [user]);
 
-  // check if profile exists on mount
   useEffect(() => {
     if (!user) return;
     const check = async () => {
@@ -87,7 +84,6 @@ const BottomNav = () => {
     check();
   }, [user]);
 
-  // listen for profileCreated event from setup modals
   useEffect(() => {
     const handler = () => setProfileExists(true);
     window.addEventListener('profileCreated', handler);
@@ -101,7 +97,7 @@ const BottomNav = () => {
     { label: 'Home', path: '/', icon: HomeIcon },
     { label: 'Discover', path: '/creator/browse-brands', icon: DiscoverIcon },
     { label: 'Messages', path: '/messages', icon: MessagesIcon },
-    { label: 'Applications', path: '/creator/applications', icon: ApplicationsIcon },
+    { label: 'Applied', path: '/creator/applications', icon: ApplicationsIcon },
     { label: 'Profile', path: '/creator/profile', icon: ProfileIcon },
   ];
 
@@ -109,7 +105,7 @@ const BottomNav = () => {
     { label: 'Home', path: '/', icon: HomeIcon },
     { label: 'Discover', path: '/brand/browse-creators', icon: DiscoverIcon },
     { label: 'Messages', path: '/messages', icon: MessagesIcon },
-    { label: 'Openings', path: '/brand/openings', icon: OpeningsIcon },
+    { label: 'Campaigns', path: '/brand/openings', icon: CampaignsIcon },
     { label: 'Profile', path: '/brand/profile', icon: ProfileIcon },
   ];
 
@@ -122,31 +118,62 @@ const BottomNav = () => {
 
   return (
     <nav
-      className="hide-on-desktop fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="hide-on-desktop"
+      style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 9999,
+        backgroundColor: 'white',
+        borderTop: '1px solid #E5E7EB',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        transform: 'translate3d(0,0,0)',
+        WebkitTransform: 'translate3d(0,0,0)',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
+      }}
     >
-      <div className="flex items-stretch h-16">
+      <div style={{
+        display: 'flex',
+        height: '60px',
+        width: '100%',
+        overflowX: 'hidden', // prevent horizontal scroll
+        overflowY: 'hidden',
+      }}>
         {tabs.map(({ label, path, icon: Icon }) => {
           const active = isActive(path);
+          const isMessages = label === 'Messages';
+          const hasUnread = isMessages && unreadCount > 0;
+
           return (
             <button
               key={path}
               onClick={() => navigate(path)}
-              className="flex-1 flex flex-col items-center justify-center gap-1 transition-colors"
               style={{
-                color: label === 'Messages' && unreadCount > 0 ? 'white' : active ? '#1A2E4A' : '#9CA3AF',
-                position: 'relative',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '3px',
+                border: 'none',
+                background: 'none',
+                cursor: 'pointer',
+                color: hasUnread ? 'white' : active ? '#101828' : '#9CA3AF',
+                padding: '0 4px',
+                minWidth: 0, // allow shrinking
               }}
             >
               <div style={{
                 position: 'relative',
-                backgroundColor: label === 'Messages' && unreadCount > 0 ? '#EF4444' : 'transparent',
+                backgroundColor: hasUnread ? '#EF4444' : 'transparent',
                 borderRadius: '12px',
-                padding: label === 'Messages' && unreadCount > 0 ? '4px 8px' : '0',
+                padding: hasUnread ? '4px 8px' : '0',
                 transition: 'all 0.2s',
               }}>
                 <Icon active={active} />
-                {label === 'Messages' && unreadCount > 0 && (
+                {hasUnread && (
                   <span style={{
                     position: 'absolute',
                     top: '-4px',
@@ -165,7 +192,15 @@ const BottomNav = () => {
                   </span>
                 )}
               </div>
-              <span style={{ fontSize: '10px', fontWeight: 500, letterSpacing: '0.02em' }}>
+              <span style={{
+                fontSize: '9px',
+                fontWeight: 500,
+                letterSpacing: '0.02em',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '100%',
+              }}>
                 {label}
               </span>
             </button>

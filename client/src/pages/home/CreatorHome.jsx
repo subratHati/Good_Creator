@@ -145,7 +145,7 @@ const OpeningCard = ({ opening, size = 'md', onClick }) => {
 
       <div style={{ padding: size === 'sm' ? '8px' : '12px' }}>
         {/* brand name */}
-        <div style={{ fontWeight: 900, fontSize: size === 'sm' ? '11px' : '14px', color: '#0F172A', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ fontWeight: 700, fontSize: size === 'sm' ? '13px' : '15px', color: '#16A34A', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {opening.brandId?.brandName || 'Brand'}
         </div>
 
@@ -159,8 +159,8 @@ const OpeningCard = ({ opening, size = 'md', onClick }) => {
           <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
             {boxes.map((b, i) => (
               <div key={i} style={{ flex: 1, backgroundColor: '#F8FAFF', border: '1.5px solid #DBEAFE', borderRadius: '8px', padding: size === 'sm' ? '3px 2px' : '5px 4px', textAlign: 'center' }}>
-                <div style={{ fontSize: size === 'sm' ? '8px' : '9px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '2px' }}>{b.type}</div>
-                <div style={{ fontSize: size === 'sm' ? '12px' : '15px', fontWeight: 800, color: '#1E3A8A', lineHeight: 1 }}>{b.qty}</div>
+                <div style={{ fontSize: size === 'sm' ? '9px' : '9px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '2px' }}>{b.type}</div>
+                <div style={{ fontSize: size === 'sm' ? '14px' : '15px', fontWeight: 800, color: '#1E3A8A', lineHeight: 1 }}>{b.qty}</div>
               </div>
             ))}
           </div>
