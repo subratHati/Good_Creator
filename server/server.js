@@ -28,6 +28,8 @@ const server = http.createServer(app);
 const allowedOrigins = [
   'http://localhost:5173',
   process.env.CLIENT_URL,
+  process.env.CLIENT_URL_WWW,
+  process.env.CLIENT_URL_VERCEL,
 ].filter(Boolean);
 
 const io = new Server(server, {
@@ -60,6 +62,8 @@ app.use(cors({
     const allowed = [
       'http://localhost:5173',
       process.env.CLIENT_URL,
+      process.env.CLIENT_URL_WWW,
+      process.env.CLIENT_URL_VERCEL,
     ].filter(Boolean);
     if (!origin || allowed.includes(origin)) {
       callback(null, true);
