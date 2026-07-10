@@ -1,107 +1,34 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell } from 'lucide-react';
-import axiosInstance from '../api/axiosInstance';
 import useAuth from '../hooks/useAuth';
+import useNotifications from '../hooks/useNotifications';
 
 const NotificationBell = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const panelRef = useRef(null);
-
-  const getLastSeenTime = () => {
+  const [lastSeen, setLastSeen] = useState(() => {
     const stored = localStorage.getItem(`notif_seen_${user?.id}`);
     return stored ? new Date(stored) : new Date(0);
-  };
+  });
+  const panelRef = useRef(null);
+
+  const { notifications, refetch } = useNotifications({ limit: 10, pollIntervalMs: 60000 });
+
+  // derive unread status from lastSeen locally, same as before —
+  // this keeps the shared hook itself free of per-user seen-state
+  const notificationsWithUnread = notifications.map((n) => ({
+    ...n,
+    unread: new Date(n.time) > lastSeen,
+  }));
+  const unreadCount = notificationsWithUnread.filter((n) => n.unread).length;
 
   const markAllSeen = () => {
-    localStorage.setItem(`notif_seen_${user?.id}`, new Date().toISOString());
-    setUnreadCount(0);
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    const now = new Date();
+    localStorage.setItem(`notif_seen_${user?.id}`, now.toISOString());
+    setLastSeen(now);
   };
-
-  const fetchNotifications = async () => {
-    if (!user) return;
-    const lastSeen = getLastSeenTime();
-
-    try {
-      const items = [];
-
-      if (user.role === 'creator') {
-        const enquiryRes = await axiosInstance.get('/enquiries/received');
-        const enquiries = enquiryRes.data.enquiries || [];
-        enquiries.forEach((e) => {
-          items.push({
-            id: e._id,
-            type: 'enquiry',
-            title: `${e.brandId?.brandName || 'A brand'} sent you an enquiry`,
-            preview: e.message?.slice(0, 60) + (e.message?.length > 60 ? '...' : ''),
-            unread: new Date(e.createdAt) > lastSeen,
-            time: e.createdAt,
-            action: () => { navigate('/creator/enquiries'); setOpen(false); },
-          });
-        });
-
-        const appRes = await axiosInstance.get('/applications/my');
-        const apps = appRes.data.applications || [];
-        apps.filter(a => a.status === 'shortlisted' || a.status === 'viewed').forEach((a) => {
-          items.push({
-            id: a._id + '_app',
-            type: 'application',
-            title: a.status === 'shortlisted'
-              ? `🎉 ${a.brandId?.brandName || 'Brand'} shortlisted you`
-              : `${a.brandId?.brandName || 'Brand'} viewed your application`,
-            preview: a.openingId?.title || 'Opening',
-            unread: new Date(a.updatedAt || a.createdAt) > lastSeen,
-            time: a.updatedAt || a.createdAt,
-            action: () => { navigate('/creator/applications'); setOpen(false); },
-          });
-        });
-      }
-
-      if (user.role === 'brand') {
-        const openingsRes = await axiosInstance.get('/openings/my');
-        const openings = openingsRes.data.openings || [];
-
-        for (const opening of openings.slice(0, 5)) {
-          try {
-            const appRes = await axiosInstance.get(`/applications/opening/${opening._id}`);
-            const apps = appRes.data.applications || [];
-            const pending = apps.filter(a => a.status === 'pending');
-            if (pending.length > 0) {
-              const newestApp = pending[0];
-              items.push({
-                id: opening._id + '_apps',
-                type: 'application',
-                title: `${pending.length} new application${pending.length > 1 ? 's' : ''} on "${opening.title}"`,
-                preview: pending.map(a => a.creatorId?.name || 'Creator').slice(0, 2).join(', '),
-                unread: new Date(newestApp.createdAt) > lastSeen,
-                time: newestApp.createdAt,
-                action: () => { navigate(`/brand/openings/${opening._id}/applicants`); setOpen(false); },
-              });
-            }
-          } catch {
-            // skip
-          }
-        }
-      }
-
-      items.sort((a, b) => new Date(b.time) - new Date(a.time));
-      setNotifications(items.slice(0, 10));
-      setUnreadCount(items.filter(n => n.unread).length);
-    } catch {
-      // silent
-    }
-  };
-
-  useEffect(() => {
-    fetchNotifications();
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
-  }, [user]);
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -115,11 +42,16 @@ const NotificationBell = () => {
 
   const handleOpen = () => {
     if (!open) {
-      fetchNotifications();
+      refetch();
       // mark all as seen when opening the panel
       setTimeout(markAllSeen, 1500);
     }
     setOpen(!open);
+  };
+
+  const handleNotificationClick = (n) => {
+    navigate(n.action.path);
+    setOpen(false);
   };
 
   const timeAgo = (date) => {
@@ -161,17 +93,17 @@ const NotificationBell = () => {
           </div>
 
           <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
+            {notificationsWithUnread.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 px-4 text-center">
                 <div className="text-3xl mb-2">🔔</div>
                 <div className="text-sm font-medium text-gray-600 mb-1">All caught up!</div>
                 <div className="text-xs text-gray-400">New activity will appear here.</div>
               </div>
             ) : (
-              notifications.map((n) => (
+              notificationsWithUnread.map((n) => (
                 <button
                   key={n.id}
-                  onClick={n.action}
+                  onClick={() => handleNotificationClick(n)}
                   className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
                     n.unread ? 'bg-blue-50/40' : ''
                   }`}

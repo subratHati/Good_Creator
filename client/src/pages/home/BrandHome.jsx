@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Plus, TrendingUp } from 'lucide-react';
+import { ArrowRight, Plus, TrendingUp, Bell } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { BrandSetupModal } from '../../components/ProfileSetupModals';
 import { getMyBrandProfile } from '../../api/brand';
 import { getMyOpenings } from '../../api/openings';
 import { searchCreators } from '../../api/creator';
 import useAuth from '../../hooks/useAuth';
+import useNotifications from '../../hooks/useNotifications';
+import CreatorCardSmall from '../../components/CreatorCardSmall';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -68,86 +70,61 @@ const CampaignPanel = ({ activeCampaigns, onPost }) => (
   </div>
 );
 
-// ─── CREATOR CARD — bold Zepto/Zomato style ───────────────────────────────────
-const avatarBgs = ['#FF6B35', '#155DFC', '#E1306C', '#16A34A', '#8B5CF6', '#F59E0B'];
+const timeAgo = (date) => {
+  if (!date) return '';
+  const diff = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+};
 
-const CreatorCard = ({ creator, size = 'md', onClick }) => {
-  const w = size === 'sm' ? '173px' : '200px';
-  const imgH = size === 'sm' ? '150px' : '160px';
-  const bgColor = avatarBgs[creator.name?.charCodeAt(0) % avatarBgs.length] || '#155DFC';
-  const engagementGood = (creator.instagram?.engagementRate || 0) >= 3;
+const NotificationsList = () => {
+  const navigate = useNavigate();
+  const { notifications, loading } = useNotifications({ limit: 8, pollIntervalMs: 60000 });
 
   return (
-    <div onClick={onClick}
-      className="flex-shrink-0 rounded-3xl overflow-hidden cursor-pointer transition-transform hover:scale-95"
-      style={{ backgroundColor: 'white', border: '1.5px solid #F0F0F0', boxShadow: `0 4px 0 0 #E5E5E5`, width: w }}>
-
-      {/* top image area — bold colored bg if no photo */}
-      <div style={{ height: imgH, width: '100%', overflow: 'hidden', backgroundColor: bgColor, position: 'relative' }}>
-        {creator.profilePhoto
-          ? <img src={creator.profilePhoto} alt={creator.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-          : (
-            <>
-              {/* abstract pattern bg */}
-              <div style={{ position: 'absolute', inset: 0, backgroundColor: bgColor }} />
-              <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '100px', height: '100px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)' }} />
-              <div style={{ position: 'absolute', bottom: '-30px', left: '-10px', width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.1)' }} />
-              {/* initials */}
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', fontWeight: 900, color: 'white', border: '3px solid rgba(255,255,255,0.4)' }}>
-                  {creator.name?.[0]?.toUpperCase() || '?'}
-                </div>
-              </div>
-            </>
-          )
-        }
-        {/* open for collab badge */}
-        <div style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: '#FACC15', borderRadius: '20px', padding: '3px 8px', boxShadow: '0 2px 0 0 #B45309' }}>
-          <span style={{ fontSize: '9px', fontWeight: 900, color: '#0F172A' }}>✓ Open</span>
+    <>
+      {loading ? (
+        <div className="flex items-center justify-center py-10 flex-1">
+          <div className="w-6 h-6 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
         </div>
-      </div>
-
-      {/* body */}
-      <div style={{ padding: size === 'sm' ? '10px' : '12px', backgroundColor: 'white' }}>
-        {/* name */}
-        <div style={{ fontWeight: 900, fontSize: size === 'sm' ? '13px' : '14px', color: '#101828', marginBottom: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {creator.name || 'Creator'}
+      ) : notifications.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-10 px-4 text-center flex-1">
+          <div className="text-2xl mb-2">🔔</div>
+          <div className="text-xs font-black text-gray-900 mb-1">All caught up!</div>
+          <div className="text-xs text-gray-400">New activity will appear here.</div>
         </div>
-        {/* handle */}
-        <div style={{ fontSize: size === 'sm' ? '10px' : '11px', color: '#9CA3AF', marginBottom: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {creator.instagram?.handle ? `@${creator.instagram.handle}` : 'No Instagram'}
+      ) : (
+        // this list scrolls independently — scrolling here does not move the page,
+        // scrolling the page (outside this box) moves this section normally with it
+        <div className="flex-1 min-h-0 divide-y divide-gray-100 overflow-y-auto">
+          {notifications.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => navigate(n.action.path)}
+              className="w-full text-left px-5 py-3 hover:bg-white transition-colors"
+            >
+              <div className="text-xs font-bold text-gray-900 leading-snug">{n.title}</div>
+              {n.preview && <div className="text-xs text-gray-400 mt-0.5 truncate">{n.preview}</div>}
+              <div className="text-xs text-gray-300 mt-1">{timeAgo(n.time)}</div>
+            </button>
+          ))}
         </div>
+      )}
 
-        {/* stat boxes */}
-        <div style={{ display: 'flex', gap: '5px', marginBottom: '8px' }}>
-          <div style={{ flex: 1, borderRadius: '10px', padding: '5px 4px', textAlign: 'center', backgroundColor: '#FACC15', boxShadow: '0 2px 0 0 #B45309' }}>
-            <div style={{ fontSize: size === 'sm' ? '14px' : '14px', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>{formatNumber(creator.instagram?.followersCount)}</div>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: '#78350F', textTransform: 'uppercase', marginTop: '2px' }}>Followers</div>
-          </div>
-          <div style={{ flex: 1, borderRadius: '10px', padding: '5px 4px', textAlign: 'center', backgroundColor: engagementGood ? '#DCFCE7' : '#FEE2E2', boxShadow: engagementGood ? '0 2px 0 0 #86EFAC' : '0 2px 0 0 #FCA5A5' }}>
-            <div style={{ fontSize: size === 'sm' ? '14px' : '14px', fontWeight: 900, color: engagementGood ? '#14532D' : '#7F1D1D', lineHeight: 1 }}>
-              {creator.instagram?.engagementRate ? `${creator.instagram.engagementRate}%` : '—'}
-            </div>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: engagementGood ? '#166534' : '#991B1B', textTransform: 'uppercase', marginTop: '2px' }}>Engage</div>
-          </div>
-        </div>
-
-        {/* category tags */}
-        {creator.categories?.length > 0 && (
-          <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', flexWrap: 'wrap' }}>
-            {creator.categories.slice(0, 2).map(cat => (
-              <span key={cat} style={{ fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '20px', backgroundColor: '#F1F5F9', color: '#475569', textTransform: 'capitalize' }}>{cat}</span>
-            ))}
-          </div>
-        )}
-
-        {/* message button */}
-        <button onClick={e => { e.stopPropagation(); onClick(); }}
-          style={{ width: '100%', padding: size === 'sm' ? '8px 0' : '9px 0', borderRadius: '12px', backgroundColor: '#155DFC', color: 'white', fontSize: size === 'sm' ? '12px' : '11px', fontWeight: 900, border: 'none', cursor: 'pointer', boxShadow: '0 3px 0 0 #0c3eb5' }}>
-          Message →
+      <div className="mt-auto px-5 py-3" style={{ borderTop: '1.5px solid #F0F0F0' }}>
+        <button
+          onClick={() => navigate('/brand/openings')}
+          className="text-xs font-black w-full text-center hover:underline"
+          style={{ color: '#155DFC' }}
+        >
+          View all activity →
         </button>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -200,7 +177,7 @@ const BrandHome = () => {
     ) : (
       <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
         {suggestedCreators.map(creator => (
-          <CreatorCard key={creator._id} creator={creator} size={size} onClick={() => navigate(`/creator/${creator._id}`)} />
+          <CreatorCardSmall key={creator._id} creator={creator} size={size} onClick={() => navigate(`/creator/${creator._id}`)} />
         ))}
       </div>
     )
@@ -291,14 +268,31 @@ const BrandHome = () => {
               </div>
             </div>
 
-            <div className="mt-12">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-lg font-black" style={{ color: '#101828' }}>
-                  {profile?.category ? `🎯 ${profile.category.charAt(0).toUpperCase() + profile.category.slice(1)} Creators` : '🎯 Featured Creators'}
-                </h2>
-                <button onClick={() => navigate('/brand/browse-creators')} className="flex items-center gap-1 text-sm font-black hover:underline" style={{ color: '#155DFC' }}>See all <ArrowRight size={14} /></button>
+            {/* Featured Creators (60%) + Notifications (40%) — separate cards, matched height */}
+            <div className="mt-12 grid gap-5" style={{ gridTemplateColumns: '60% 40%' }}>
+
+              {/* creators card */}
+              <div className="rounded-3xl overflow-hidden p-6 min-w-0 flex flex-col" style={{ border: '1.5px solid #F0F0F0', boxShadow: '0 4px 0 0 #E5E5E5' }}>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-lg font-black" style={{ color: '#101828' }}>
+                    {profile?.category ? `🎯 ${profile.category.charAt(0).toUpperCase() + profile.category.slice(1)} Creators` : '🎯 Featured Creators'}
+                  </h2>
+                  <button onClick={() => navigate('/brand/browse-creators')} className="flex items-center gap-1 text-sm font-black hover:underline" style={{ color: '#155DFC' }}>See all <ArrowRight size={14} /></button>
+                </div>
+                <CreatorCards size="md" />
               </div>
-              <CreatorCards size="md" />
+
+              {/* notifications card — its own internal scroll, section scrolls normally with the page */}
+              <div className="rounded-3xl overflow-hidden min-w-0 flex flex-col" style={{ border: '1.5px solid #F0F0F0', boxShadow: '0 4px 0 0 #E5E5E5' }}>
+                <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1.5px solid #F0F0F0' }}>
+                  <div className="flex items-center gap-2">
+                    <Bell size={15} style={{ color: '#155DFC' }} />
+                    <span className="font-black text-sm" style={{ color: '#101828' }}>Notifications</span>
+                  </div>
+                </div>
+                <NotificationsList />
+              </div>
+
             </div>
 
             <div className="mt-12">

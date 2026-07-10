@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Shirt, Sparkles, UtensilsCrossed, Laptop, Dumbbell, Sun, Plane, GraduationCap, Gamepad2, LayoutGrid, TrendingUp as TrendUp, ChevronRight } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { CreatorSetupModal } from '../../components/ProfileSetupModals';
 import { getMyCreatorProfile } from '../../api/creator';
@@ -28,6 +28,8 @@ const categoryColors = {
   other: { bg: '#E5E7EB', color: '#1F2937' },
 };
 
+
+
 const slides = [
   { src: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&q=80' },
   { src: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&q=80' },
@@ -41,6 +43,7 @@ const tips = [
   { src: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=400&q=80', emoji: '📊', title: 'Track Your Stats', desc: 'Creators who track analytics consistently grow 40% faster.' },
 ];
 
+// ─── CAROUSEL ─────────────────────────────────────────────────────────────────
 const Carousel = ({ height = 'h-full' }) => {
   const [current, setCurrent] = useState(0);
   useEffect(() => {
@@ -48,145 +51,93 @@ const Carousel = ({ height = 'h-full' }) => {
     return () => clearInterval(t);
   }, []);
   return (
-    <div className={`relative ${height} rounded-3xl overflow-hidden select-none`}>
+    <div className={`relative ${height} overflow-hidden select-none`} style={{ borderRadius: '20px' }}>
       <img src={slides[current].src} alt="slide" className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700" />
       <div className="absolute bottom-0 left-0 right-0 h-16" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 100%)' }} />
-      <div className="absolute bottom-4 left-5 flex gap-2">
+      <div className="absolute bottom-4 left-4 flex gap-1.5">
         {slides.map((_, i) => (
           <button key={i} onClick={() => setCurrent(i)}
-            className="rounded-full transition-all"
-            style={{ width: i === current ? '24px' : '8px', height: '8px', backgroundColor: i === current ? '#FFE234' : 'rgba(255,255,255,0.5)', border: 'none', cursor: 'pointer' }} />
+            style={{ width: i === current ? '20px' : '6px', height: '6px', borderRadius: '3px', backgroundColor: i === current ? '#FACC15' : 'rgba(255,255,255,0.4)', border: 'none', cursor: 'pointer', transition: 'all 0.3s' }} />
         ))}
       </div>
     </div>
   );
 };
 
+// ─── INSTAGRAM PANEL ──────────────────────────────────────────────────────────
 const InstagramPanel = ({ ig, onConnect }) => {
   const engagementGood = ig?.engagementRate >= 3;
   return (
-    <div className="rounded-3xl overflow-hidden border border-gray-100" style={{ backgroundColor: 'white' }}>
-      <div className="p-4">
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="rounded-2xl p-3 text-center" style={{ backgroundColor: '#F8FAFF' }}>
-            <div className="text-xl font-black" style={{ color: '#155DFC' }}>
-              {ig?.isConnected ? formatNumber(ig.followersCount) : '—'}
-            </div>
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Followers</div>
+    <div style={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '20px', padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+        <div style={{ backgroundColor: '#F8FAFC', borderRadius: '14px', padding: '14px 12px', textAlign: 'center', border: '1px solid #F0F0F0' }}>
+          <div style={{ fontSize: '22px', fontWeight: 900, color: '#155DFC', marginBottom: '2px' }}>
+            {ig?.isConnected ? formatNumber(ig.followersCount) : '—'}
           </div>
-          <div className="rounded-2xl p-3 text-center relative overflow-hidden" style={{ backgroundColor: '#F8FAFF' }}>
-            <div className="flex items-center justify-center gap-1">
-              <div className="text-xl font-black" style={{ color: ig?.isConnected ? (engagementGood ? '#22C55E' : '#FF3D57') : '#9CA3AF' }}>
-                {ig?.isConnected ? (ig.engagementRate ? `${ig.engagementRate}%` : '—') : '—'}
-              </div>
-              {ig?.isConnected && ig?.engagementRate && (
-                <div style={{ animation: 'bounce 1s infinite' }}>
-                  {engagementGood ? <TrendingUp size={14} color="#22C55E" /> : <TrendingDown size={14} color="#FF3D57" />}
-                </div>
-              )}
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Followers</div>
+        </div>
+        <div style={{ backgroundColor: '#F8FAFC', borderRadius: '14px', padding: '14px 12px', textAlign: 'center', border: '1px solid #F0F0F0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '2px' }}>
+            <div style={{ fontSize: '22px', fontWeight: 900, color: ig?.isConnected ? (engagementGood ? '#16A34A' : '#DC2626') : '#9CA3AF' }}>
+              {ig?.isConnected ? (ig.engagementRate ? `${ig.engagementRate}%` : '—') : '—'}
             </div>
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-0.5">Engagement</div>
             {ig?.isConnected && ig?.engagementRate && (
-              <div className="text-xs font-black mt-0.5" style={{ color: engagementGood ? '#22C55E' : '#FF3D57' }}>
-                {engagementGood ? '↑ Great!' : '↓ Improve'}
-              </div>
+              engagementGood ? <TrendingUp size={14} color="#16A34A" /> : <TrendingDown size={14} color="#DC2626" />
             )}
           </div>
+          <div style={{ fontSize: '10px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Engagement</div>
         </div>
-        {ig?.isConnected ? (
-          <div className="flex items-center justify-center gap-2 py-2.5 rounded-2xl" style={{ backgroundColor: '#F0FFF4' }}>
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#22C55E' }} />
-            <span className="text-xs font-black" style={{ color: '#166834' }}>@{ig.handle} · Instagram Connected</span>
-          </div>
-        ) : (
-          <button onClick={onConnect}
-            className="w-full py-3 rounded-2xl font-black text-white text-sm transition-opacity hover:opacity-90"
-            style={{ background: 'linear-gradient(90deg, #833AB4, #E1306C, #F77737)' }}>
-            Connect Instagram →
-          </button>
-        )}
       </div>
+      {ig?.isConnected ? (
+        <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '12px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E', flexShrink: 0 }} />
+          <span style={{ fontSize: '12px', fontWeight: 700, color: '#166534' }}>@{ig.handle} · Instagram Connected</span>
+        </div>
+      ) : (
+        <button onClick={onConnect}
+          style={{ width: '100%', padding: '13px', borderRadius: '14px', fontWeight: 900, color: 'white', fontSize: '14px', border: 'none', cursor: 'pointer', background: 'linear-gradient(90deg, #833AB4, #E1306C, #F77737)' }}>
+          Connect Instagram →
+        </button>
+      )}
       <style>{`@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }`}</style>
     </div>
   );
 };
 
-// ─── OPENING CARD — matches BrowseBrands design exactly ──────────────────────
-const OpeningCard = ({ opening, size = 'md', onClick }) => {
-  const cat = opening.brandId?.category?.toLowerCase() || 'other';
-  const catStyle = categoryColors[cat] || categoryColors.other;
-
-  const d = opening.deliverables || {};
-  const boxes = [
-    { type: 'Reel', qty: d.reels || 0 },
-    { type: 'Post', qty: d.posts || 0 },
-    { type: 'Story', qty: d.stories || 0 },
-    { type: 'UGC', qty: d.ugc || 0 },
-  ].filter(b => b.qty > 0);
-  if (boxes.length === 0 && opening.contentType) {
-    boxes.push({ type: opening.contentType.charAt(0).toUpperCase() + opening.contentType.slice(1), qty: opening.quantity || 1 });
-  }
-
-  const w = size === 'sm' ? '173px' : '200px';
-  const imgH = size === 'sm' ? '130px' : '130px';
+// ─── CATEGORY GRID ────────────────────────────────────────────────────────────
+const CategoryGrid = ({ onCategoryClick }) => {
+  const categories = [
+    { key: 'fashion', icon: Shirt },
+    { key: 'beauty', icon: Sparkles },
+    { key: 'food', icon: UtensilsCrossed },
+    { key: 'tech', icon: Laptop },
+    { key: 'fitness', icon: Dumbbell },
+    { key: 'lifestyle', icon: Sun },
+    { key: 'travel', icon: Plane },
+    { key: 'education', icon: GraduationCap },
+    { key: 'finance', icon: TrendUp },
+    { key: 'gaming', icon: Gamepad2 },
+    { key: 'other', icon: LayoutGrid },
+  ];
 
   return (
-    <div onClick={onClick}
-      className="flex-shrink-0 rounded-2xl overflow-hidden cursor-pointer transition-transform hover:scale-95"
-      style={{ backgroundColor: 'white', border: '1.5px solid #F0F0F0', boxShadow: '0 2px 0 0 #E5E5E5', width: w }}>
-
-      {/* brand image */}
-      <div style={{ height: imgH, width: '100%', overflow: 'hidden', backgroundColor: '#F0F5FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {opening.brandId?.logo
-          ? <img src={opening.brandId.logo} alt="brand" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
-          : <span style={{ fontSize: size === 'sm' ? '40px' : '52px' }}>🏷️</span>
-        }
-      </div>
-
-      <div style={{ padding: size === 'sm' ? '8px' : '12px' }}>
-        {/* brand name */}
-        <div style={{ fontWeight: 700, fontSize: size === 'sm' ? '13px' : '15px', color: '#16A34A', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {opening.brandId?.brandName || 'Brand'}
-        </div>
-
-        {/* category badge */}
-        <span style={{ display: 'inline-block', fontSize: '10px', fontWeight: 700, padding: '3px 9px', borderRadius: '20px', backgroundColor: catStyle.bg, color: catStyle.color, marginBottom: '10px', textTransform: 'capitalize' }}>
-          {opening.brandId?.category || opening.contentType || 'Brand'}
-        </span>
-
-        {/* deliverable boxes */}
-        {boxes.length > 0 && (
-          <div style={{ display: 'flex', gap: '5px', marginBottom: '10px' }}>
-            {boxes.map((b, i) => (
-              <div key={i} style={{ flex: 1, backgroundColor: '#F8FAFF', border: '1.5px solid #DBEAFE', borderRadius: '8px', padding: size === 'sm' ? '3px 2px' : '5px 4px', textAlign: 'center' }}>
-                <div style={{ fontSize: size === 'sm' ? '9px' : '9px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '2px' }}>{b.type}</div>
-                <div style={{ fontSize: size === 'sm' ? '14px' : '15px', fontWeight: 800, color: '#1E3A8A', lineHeight: 1 }}>{b.qty}</div>
-              </div>
-            ))}
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      {categories.map(({ key, icon: Icon }) => (
+        <button key={key} onClick={() => onCategoryClick(key)}
+          style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '16px', padding: '14px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'scale(0.97)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#155DFC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon size={18} color="white" strokeWidth={2} />
           </div>
-        )}
-
-        {/* price box */}
-        <div style={{ backgroundColor: '#FACC15', borderRadius: '10px', padding: '7px 10px', marginBottom: '10px', boxShadow: '0 3px 0 0 #B45309' }}>
-          <div style={{ fontSize: size === 'sm' ? '11px' : '14px', fontWeight: 900, color: '#0F172A' }}>
-            {opening.budgetMin > 0 && opening.budgetMax > 0
-              ? `₹${opening.budgetMin.toLocaleString('en-IN')} – ₹${opening.budgetMax.toLocaleString('en-IN')}`
-              : opening.budgetMax > 0
-                ? `Up to ₹${opening.budgetMax.toLocaleString('en-IN')}`
-                : 'Budget on discussion'
-            }
-          </div>
-        </div>
-
-        {/* apply button */}
-        <button style={{ width: '100%', padding: size === 'sm' ? '6px 0' : '9px 0', borderRadius: '12px', backgroundColor: '#155DFC', color: 'white', fontSize: size === 'sm' ? '10px' : '11px', fontWeight: 900, border: 'none', cursor: 'pointer', boxShadow: '0 3px 0 0 #0C3EB5' }}>
-          Apply Now
+          <span style={{ fontSize: '13px', fontWeight: 800, color: '#101828', textTransform: 'capitalize' }}>{key}</span>
         </button>
-      </div>
+      ))}
     </div>
   );
 };
 
+// ─── MAIN ─────────────────────────────────────────────────────────────────────
 const CreatorHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -199,7 +150,6 @@ const CreatorHome = () => {
     const fetchAll = async () => {
       try {
         const [profileRes] = await Promise.allSettled([getMyCreatorProfile()]);
-
         let creatorProfile = null;
         if (profileRes.status === 'fulfilled') {
           creatorProfile = profileRes.value.data.creator;
@@ -209,8 +159,6 @@ const CreatorHome = () => {
           setProfile(null);
           setShowSetupModal(true);
         }
-
-        // fetch openings personalized by creator categories
         const categories = creatorProfile?.categories?.join(',') || '';
         const openingsRes = await searchOpenings({ limit: 6, ...(categories ? { categories } : {}) });
         setOpenings(openingsRes.data.openings?.slice(0, 6) || []);
@@ -222,103 +170,104 @@ const CreatorHome = () => {
 
   const ig = profile?.instagram;
 
+  const handleCategoryClick = (cat) => {
+    navigate(`/creator/browse-brands?category=${cat}`);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
         <Navbar />
         <div className="flex items-center justify-center h-96">
-          <div className="w-10 h-10 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
+          <div className="w-10 h-10 rounded-full animate-spin" style={{ border: '3px solid #F0F0F0', borderTopColor: '#155DFC' }} />
         </div>
       </div>
     );
   }
 
-  const OpeningCards = ({ size = 'md' }) => (
-    openings.length === 0 ? (
-      <div className="rounded-2xl p-8 text-center border-2 border-dashed border-gray-100">
-        <div className="text-3xl mb-2">📋</div>
-        <div className="font-black text-gray-900 text-sm">No openings yet</div>
-        <div className="text-xs text-gray-400 mt-1">Brands are posting daily — check back soon!</div>
-      </div>
-    ) : (
-      <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-        {openings.map(opening => (
-          <OpeningCard key={opening._id} opening={opening} size={size} onClick={() => navigate('/creator/browse-brands')} />
-        ))}
-      </div>
-    )
-  );
-
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen" style={{ backgroundColor: '#F8FAFC' }}>
       <Navbar />
 
       {/* ══ MOBILE ══ */}
-      <div className="md:hidden">
-        <div style={{ backgroundColor: '#101828', borderBottomLeftRadius: '32px', borderBottomRightRadius: '32px', boxShadow: '0 12px 40px rgba(0,0,0,0.15)' }} className="px-4 pt-4 pb-6 space-y-3">
-          <div style={{ height: '28vh' }}>
+      <div className="md:hidden" style={{ position: 'relative' }}>
+
+        {/* dark hero — fixed behind */}
+        <div style={{ backgroundColor: '#101828', padding: '16px 16px 28px', position: 'sticky', top: '56px', zIndex: 0 }}>
+          <div style={{ height: '28vh', marginBottom: '20px' }}>
             <Carousel height="h-full" />
           </div>
-          <div className="text-center py-2">
+          <div style={{ textAlign: 'center' }}>
             <button onClick={() => navigate('/creator/browse-brands')}
-              className="inline-block text-xs font-black px-3 py-1.5 rounded-full mb-3"
-              style={{ backgroundColor: '#155DFC', color: 'white' }}>
+              style={{ display: 'inline-block', backgroundColor: '#155DFC', color: 'white', fontSize: '12px', fontWeight: 800, padding: '6px 16px', borderRadius: '99px', border: 'none', cursor: 'pointer', marginBottom: '12px', boxShadow: '0 3px 0 0 #0C3EB5' }}>
               Brand Deals →
             </button>
-            <h2 className="text-xl font-black text-white leading-tight mb-2">Get Discovered by<br />Top Indian Brands</h2>
-            <p className="text-xs font-medium mx-auto" style={{ color: 'rgba(255,255,255,0.6)', maxWidth: '260px' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'white', lineHeight: 1.25, marginBottom: '8px', letterSpacing: '-0.3px' }}>
+              Get Discovered by<br />Top Indian Brands
+            </h2>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', maxWidth: '260px', margin: '0 auto', marginBottom: '8px' }}>
               1,000+ creators landing paid collabs every month on GoodCreator
             </p>
           </div>
         </div>
 
-        <div className="bg-white px-4 pt-4 pb-24 space-y-6">
-          <InstagramPanel ig={ig} onConnect={() => navigate('/creator/profile')} />
+        {/* white card slides up */}
+        <div style={{ backgroundColor: 'white', borderRadius: '28px 28px 0 0', padding: '24px 16px 100px', marginTop: '-28px', position: 'relative', zIndex: 2 }}>
 
-          <div>
+          {/* instagram panel */}
+          <div style={{ marginBottom: '24px' }}>
+            <InstagramPanel ig={ig} onConnect={() => navigate('/creator/profile')} />
+          </div>
 
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-black" style={{ color: '#101828' }}>Brands Hiring Now</h2>
-              <button onClick={() => navigate('/creator/browse-brands')} className="flex items-center gap-1 text-xs font-black" style={{ color: '#155DFC' }}>
+          {/* ── CATEGORY SECTION (replaces Brands Hiring Now) ── */}
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div style={{ fontSize: '16px', fontWeight: 900, color: '#101828' }}> Browse by Category</div>
+              <button onClick={() => navigate('/creator/browse-brands')}
+                style={{ fontSize: '12px', fontWeight: 700, color: '#155DFC', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}>
                 See all <ArrowRight size={12} />
               </button>
             </div>
-            <OpeningCards size="sm" />
+            <CategoryGrid onCategoryClick={handleCategoryClick} />
           </div>
 
-          <div>
-            <div className="text-xs font-black uppercase tracking-widest mb-0.5" style={{ color: '#155DFC' }}>Creator Academy</div>
-            <h2 className="text-xl font-black mb-3" style={{ color: '#101828' }}>Level Up Your Content</h2>
+          {/* creator academy */}
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#155DFC', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>Creator Academy</div>
+            <div style={{ fontSize: '18px', fontWeight: 900, color: '#101828', marginBottom: '14px' }}>Level Up Your Content</div>
             <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
               {tips.map((tip, i) => (
-                <div key={i} className="flex-shrink-0 w-44 rounded-2xl overflow-hidden" style={{ border: '1.5px solid #F0F0F0', boxShadow: '0 2px 0 0 #E5E5E5' }}>
-                  <div className="h-28 overflow-hidden">
-                    <img src={tip.src} alt={tip.title} className="w-full h-full object-cover" />
+                <div key={i} className="flex-shrink-0" style={{ width: '150px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                  <div style={{ height: '90px', overflow: 'hidden' }}>
+                    <img src={tip.src} alt={tip.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
-                  <div className="p-3 bg-white">
-                    <div className="text-lg mb-1">{tip.emoji}</div>
-                    <div className="font-black text-xs" style={{ color: '#101828' }}>{tip.title}</div>
-                    <div className="text-xs text-gray-400 mt-1 line-clamp-2">{tip.desc}</div>
+                  <div style={{ padding: '10px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '16px' }}>{tip.emoji}</span>
+                    </div>
+                    <div style={{ fontSize: '11px', fontWeight: 900, color: '#101828', marginBottom: '3px' }}>{tip.title}</div>
+                    <div style={{ fontSize: '10px', color: '#6B7280', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{tip.desc}</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-3xl overflow-hidden relative" style={{ backgroundColor: '#101828' }}>
+          {/* motivational banner */}
+          <div style={{ backgroundColor: '#101828', borderRadius: '20px', overflow: 'hidden', position: 'relative', padding: '24px 20px' }}>
             <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80" alt="creators"
-              className="absolute inset-0 w-full h-full object-cover opacity-20" />
-            <div className="relative z-10 p-6">
-              <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>You've got this 💪</div>
-              <h2 className="text-xl font-black text-white leading-tight mb-2">Your next viral<br />collab starts here 🚀</h2>
-              <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.6)' }}>Join 1,000+ creators landing brand deals every month.</p>
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.15 }} />
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>You've got this</div>
+              <div style={{ fontSize: '20px', fontWeight: 900, color: 'white', lineHeight: 1.25, marginBottom: '6px' }}>Your next viral<br />collab starts here</div>
+              <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginBottom: '16px' }}>Join 1,000+ creators landing brand deals every month.</p>
               <button onClick={() => navigate('/creator/browse-brands')}
-                className="w-full py-3 rounded-2xl font-black text-sm text-white"
-                style={{ backgroundColor: '#155DFC' }}>
-                Find Brand Deals →
+                style={{ padding: '12px 24px', backgroundColor: '#155DFC', color: 'white', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 3px 0 0 #0C3EB5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                Find Brand Deals <ArrowRight size={14} />
               </button>
             </div>
           </div>
+
         </div>
       </div>
 
@@ -336,69 +285,95 @@ const CreatorHome = () => {
               </div>
               <div className="flex gap-3">
                 <button onClick={() => navigate('/creator/browse-brands')}
-                  className="flex-1 py-4 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2 transition-transform hover:scale-95"
-                  style={{ backgroundColor: '#155DFC' }}>
+                  className="flex-1 flex items-center justify-center gap-2 transition-transform hover:scale-95"
+                  style={{ padding: '16px', backgroundColor: '#155DFC', color: 'white', border: 'none', borderRadius: '16px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 0 0 #0C3EB5' }}>
                   Find Brand Deals 🚀
                 </button>
                 <button onClick={() => navigate('/creator/profile')}
-                  className="px-6 py-4 rounded-2xl font-black text-sm flex items-center gap-1 transition-transform hover:scale-95"
-                  style={{ backgroundColor: 'white', color: '#101828', border: '2px solid #101828' }}>
+                  className="flex items-center gap-1 transition-transform hover:scale-95"
+                  style={{ padding: '16px 24px', backgroundColor: 'white', color: '#101828', border: '1.5px solid #E5E7EB', borderRadius: '16px', fontSize: '14px', fontWeight: 900, cursor: 'pointer' }}>
                   Edit Profile <ArrowRight size={14} />
                 </button>
               </div>
             </div>
           </div>
 
-          <div className="mt-12">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-2xl font-black" style={{ color: '#101828' }}>Brands Hiring Now</h3>
-              <button onClick={() => navigate('/creator/browse-brands')} className="flex items-center gap-1 text-sm font-black hover:underline" style={{ color: '#155DFC' }}>
-                See all <ArrowRight size={14} />
+          {/* ── CATEGORY SECTION (replaces Brands Hiring Now) ── */}
+          <div style={{ marginTop: '48px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <div style={{ fontSize: '24px', fontWeight: 900, color: '#101828' }}>Browse by Category</div>
+              <button onClick={() => navigate('/creator/browse-brands')}
+                style={{ fontSize: '13px', fontWeight: 700, color: '#155DFC', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                See all <ArrowRight size={13} />
               </button>
             </div>
-            <OpeningCards size="md" />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+              {[
+                { key: 'fashion', icon: Shirt },
+                { key: 'beauty', icon: Sparkles },
+                { key: 'food', icon: UtensilsCrossed },
+                { key: 'tech', icon: Laptop },
+                { key: 'fitness', icon: Dumbbell },
+                { key: 'lifestyle', icon: Sun },
+                { key: 'travel', icon: Plane },
+                { key: 'education', icon: GraduationCap },
+                { key: 'finance', icon: TrendUp },
+                { key: 'gaming', icon: Gamepad2 },
+                { key: 'other', icon: LayoutGrid },
+              ].map(({ key, icon: Icon }) => (
+                <button key={key} onClick={() => handleCategoryClick(key)}
+                  style={{ backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: '16px', padding: '18px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', textAlign: 'left', transition: 'transform 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(0.97)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#155DFC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon size={20} color="white" strokeWidth={2} />
+                  </div>
+                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#101828', textTransform: 'capitalize' }}>{key}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="mt-12">
-            <div className="mb-5">
-              <div className="text-xs font-black uppercase tracking-widest mb-1" style={{ color: '#155DFC' }}>Creator Academy</div>
-              <h2 className="text-2xl font-black" style={{ color: '#101828' }}>Level Up Your Content</h2>
+          {/* creator academy */}
+          <div style={{ marginTop: '48px' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: '#155DFC', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>Creator Academy</div>
+              <div style={{ fontSize: '24px', fontWeight: 900, color: '#101828' }}>Level Up Your Content</div>
             </div>
             <div className="grid grid-cols-4 gap-4">
               {tips.map((tip, i) => (
-                <div key={i} className="rounded-3xl overflow-hidden cursor-pointer transition-transform hover:scale-95"
-                  style={{ border: '1.5px solid #F0F0F0', boxShadow: '0 4px 0 0 #E5E5E5' }}>
-                  <div className="h-36 overflow-hidden">
-                    <img src={tip.src} alt={tip.title} className="w-full h-full object-cover" />
+                <div key={i} className="cursor-pointer transition-transform hover:scale-95"
+                  style={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+                  <div style={{ height: '140px', overflow: 'hidden' }}>
+                    <img src={tip.src} alt={tip.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
-                  <div className="p-4 bg-white">
-                    <div className="text-2xl mb-2">{tip.emoji}</div>
-                    <div className="font-black text-sm mb-1" style={{ color: '#101828' }}>{tip.title}</div>
-                    <div className="text-xs text-gray-400 leading-relaxed mb-3">{tip.desc}</div>
-                    <div className="flex items-center gap-1 text-xs font-black" style={{ color: '#155DFC' }}>Read More <ArrowRight size={11} /></div>
+                  <div style={{ padding: '16px' }}>
+                    <div style={{ fontSize: '24px', marginBottom: '8px' }}>{tip.emoji}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 900, color: '#101828', marginBottom: '4px' }}>{tip.title}</div>
+                    <div style={{ fontSize: '12px', color: '#6B7280', lineHeight: 1.5, marginBottom: '12px' }}>{tip.desc}</div>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#155DFC', display: 'flex', alignItems: 'center', gap: '4px' }}>Read More <ArrowRight size={11} /></div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="mt-12 rounded-3xl overflow-hidden relative" style={{ backgroundColor: '#101828' }}>
-            <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&q=80" alt="creators collaborating"
-              className="absolute inset-0 w-full h-full object-cover opacity-25" />
-            <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(16,24,40,0.95) 40%, rgba(16,24,40,0.4) 100%)' }} />
-            <div className="relative z-10 p-10">
-              <div className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.5)' }}>You've got this 💪</div>
-              <h2 className="text-3xl font-black text-white leading-tight mb-3">Your next viral collab<br />starts here 🚀</h2>
-              <p className="text-sm mb-6" style={{ color: 'rgba(255,255,255,0.6)' }}>Join 1,000+ creators landing brand deals on GoodCreator every month.</p>
-              <div className="flex gap-3">
+          {/* banner */}
+          <div style={{ marginTop: '48px', backgroundColor: '#101828', borderRadius: '24px', overflow: 'hidden', position: 'relative' }}>
+            <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&q=80" alt="creators"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.2 }} />
+            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(16,24,40,0.95) 40%, rgba(16,24,40,0.4) 100%)' }} />
+            <div style={{ position: 'relative', zIndex: 1, padding: '48px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '10px' }}>You've got this</div>
+              <h2 style={{ fontSize: '32px', fontWeight: 900, color: 'white', lineHeight: 1.2, marginBottom: '10px', letterSpacing: '-0.5px' }}>Your next viral collab<br />starts here</h2>
+              <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', marginBottom: '24px' }}>Join 1,000+ creators landing brand deals on GoodCreator every month.</p>
+              <div style={{ display: 'flex', gap: '12px' }}>
                 <button onClick={() => navigate('/creator/browse-brands')}
-                  className="px-6 py-3 rounded-2xl font-black text-sm text-white transition-transform hover:scale-95"
-                  style={{ backgroundColor: '#155DFC' }}>
+                  style={{ padding: '14px 28px', backgroundColor: '#155DFC', color: 'white', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 0 0 #0C3EB5' }}>
                   Find Brand Deals
                 </button>
                 <button onClick={() => navigate('/creator/profile')}
-                  className="px-6 py-3 rounded-2xl font-black text-sm transition-transform hover:scale-95"
-                  style={{ border: '2px solid rgba(255,255,255,0.3)', color: 'white', backgroundColor: 'rgba(255,255,255,0.1)' }}>
+                  style={{ padding: '14px 28px', backgroundColor: 'rgba(255,255,255,0.1)', color: 'white', border: '1.5px solid rgba(255,255,255,0.2)', borderRadius: '14px', fontSize: '14px', fontWeight: 900, cursor: 'pointer' }}>
                   Complete Profile
                 </button>
               </div>

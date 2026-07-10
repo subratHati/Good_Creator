@@ -8,6 +8,8 @@ const connectDB = require("./config/db");
 const http = require("http");
 const { Server } = require("socket.io");
 
+require('./jobs/cleanupUnverifiedUsers')();
+
 const authRoutes = require("./routes/auth.routes");
 const creatorRoutes = require("./routes/creator.routes");
 const brandRoutes = require("./routes/brand.routes");

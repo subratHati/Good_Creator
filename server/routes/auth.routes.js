@@ -1,9 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const { body } = require('express-validator');
-
-const { register, login, getMe } = require('../controllers/auth.controller');
 const { protect } = require('../middleware/auth.middleware');
+
+const {
+  register,
+  verifyOtp,
+  resendOtp,
+  login,
+  forgotPassword,
+  resetPassword,
+  getMe,
+} = require('../controllers/auth.controller');
 
 const registerValidation = [
   body('email').isEmail().withMessage('Enter a valid email'),
@@ -17,7 +25,11 @@ const loginValidation = [
 ];
 
 router.post('/register', registerValidation, register);
+router.post('/verify-otp', verifyOtp);
+router.post('/resend-otp', resendOtp);
 router.post('/login', loginValidation, login);
+router.post('/forgot-password', forgotPassword);
+router.post('/reset-password', resetPassword);
 router.get('/me', protect, getMe);
 
 module.exports = router;

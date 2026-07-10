@@ -10,6 +10,7 @@ import ChatWindow from './pages/messages/ChatWindow';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import InstagramCallback from './pages/auth/InstagramCallback';
+import ForgotPassword from './pages/auth/ForgotPassword';
 
 //Navbar
 import BottomNav from './components/BottomNav';
@@ -20,6 +21,7 @@ import CreatorProfile from './pages/creator/CreatorProfile';
 import BrowseBrands from './pages/creator/BrowseBrands';
 import MyApplications from './pages/creator/MyApplications';
 import CreatorEnquiries from './pages/creator/CreatorEnquiries';
+import BankDetails from './pages/creator/BankDetails';
 
 // brand
 import BrandDashboard from './pages/brand/BrandDashboard';
@@ -45,6 +47,7 @@ const App = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
           {/* instagram oauth callback */}
           <Route path="/auth/instagram/callback" element={<InstagramCallback />} />
@@ -69,6 +72,10 @@ const App = () => {
           <Route path="/creator/enquiries" element={
             <ProtectedRoute allowedRole="creator"><CreatorEnquiries /></ProtectedRoute>
           } />
+
+          <Route path="/creator/bank-details" element={
+           <ProtectedRoute allowedRole="creator" > <BankDetails /> </ProtectedRoute> 
+            } />
 
           {/* brand */}
           <Route path="/brand/dashboard" element={

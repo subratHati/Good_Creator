@@ -8,3 +8,8 @@ export const loginUser = (data) =>
 
 // export const getMe = () =>
 //   axiosInstance.get('/auth/me');
+
+export const verifyOtp = (data) => axiosInstance.post('/auth/verify-otp', data);
+export const resendOtp = (data) => axiosInstance.post('/auth/resend-otp', data);
+export const forgotPassword = (data) => axiosInstance.post('/auth/forgot-password', data);
+export const resetPassword = (data) => axiosInstance.post('/auth/reset-password', data);

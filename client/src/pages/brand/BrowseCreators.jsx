@@ -4,6 +4,7 @@ import { SlidersHorizontal, X, Bookmark } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { searchCreators } from '../../api/creator';
 import { saveCreator, getSavedCreators } from '../../api/brand';
+import CreatorCard from '../../components/CreatorCard';
 import toast from 'react-hot-toast';
 
 const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'other'];
@@ -15,108 +16,7 @@ const formatNumber = (num) => {
   return num.toString();
 };
 
-const avatarBgs = ['#FF6B35', '#155DFC', '#E1306C', '#16A34A', '#8B5CF6', '#F59E0B', '#0EA5E9', '#EC4899'];
 
-// ─── CREATOR CARD — bold Zepto/Blinkit style ─────────────────────────────────
-const CreatorCard = ({ creator, onSave, saved, onClick }) => {
-  const bgColor = avatarBgs[creator.name?.charCodeAt(0) % avatarBgs.length] || '#155DFC';
-  const engagementGood = (creator.instagram?.engagementRate || 0) >= 3;
-
-  return (
-    <div onClick={onClick}
-      className="rounded-3xl overflow-hidden cursor-pointer transition-transform hover:scale-95 relative"
-      style={{ backgroundColor: 'white', border: '1.5px solid #F0F0F0', boxShadow: '0 4px 0 0 #E5E5E5' }}>
-
-      {/* save button */}
-      <button onClick={e => { e.stopPropagation(); onSave(creator._id); }}
-        className="absolute top-3 right-3 z-10 w-7 h-7 rounded-full flex items-center justify-center transition-all"
-        style={{ backgroundColor: saved ? '#FEE2E2' : 'rgba(255,255,255,0.9)', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }}>
-        <Bookmark size={13} fill={saved ? '#EF4444' : 'none'} color={saved ? '#EF4444' : '#9CA3AF'} />
-      </button>
-
-      {/* top image / colored bg */}
-      <div style={{ height: '140px', width: '100%', overflow: 'hidden', backgroundColor: bgColor, position: 'relative' }}>
-        {creator.profilePhoto
-          ? <img src={creator.profilePhoto} alt={creator.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-          : (
-            <>
-              <div style={{ position: 'absolute', top: '-20px', right: '-20px', width: '110px', height: '110px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.12)' }} />
-              <div style={{ position: 'absolute', bottom: '-25px', left: '-15px', width: '90px', height: '90px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.08)' }} />
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: '70px', height: '70px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '30px', fontWeight: 900, color: 'white', border: '3px solid rgba(255,255,255,0.4)' }}>
-                  {creator.name?.[0]?.toUpperCase() || '?'}
-                </div>
-              </div>
-            </>
-          )
-        }
-        {/* open badge */}
-        <div style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: '#FACC15', borderRadius: '20px', padding: '3px 8px', boxShadow: '0 2px 0 0 #B45309' }}>
-          <span style={{ fontSize: '9px', fontWeight: 900, color: '#0F172A' }}>
-            {creator.isOpenForCollab ? '✓ Open' : '✗ Closed'}
-          </span>
-        </div>
-      </div>
-
-      {/* body */}
-      <div style={{ padding: '10px' }}>
-        {/* name */}
-        <div style={{ fontWeight: 900, fontSize: '13px', color: '#101828', marginBottom: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {creator.name || 'Creator'}
-          {creator.isAdminVerified && <span style={{ color: '#155DFC', marginLeft: '4px', fontSize: '11px' }}>✓</span>}
-        </div>
-        {/* handle */}
-        <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {creator.instagram?.handle ? `@${creator.instagram.handle}` : 'No Instagram'}
-        </div>
-
-        {/* stat boxes row */}
-        <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
-          {/* followers */}
-          <div style={{ flex: 1, borderRadius: '8px', padding: '4px 3px', textAlign: 'center', backgroundColor: '#FACC15', boxShadow: '0 2px 0 0 #B45309' }}>
-            <div style={{ fontSize: '14px', fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>{formatNumber(creator.instagram?.followersCount)}</div>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: '#78350F', textTransform: 'uppercase', marginTop: '2px' }}>Followers</div>
-          </div>
-          {/* engagement */}
-          <div style={{ flex: 1, borderRadius: '8px', padding: '4px 3px', textAlign: 'center', backgroundColor: engagementGood ? '#DCFCE7' : '#FEE2E2', boxShadow: engagementGood ? '0 2px 0 0 #86EFAC' : '0 2px 0 0 #FCA5A5' }}>
-            <div style={{ fontSize: '14px', fontWeight: 900, color: engagementGood ? '#14532D' : '#7F1D1D', lineHeight: 1 }}>
-              {creator.instagram?.engagementRate ? `${creator.instagram.engagementRate}%` : '—'}
-            </div>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: engagementGood ? '#166534' : '#991B1B', textTransform: 'uppercase', marginTop: '2px' }}>Engage</div>
-          </div>
-          {/* avg views */}
-          <div style={{ flex: 1, borderRadius: '8px', padding: '4px 3px', textAlign: 'center', backgroundColor: '#EFF6FF', boxShadow: '0 2px 0 0 #BFDBFE' }}>
-            <div style={{ fontSize: '14px', fontWeight: 900, color: '#1E3A8A', lineHeight: 1 }}>{formatNumber(creator.instagram?.avgViews)}</div>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: '#1D4ED8', textTransform: 'uppercase', marginTop: '2px' }}>Views</div>
-          </div>
-        </div>
-
-        {/* category tags */}
-        {creator.categories?.length > 0 && (
-          <div style={{ display: 'flex', gap: '3px', marginBottom: '8px', flexWrap: 'wrap' }}>
-            {creator.categories.slice(0, 2).map(cat => (
-              <span key={cat} style={{ fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '20px', backgroundColor: '#F1F5F9', color: '#475569', textTransform: 'capitalize' }}>{cat}</span>
-            ))}
-          </div>
-        )}
-
-        {/* price */}
-        <div style={{ backgroundColor: '#F8FAFF', borderRadius: '8px', padding: '5px 8px', marginBottom: '8px', border: '1px solid #DBEAFE' }}>
-          <div style={{ fontSize: '8px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: '1px' }}>Starting from</div>
-          <div style={{ fontSize: '13px', fontWeight: 900, color: '#155DFC' }}>
-            {creator.pricing?.reel > 0 ? `₹${creator.pricing.reel.toLocaleString('en-IN')}` : 'Negotiable'}
-          </div>
-        </div>
-
-        {/* message button */}
-        <button onClick={e => { e.stopPropagation(); onClick(); }}
-          style={{ width: '100%', padding: '8px 0', borderRadius: '12px', backgroundColor: '#155DFC', color: 'white', fontSize: '13px', fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 3px 0 0 #0c3eb5' }}>
-          Message →
-        </button>
-      </div>
-    </div>
-  );
-};
 
 // ─── MOBILE FILTER SHEET ──────────────────────────────────────────────────────
 const FilterSheet = ({ open, onClose, filters, onFilterChange, onApply, onClear }) => {
@@ -297,6 +197,10 @@ const BrowseCreators = () => {
   const [savedIds, setSavedIds] = useState([]);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
 
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
   const [filters, setFilters] = useState({
     category: searchParams.get('category') || '',
     city: searchParams.get('city') || '',
@@ -308,10 +212,11 @@ const BrowseCreators = () => {
     sortBy: 'newest',
   });
 
-  const fetchCreators = async (f = filters) => {
-    setLoading(true);
+  const fetchCreators = async (f = filters, pg = 1) => {
+    if (pg === 1) setLoading(true);
+    else setLoadingMore(true);
     try {
-      const params = {};
+      const params = { page: pg, limit: 12 };
       if (f.category) params.category = f.category;
       if (f.city) params.city = f.city;
       if (f.minFollowers) params.minFollowers = f.minFollowers;
@@ -321,10 +226,14 @@ const BrowseCreators = () => {
       if (f.isOpenForCollab) params.isOpenForCollab = f.isOpenForCollab;
       if (f.sortBy) params.sortBy = f.sortBy;
       const res = await searchCreators(params);
-      setCreators(res.data.creators);
+      const newCreators = res.data.creators || [];
+      if (pg === 1) setCreators(newCreators);
+      else setCreators(prev => [...prev, ...newCreators]);
       setTotal(res.data.pagination.total);
-    } catch { setCreators([]); }
-    finally { setLoading(false); }
+      setHasMore(pg < res.data.pagination.pages);
+      setPage(pg);
+    } catch { if (pg === 1) setCreators([]); }
+    finally { setLoading(false); setLoadingMore(false); }
   };
 
   useEffect(() => {
@@ -332,8 +241,8 @@ const BrowseCreators = () => {
       try {
         const savedRes = await getSavedCreators();
         setSavedIds(savedRes.data.savedCreators.map(c => c._id));
-      } catch {}
-      fetchCreators();
+      } catch { }
+      fetchCreators(filters, 1);
     };
     init();
   }, []);
@@ -431,11 +340,19 @@ const BrowseCreators = () => {
             </div>
 
             {loading ? <LoadingSpinner /> : creators.length === 0 ? <EmptyState /> : (
-              <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="flex flex-col gap-4 max-w-3xl">
                 {creators.map(creator => (
                   <CreatorCard key={creator._id} creator={creator} onSave={handleSave}
                     saved={savedIds.includes(creator._id)} onClick={() => navigate(`/creator/${creator._id}`)} />
                 ))}
+                {hasMore && (
+                  <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <button onClick={() => fetchCreators(filters, page + 1)} disabled={loadingMore}
+                      style={{ padding: '12px 32px', backgroundColor: 'white', color: '#155DFC', border: '1.5px solid #155DFC', borderRadius: '14px', fontSize: '14px', fontWeight: 700, cursor: loadingMore ? 'not-allowed' : 'pointer' }}>
+                      {loadingMore ? 'Loading...' : 'Load More'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -447,11 +364,19 @@ const BrowseCreators = () => {
             <span className="text-sm font-black" style={{ color: '#101828' }}>{total} creators</span>
           </div>
           {loading ? <LoadingSpinner /> : creators.length === 0 ? <EmptyState /> : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols gap-3">
               {creators.map(creator => (
-                <CreatorCard key={creator._id} creator={creator} onSave={handleSave}
-                  saved={savedIds.includes(creator._id)} onClick={() => navigate(`/creator/${creator._id}`)} />
-              ))}
+  <CreatorCard key={creator._id} creator={creator} onSave={handleSave}
+    saved={savedIds.includes(creator._id)} onClick={() => navigate(`/creator/${creator._id}`)} />
+))}
+{hasMore && (
+  <div style={{ textAlign: 'center', padding: '20px 0 80px' }}>
+    <button onClick={() => fetchCreators(filters, page + 1)} disabled={loadingMore}
+      style={{ padding: '12px 32px', backgroundColor: 'white', color: '#155DFC', border: '1.5px solid #155DFC', borderRadius: '14px', fontSize: '14px', fontWeight: 700, cursor: loadingMore ? 'not-allowed' : 'pointer' }}>
+      {loadingMore ? 'Loading...' : 'Load More'}
+    </button>
+  </div>
+)}
             </div>
           )}
         </div>

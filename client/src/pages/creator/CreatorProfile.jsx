@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, RefreshCw, X } from 'lucide-react';
+import { Camera, RefreshCw, X, Link2, Landmark, ImagePlay, Tag, Pencil, AlertCircle, Sparkles, TrendingUp } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import BankDetailsForm from '../../components/BankDetailsForm';
 import {
@@ -300,8 +300,8 @@ const RateChartModal = ({ profile, onClose, onSave }) => {
 const Avatar = ({ name, photo, size = 80 }) => {
   const bg = avatarBgs[(name?.charCodeAt(0) || 0) % avatarBgs.length];
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', backgroundColor: bg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 900, color: 'white', border: `3px solid ${bg}33`, flexShrink: 0 }}>
-      {photo ? <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : name?.[0]?.toUpperCase() || '?'}
+    <div style={{ width: size, height: size, borderRadius: '50%', backgroundColor: bg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 900, color: 'white', border: `3px solid ${bg}33`, flexShrink: 0, lineHeight: 1, textAlign: 'center' }}>
+      {photo ? <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>{name?.[0]?.toUpperCase() || '?'}</span>}
     </div>
   );
 };
@@ -327,11 +327,13 @@ const SectionCard = ({ title, onEdit, locked, children }) => (
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 const CreatorProfile = () => {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [syncing, setSyncing] = useState(false);
+
 
   const fetchProfile = async () => {
     try { const res = await getMyCreatorProfile(); setProfile(res.data.creator); }
@@ -353,29 +355,29 @@ const CreatorProfile = () => {
     finally { setSyncing(false); }
   };
 
- const handleDisconnect = async () => {
-  try {
-    await disconnectInstagram();
-    toast.success('Instagram disconnected');
-    setShowDisconnectConfirm(false);
-    // immediately clear instagram stats from local state
-    setProfile(prev => prev ? {
-      ...prev,
-      instagram: {
-        isConnected: false,
-        handle: null,
-        followersCount: 0,
-        engagementRate: null,
-        avgViews: 0,
-        avgLikes: 0,
-        avgComments: 0,
-        avgShares: 0,
-        avgReach: 0,
-      }
-    } : prev);
-    fetchProfile();
-  } catch { toast.error('Failed to disconnect'); }
-};
+  const handleDisconnect = async () => {
+    try {
+      await disconnectInstagram();
+      toast.success('Instagram disconnected');
+      setShowDisconnectConfirm(false);
+      // immediately clear instagram stats from local state
+      setProfile(prev => prev ? {
+        ...prev,
+        instagram: {
+          isConnected: false,
+          handle: null,
+          followersCount: 0,
+          engagementRate: null,
+          avgViews: 0,
+          avgLikes: 0,
+          avgComments: 0,
+          avgShares: 0,
+          avgReach: 0,
+        }
+      } : prev);
+      fetchProfile();
+    } catch { toast.error('Failed to disconnect'); }
+  };
 
   const hasProfile = !!profile;
   const engGood = (profile?.instagram?.engagementRate || 0) >= 3;
@@ -480,7 +482,7 @@ const CreatorProfile = () => {
         ? profile.sampleContentLinks.filter(l => l).map((link, i) => (
           <a key={i} href={link} target="_blank" rel="noreferrer"
             style={{ display: 'block', fontSize: '12px', color: '#155DFC', padding: '8px 12px', backgroundColor: '#F8FAFF', borderRadius: '10px', marginBottom: '6px', border: '1px solid #DBEAFE', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            🔗 {link}
+            <Link2 size={12} style={{ marginRight: '6px', flexShrink: 0 }} /> {link}
           </a>
         ))
         : <p style={{ fontSize: '12px', color: '#9CA3AF' }}>No sample content links added yet.</p>
@@ -500,7 +502,9 @@ const CreatorProfile = () => {
           {!hasProfile && (
             <div className="px-4 md:px-0" style={{ marginBottom: '0' }}>
               <div style={{ backgroundColor: '#FEF9C3', border: '1.5px solid #FDE047', borderRadius: '16px', padding: '14px 16px', marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                <span style={{ fontSize: '20px' }}>⚠️</span>
+                <span style={{ fontSize: '20px' }}>
+                  <AlertCircle size={20} color="#78350F" style={{ flexShrink: 0 }} />
+                </span>
                 <div>
                   <div style={{ fontWeight: 900, color: '#78350F', fontSize: '13px', marginBottom: '2px' }}>Complete your profile to get started</div>
                   <div style={{ fontSize: '12px', color: '#92400E' }}>Fill in your basic details to unlock all features and get discovered by brands.</div>
@@ -535,9 +539,12 @@ const CreatorProfile = () => {
                 </div>
 
                 <div style={{ fontWeight: 900, fontSize: '20px', color: '#1C1B1B', marginBottom: '2px' }}>{profile?.name || 'Your Name'}</div>
-                <div style={{ fontSize: '13px', color: '#5C3F41', marginBottom: '4px' }}>
-                  {profile?.bio ? profile.bio.slice(0, 40) + (profile.bio.length > 40 ? '…' : '') : 'Lifestyle & Travel Creator'}
-                </div>
+
+                {profile?.instagram?.isConnected && profile?.instagram?.handle && (
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#155DFC', marginBottom: '4px' }}>
+                    @{profile.instagram.handle}
+                  </div>
+                )}
                 <div style={{ fontSize: '12px', color: '#906F70', marginBottom: '16px' }}>
                   {profile?.location?.city ? `${profile.location.city}, ${profile.location.state}` : 'No location set'}
                 </div>
@@ -569,8 +576,9 @@ const CreatorProfile = () => {
                   )}
                 </div>
 
-                <button onClick={() => setModal('profile')} style={{ width: '100%', padding: '11px', backgroundColor: '#BE0038', color: 'white', border: 'none', borderRadius: '14px', fontSize: '13px', fontWeight: 900, cursor: 'pointer', boxShadow: '6px 6px 0 0 #7A0021' }}>
-                  ✎ Edit Profile Details
+                <button onClick={() => setModal('profile')}
+                  style={{ width: '100%', padding: '11px', backgroundColor: '#155DFC', color: 'white', border: 'none', borderRadius: '14px', fontSize: '13px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 0 0 #0C3EB5' }}>
+                  <Pencil size={14} style={{ marginRight: '6px' }} /> Edit Profile Details
                 </button>
               </div>
             </div>
@@ -579,7 +587,15 @@ const CreatorProfile = () => {
             <div style={{ backgroundColor: '#1C1B1B', borderRadius: '20px', padding: '16px', marginBottom: '16px', boxShadow: '8px 8px 0 0 rgba(0,0,0,0.08)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: profile?.instagram?.isConnected ? '14px' : '0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'linear-gradient(135deg,#f9ce34,#ee2a7b,#6228d7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📸</div>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'linear-gradient(135deg,#f9ce34,#ee2a7b,#6228d7)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: 'linear-gradient(135deg,#f9ce34,#ee2a7b,#6228d7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                        <circle cx="12" cy="12" r="4" />
+                        <circle cx="17.5" cy="6.5" r="1" fill="white" stroke="none" />
+                      </svg>
+                    </div>
+                  </div>
                   <div>
                     <div style={{ fontWeight: 900, fontSize: '14px', color: 'white' }}>Instagram Insights</div>
                     <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }}>
@@ -630,7 +646,7 @@ const CreatorProfile = () => {
                 </div>
               ) : (
                 <button onClick={handleInstagramConnect} style={{ width: '100%', padding: '12px', background: 'linear-gradient(90deg,#833AB4,#E1306C,#F77737)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: 900, cursor: 'pointer', marginTop: '12px' }}>
-                  Connect Instagram →
+                  Connect Instagram
                 </button>
               )}
             </div>
@@ -644,12 +660,11 @@ const CreatorProfile = () => {
             <div style={{ backgroundColor: 'white', border: '2px solid #E5BDBE', borderRadius: '20px', padding: '16px', marginTop: '16px', boxShadow: '8px 8px 0 0 rgba(0,0,0,0.08)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '22px' }}>📈</span>
-                  <span style={{ fontWeight: 900, fontSize: '16px', color: '#1C1B1B' }}>Rate Chart</span>
+                  <TrendingUp size={18} style={{ marginRight: '8px' }} /> Rate Chart
                 </div>
                 {hasProfile && (
-                  <button onClick={() => setModal('rates')} style={{ backgroundColor: '#BE0038', color: 'white', border: 'none', borderRadius: '20px', padding: '6px 16px', fontSize: '11px', fontWeight: 900, cursor: 'pointer', boxShadow: '4px 4px 0 0 #7A0021' }}>
-                    EDIT
+                  <button onClick={() => setModal('rates')} style={{ backgroundColor: '#EFF6FF', color: '#155DFC', border: 'none', borderRadius: '8px', padding: '5px 12px', fontSize: '11px', fontWeight: 900, cursor: 'pointer' }}>
+                    Edit
                   </button>
                 )}
               </div>
@@ -657,22 +672,20 @@ const CreatorProfile = () => {
             </div>
 
             {/* bank details — gray bg like Stitch */}
-            <div style={{ backgroundColor: '#E5E2E1', borderRadius: '20px', padding: '16px', marginTop: '16px', border: '1px solid #D3D1C7', boxShadow: '8px 8px 0 0 rgba(0,0,0,0.08)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '22px' }}>🏦</span>
-                  <span style={{ fontWeight: 900, fontSize: '16px', color: '#1C1B1B' }}>Bank Details</span>
-                </div>
-              </div>
-              {hasProfile ? <BankDetailsForm /> : <div style={{ fontSize: '12px', color: '#6B7280' }}>Complete your profile first</div>}
-            </div>
+            <SectionCard title="Bank Details" onEdit={hasProfile ? () => navigate('/creator/bank-details') : undefined} locked={!hasProfile}>
+              <button
+                onClick={() => navigate('/creator/bank-details')}
+                disabled={!hasProfile}
+                style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: hasProfile ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <Landmark size={16} style={{ marginRight: '8px' }} /> Manage Bank Account
+              </button>
+            </SectionCard>
 
             {/* bio / the vibe — yellow like Stitch */}
             {hasProfile && profile?.bio && (
               <div style={{ backgroundColor: '#FCC82B', borderRadius: '20px', padding: '16px', marginTop: '16px', border: '2px solid #765B00', boxShadow: '8px 8px 0 0 rgba(0,0,0,0.08)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                  <span style={{ fontSize: '22px' }}>✨</span>
-                  <span style={{ fontWeight: 900, fontSize: '16px', color: '#251A00' }}>The Vibe</span>
+                  <Sparkles size={18} style={{ marginRight: '8px' }} /> The Vibe
                 </div>
                 <p style={{ fontSize: '14px', color: '#251A00', lineHeight: '1.6', fontWeight: 400 }}>{profile.bio}</p>
               </div>
@@ -701,6 +714,11 @@ const CreatorProfile = () => {
                 </div>
                 <div style={{ fontWeight: 900, fontSize: '18px', color: 'white', marginBottom: '2px' }}>{profile?.name || 'Your Name'}</div>
                 <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', marginBottom: '18px' }}>
+                  {profile?.instagram?.isConnected && profile?.instagram?.handle && (
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#93B4FD', marginBottom: '4px' }}>
+                      @{profile.instagram.handle}
+                    </div>
+                  )}
                   {profile?.location?.city ? `${profile.location.city}, ${profile.location.state}` : 'No location set'}
                 </div>
 
@@ -754,7 +772,13 @@ const CreatorProfile = () => {
               </SectionCard>
 
               <SectionCard title="Bank Details" locked={!hasProfile}>
-                {hasProfile && <BankDetailsForm />}
+                {hasProfile && (
+                  <button
+                    onClick={() => navigate('/creator/bank-details')}
+                    style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    🏦 Manage Bank Account
+                  </button>
+                )}
               </SectionCard>
 
               <SectionCard title="Sample Content" onEdit={hasProfile ? () => setModal('rates') : undefined} locked={!hasProfile}>

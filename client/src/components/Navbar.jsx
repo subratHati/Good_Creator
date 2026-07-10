@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronDown, User, LogOut, Settings } from 'lucide-react';
+import { ChevronDown, User, LogOut, Settings, Bookmark } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import NotificationBell from './NotificationBell';
 import { getUnreadCount } from '../api/chat';
@@ -90,7 +90,7 @@ const Navbar = () => {
     { label: 'Browse Creators', path: '/brand/browse-creators' },
     { label: 'Messages', path: '/messages' },
     { label: 'Saved', path: '/brand/saved-creators' },
-    { label: 'Openings', path: '/brand/openings' },
+    { label: 'Campaigns', path: '/brand/openings' },
   ];
 
   const links = user?.role === 'creator' ? creatorLinks : brandLinks;
@@ -192,6 +192,16 @@ const Navbar = () => {
                           <User size={15} className="text-gray-400" />
                           My Profile
                         </Link>
+                        {user?.role === 'brand' && (
+                          <Link
+                            to="/brand/saved-creators"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm text-gray-700 hover:bg-gray-50 transition-colors w-full md:hidden"
+                          >
+                            <Bookmark size={15} className="text-gray-400" />
+                            Saved Creators
+                          </Link>
+                        )}
                         <Link
                           to="/"
                           onClick={() => setDropdownOpen(false)}
