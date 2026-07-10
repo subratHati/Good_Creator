@@ -90,8 +90,8 @@ const CreatorCard = ({ creator, onViewProfile }) => {
           {/* name block */}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: '15px', fontWeight: 700, color: '#101828', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-            {!ig.isConnected && !ig.handle
-              ? <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '6px', background: 'linear-gradient(90deg, #833AB4, #E1306C, #F77737)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>@{ig.handle}subratdude98</div>
+            {ig.isConnected && ig.handle
+              ? <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '6px', background: 'linear-gradient(90deg, #833AB4, #E1306C, #F77737)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>@{ig.handle}</div>
               : <div style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Unlink size={12} color="#F59E0B" /> Not verified
               </div>
