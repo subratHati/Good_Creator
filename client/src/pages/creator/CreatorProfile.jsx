@@ -5,7 +5,6 @@ import Navbar from '../../components/Navbar';
 import BankDetailsForm from '../../components/BankDetailsForm';
 import CategoryPolicyDialog from '../../components/CategoryPolicyDialog';
 import ImageCropModal from '../../components/ImageCropModal';
-import useBackButtonClose from '../../hooks/useBackButtonClose';
 import {
   getMyCreatorProfile,
   createCreatorProfile,
@@ -66,8 +65,6 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
   const [showPolicyDialog, setShowPolicyDialog] = useState(false);
   // raw picked file waiting to be cropped, shown in ImageCropModal
   const [rawImageForCrop, setRawImageForCrop] = useState(null);
-
-  useBackButtonClose(true, onClose);
 
   const toggleCategory = (cat) => {
     setForm(prev => {
@@ -247,8 +244,6 @@ const RateChartModal = ({ profile, onClose, onSave }) => {
   });
   const [saving, setSaving] = useState(false);
 
-  useBackButtonClose(true, onClose);
-
   const toggleLanguage = (lang) => setForm(prev => ({
     ...prev, languages: prev.languages.includes(lang) ? prev.languages.filter(l => l !== lang) : [...prev.languages, lang],
   }));
@@ -423,6 +418,7 @@ const CreatorProfile = () => {
   const [modal, setModal] = useState(null);
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [connectingInstagram, setConnectingInstagram] = useState(false);
 
   // TEMPORARY: nags creators who already have more than 3 categories from
   // before the new policy existed. Remove this whole block once migrated.
@@ -449,8 +445,17 @@ const CreatorProfile = () => {
   //All the above code piece are TEMPORARY(end) till all the old creators change there category range from more than 3 to 1-3.
 
   const handleInstagramConnect = async () => {
-    try { const res = await getInstagramAuthUrl(); window.location.href = res.data.url; }
-    catch { toast.error('Failed to get auth URL'); }
+    setConnectingInstagram(true);
+    try {
+      const res = await getInstagramAuthUrl();
+      // don't clear connectingInstagram here — the browser is about to
+      // navigate away entirely, so the button staying in a loading state
+      // until that navigation happens is the correct, intentional behavior
+      window.location.href = res.data.url;
+    } catch {
+      toast.error('Failed to get auth URL');
+      setConnectingInstagram(false);
+    }
   };
 
   const handleSync = async () => {
@@ -573,8 +578,19 @@ const CreatorProfile = () => {
           <p style={{ fontSize: '12px', color: '#6B7280', backgroundColor: '#F9FAFB', borderRadius: '10px', padding: '10px', marginBottom: '12px' }}>
             Connect Instagram to show verified followers, engagement and avg views to brands.
           </p>
-          <button onClick={handleInstagramConnect} style={{ width: '100%', padding: '12px', background: 'linear-gradient(90deg,#833AB4,#E1306C,#F77737)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: 900, cursor: 'pointer' }}>
-            Connect Instagram →
+          <button
+            onClick={handleInstagramConnect}
+            disabled={connectingInstagram}
+            style={{ width: '100%', padding: '12px', background: connectingInstagram ? '#D1D5DB' : 'linear-gradient(90deg,#833AB4,#E1306C,#F77737)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: 900, cursor: connectingInstagram ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+          >
+            {connectingInstagram ? (
+              <>
+                <span style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block' }} className="animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              'Connect Instagram →'
+            )}
           </button>
         </div>
       )
@@ -748,8 +764,19 @@ const CreatorProfile = () => {
                   )}
                 </div>
               ) : (
-                <button onClick={handleInstagramConnect} style={{ width: '100%', padding: '12px', background: 'linear-gradient(90deg,#833AB4,#E1306C,#F77737)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: 900, cursor: 'pointer', marginTop: '12px' }}>
-                  Connect Instagram
+                <button
+                  onClick={handleInstagramConnect}
+                  disabled={connectingInstagram}
+                  style={{ width: '100%', padding: '12px', background: connectingInstagram ? '#D1D5DB' : 'linear-gradient(90deg,#833AB4,#E1306C,#F77737)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: 900, cursor: connectingInstagram ? 'not-allowed' : 'pointer', marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                >
+                  {connectingInstagram ? (
+                    <>
+                      <span style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: 'white', borderRadius: '50%', display: 'inline-block' }} className="animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    'Connect Instagram'
+                  )}
                 </button>
               )}
             </div>

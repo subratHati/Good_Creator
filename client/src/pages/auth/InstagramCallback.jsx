@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'; 
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import useAuth from '../../hooks/useAuth';
@@ -26,13 +26,13 @@ const InstagramCallback = () => {
 
       if (error) {
         toast.error('Instagram connection was cancelled');
-        navigate(`/${user?.role}/profile`);
+        navigate(`/${user?.role}/profile`, { replace: true });
         return;
       }
 
       if (!code) {
         toast.error('No authorization code received');
-        navigate(`/${user?.role}/profile`);
+        navigate(`/${user?.role}/profile`, { replace: true });
         return;
       }
 
@@ -48,13 +48,13 @@ const InstagramCallback = () => {
           // single account — auto connected
           setStatus('success');
           toast.success('Instagram connected successfully!');
-          setTimeout(() => navigate(`/${user?.role}/profile`), 1500);
+          setTimeout(() => navigate(`/${user?.role}/profile`, { replace: true }), 1500);
         }
       } catch (error) {
         setStatus('error');
         const msg = error.response?.data?.message || 'Failed to connect Instagram';
         toast.error(msg);
-        setTimeout(() => navigate(`/${user?.role}/profile`), 2000);
+        setTimeout(() => navigate(`/${user?.role}/profile`, { replace: true }), 2000);
       }
     };
 
@@ -73,7 +73,7 @@ const InstagramCallback = () => {
       });
       setStatus('success');
       toast.success(`@${account.username} connected successfully!`);
-      setTimeout(() => navigate(`/${user?.role}/profile`), 1500);
+      setTimeout(() => navigate(`/${user?.role}/profile`, { replace: true }), 1500);
     } catch (error) {
       toast.error('Failed to connect this account. Try again.');
       setSelecting(null);
@@ -81,15 +81,25 @@ const InstagramCallback = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl border border-gray-200 w-full max-w-sm mx-auto">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ backgroundColor: '#F5F5F7' }}>
+      <div className="w-full max-w-sm mx-auto rounded-3xl overflow-hidden" style={{ backgroundColor: 'white', border: '1.5px solid #F0F0F0', boxShadow: '0 6px 0 0 #E5E5E5' }}>
 
         {/* connecting state */}
         {status === 'connecting' && (
           <div className="p-8 text-center">
-            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Connecting Instagram</h2>
-            <p className="text-sm text-gray-500">Fetching your accounts...</p>
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5"
+              style={{ background: 'linear-gradient(135deg,#f9ce34,#ee2a7b,#6228d7)' }}
+            >
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="17.5" cy="6.5" r="1" fill="white" stroke="none" />
+              </svg>
+            </div>
+            <div className="w-8 h-8 rounded-full animate-spin mx-auto mb-5" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
+            <h2 className="font-black text-lg mb-1.5" style={{ color: '#101828' }}>Connecting Instagram</h2>
+            <p className="text-sm" style={{ color: '#9CA3AF' }}>Fetching your accounts, this may take a moment...</p>
           </div>
         )}
 
@@ -97,11 +107,14 @@ const InstagramCallback = () => {
         {status === 'selecting' && (
           <div className="p-6">
             <div className="text-center mb-6">
-              <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                style={{ background: 'linear-gradient(135deg,#f9ce34,#ee2a7b,#6228d7)' }}
+              >
                 <span className="text-2xl">📸</span>
               </div>
-              <h2 className="text-lg font-bold text-gray-900">Select Instagram account</h2>
-              <p className="text-sm text-gray-500 mt-1">
+              <h2 className="font-black text-lg" style={{ color: '#101828' }}>Select Instagram account</h2>
+              <p className="text-sm mt-1" style={{ color: '#9CA3AF' }}>
                 We found {accounts.length} Instagram accounts. Choose which one to connect.
               </p>
             </div>
@@ -112,20 +125,19 @@ const InstagramCallback = () => {
                   key={account.instagramId}
                   onClick={() => handleSelectAccount(account)}
                   disabled={!!selecting}
-                  className={`w-full flex items-center gap-3 p-4 rounded-xl border-2 text-left transition-all ${
-                    selecting === account.instagramId
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                  } disabled:opacity-60`}
+                  className="w-full flex items-center gap-3 p-4 rounded-2xl text-left transition-all disabled:opacity-60"
+                  style={{
+                    border: selecting === account.instagramId ? '2px solid #155DFC' : '2px solid #E5E7EB',
+                    backgroundColor: selecting === account.instagramId ? '#EFF6FF' : 'white',
+                  }}
                 >
                   {/* profile picture */}
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 overflow-hidden">
+                  <div
+                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-black text-lg flex-shrink-0 overflow-hidden"
+                    style={{ background: 'linear-gradient(135deg,#155DFC,#0D3FAE)' }}
+                  >
                     {account.profilePicture ? (
-                      <img
-                        src={account.profilePicture}
-                        alt={account.username}
-                        className="w-full h-full object-cover"
-                      />
+                      <img src={account.profilePicture} alt={account.username} className="w-full h-full object-cover" />
                     ) : (
                       account.username?.[0]?.toUpperCase()
                     )}
@@ -133,13 +145,13 @@ const InstagramCallback = () => {
 
                   {/* account info */}
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-gray-900 truncate">
+                    <div className="font-black truncate" style={{ color: '#101828' }}>
                       @{account.username}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm" style={{ color: '#6B7280' }}>
                       {formatNumber(account.followersCount)} followers
                     </div>
-                    <div className="text-xs text-gray-400 truncate">
+                    <div className="text-xs truncate" style={{ color: '#9CA3AF' }}>
                       via {account.pageName}
                     </div>
                   </div>
@@ -147,9 +159,9 @@ const InstagramCallback = () => {
                   {/* loading or arrow */}
                   <div className="flex-shrink-0">
                     {selecting === account.instagramId ? (
-                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-5 h-5 rounded-full animate-spin" style={{ border: '2px solid #BFDBFE', borderTopColor: '#155DFC' }} />
                     ) : (
-                      <span className="text-gray-400 text-lg">→</span>
+                      <span style={{ color: '#9CA3AF', fontSize: '18px' }}>→</span>
                     )}
                   </div>
                 </button>
@@ -157,8 +169,9 @@ const InstagramCallback = () => {
             </div>
 
             <button
-              onClick={() => navigate(`/${user?.role}/profile`)}
-              className="w-full mt-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              onClick={() => navigate(`/${user?.role}/profile`, { replace: true })}
+              className="w-full mt-4 py-2.5 text-sm font-semibold transition-colors"
+              style={{ color: '#9CA3AF' }}
             >
               Cancel
             </button>
@@ -168,22 +181,22 @@ const InstagramCallback = () => {
         {/* success state */}
         {status === 'success' && (
           <div className="p-8 text-center">
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-green-600 text-2xl">✓</span>
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ backgroundColor: '#DCFCE7', boxShadow: '0 3px 0 0 #86EFAC' }}>
+              <span style={{ color: '#166534', fontSize: '26px' }}>✓</span>
             </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Instagram connected!</h2>
-            <p className="text-sm text-gray-500">Redirecting to your profile...</p>
+            <h2 className="font-black text-lg mb-1.5" style={{ color: '#101828' }}>Instagram connected!</h2>
+            <p className="text-sm" style={{ color: '#9CA3AF' }}>Redirecting to your profile...</p>
           </div>
         )}
 
         {/* error state */}
         {status === 'error' && (
           <div className="p-8 text-center">
-            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-red-600 text-2xl">✕</span>
+            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ backgroundColor: '#FEE2E2', boxShadow: '0 3px 0 0 #FCA5A5' }}>
+              <span style={{ color: '#991B1B', fontSize: '26px' }}>✕</span>
             </div>
-            <h2 className="text-lg font-bold text-gray-900 mb-2">Connection failed</h2>
-            <p className="text-sm text-gray-500">Redirecting back to your profile...</p>
+            <h2 className="font-black text-lg mb-1.5" style={{ color: '#101828' }}>Connection failed</h2>
+            <p className="text-sm" style={{ color: '#9CA3AF' }}>Redirecting back to your profile...</p>
           </div>
         )}
       </div>
@@ -192,4 +205,3 @@ const InstagramCallback = () => {
 };
 
 export default InstagramCallback;
-
