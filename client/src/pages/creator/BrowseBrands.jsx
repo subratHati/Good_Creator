@@ -6,6 +6,7 @@ import { searchOpenings } from '../../api/openings';
 import { applyToOpening } from '../../api/applications';
 import useCreatorProfileGuard from '../../hooks/useCreatorProfileGuard';
 import toast from 'react-hot-toast';
+import useBackButtonClose from '../../hooks/useBackButtonClose';
 
 const categoryColors = {
   fashion: { bg: '#FED7AA', color: '#7C2D12' },
@@ -26,6 +27,8 @@ const OpeningCard = ({ opening, onApply, applied }) => {
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [coverNote, setCoverNote] = useState('');
   const [applying, setApplying] = useState(false);
+
+  useBackButtonClose(showApplyModal, () => setShowApplyModal(false));
 
   const handleApply = async () => {
     setApplying(true);

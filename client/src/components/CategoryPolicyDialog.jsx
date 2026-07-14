@@ -1,4 +1,5 @@
 import { AlertTriangle, X } from 'lucide-react';
+import useBackButtonClose from '../hooks/useBackButtonClose';
 
 // Shared dialog for the "max 3 categories" policy.
 // mode="blocked"  — shown when a creator tries to select/save a 4th category
@@ -7,6 +8,8 @@ import { AlertTriangle, X } from 'lucide-react';
 //                   remove once existing over-limit accounts have been migrated/fixed.
 const CategoryPolicyDialog = ({ mode = 'blocked', currentCount, onClose, onFixNow }) => {
   const isExisting = mode === 'existing';
+
+  useBackButtonClose(mode === 'blocked', onClose);
 
   return (
     <div

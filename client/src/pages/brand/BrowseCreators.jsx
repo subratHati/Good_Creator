@@ -6,6 +6,7 @@ import { searchCreators } from '../../api/creator';
 import { saveCreator, getSavedCreators } from '../../api/brand';
 import CreatorCard from '../../components/CreatorCard';
 import toast from 'react-hot-toast';
+import useBackButtonClose from '../../hooks/useBackButtonClose';
 
 const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'other'];
 
@@ -20,6 +21,7 @@ const formatNumber = (num) => {
 
 // ─── MOBILE FILTER SHEET ──────────────────────────────────────────────────────
 const FilterSheet = ({ open, onClose, filters, onFilterChange, onApply, onClear }) => {
+  useBackButtonClose(open, onClose);
   if (!open) return null;
   return (
     <>
@@ -366,17 +368,17 @@ const BrowseCreators = () => {
           {loading ? <LoadingSpinner /> : creators.length === 0 ? <EmptyState /> : (
             <div className="grid grid-cols gap-3">
               {creators.map(creator => (
-  <CreatorCard key={creator._id} creator={creator} onSave={handleSave}
-    saved={savedIds.includes(creator._id)} onClick={() => navigate(`/creator/${creator._id}`)} />
-))}
-{hasMore && (
-  <div style={{ textAlign: 'center', padding: '20px 0 80px' }}>
-    <button onClick={() => fetchCreators(filters, page + 1)} disabled={loadingMore}
-      style={{ padding: '12px 32px', backgroundColor: 'white', color: '#155DFC', border: '1.5px solid #155DFC', borderRadius: '14px', fontSize: '14px', fontWeight: 700, cursor: loadingMore ? 'not-allowed' : 'pointer' }}>
-      {loadingMore ? 'Loading...' : 'Load More'}
-    </button>
-  </div>
-)}
+                <CreatorCard key={creator._id} creator={creator} onSave={handleSave}
+                  saved={savedIds.includes(creator._id)} onClick={() => navigate(`/creator/${creator._id}`)} />
+              ))}
+              {hasMore && (
+                <div style={{ textAlign: 'center', padding: '20px 0 80px' }}>
+                  <button onClick={() => fetchCreators(filters, page + 1)} disabled={loadingMore}
+                    style={{ padding: '12px 32px', backgroundColor: 'white', color: '#155DFC', border: '1.5px solid #155DFC', borderRadius: '14px', fontSize: '14px', fontWeight: 700, cursor: loadingMore ? 'not-allowed' : 'pointer' }}>
+                    {loadingMore ? 'Loading...' : 'Load More'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

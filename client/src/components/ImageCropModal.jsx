@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import Cropper from 'react-easy-crop';
 import { ZoomIn, ZoomOut, X } from 'lucide-react';
 import { getCroppedImageBlob } from '../utils/cropImage';
+import useBackButtonClose from '../hooks/useBackButtonClose';
 
 // Square (1:1) crop modal — drag to reposition, slider/buttons to zoom.
 // imageSrc is expected to be a local blob: URL (from the raw picked file);
@@ -11,6 +12,8 @@ const ImageCropModal = ({ imageSrc, onCancel, onCropDone }) => {
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [processing, setProcessing] = useState(false);
+
+   useBackButtonClose(true, onCancel); 
 
   const onCropComplete = useCallback((_croppedAreaPercent, croppedAreaPixelsValue) => {
     setCroppedAreaPixels(croppedAreaPixelsValue);

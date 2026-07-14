@@ -5,6 +5,7 @@ import Navbar from '../../components/Navbar';
 import BankDetailsForm from '../../components/BankDetailsForm';
 import CategoryPolicyDialog from '../../components/CategoryPolicyDialog';
 import ImageCropModal from '../../components/ImageCropModal';
+import useBackButtonClose from '../../hooks/useBackButtonClose';
 import {
   getMyCreatorProfile,
   createCreatorProfile,
@@ -65,6 +66,8 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
   const [showPolicyDialog, setShowPolicyDialog] = useState(false);
   // raw picked file waiting to be cropped, shown in ImageCropModal
   const [rawImageForCrop, setRawImageForCrop] = useState(null);
+
+  useBackButtonClose(true, onClose);
 
   const toggleCategory = (cat) => {
     setForm(prev => {
@@ -243,6 +246,8 @@ const RateChartModal = ({ profile, onClose, onSave }) => {
     sampleContentLinks: profile?.sampleContentLinks?.length ? profile.sampleContentLinks : [''],
   });
   const [saving, setSaving] = useState(false);
+
+  useBackButtonClose(true, onClose);
 
   const toggleLanguage = (lang) => setForm(prev => ({
     ...prev, languages: prev.languages.includes(lang) ? prev.languages.filter(l => l !== lang) : [...prev.languages, lang],

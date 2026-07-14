@@ -27,7 +27,7 @@ const Login = () => {
       const res = await loginUser(formData);
       login(res.data.user, res.data.token);
       toast.success('Welcome back!');
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (error) {
       const data = error.response?.data;
       if (data?.requiresVerification) {
@@ -72,7 +72,7 @@ const Login = () => {
       const res = await verifyOtp({ email: formData.email, otp: otpString });
       login(res.data.user, res.data.token);
       toast.success('Email verified! Welcome to GoodCreator 🎉');
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (error) {
       toast.error(error.response?.data?.message || 'Invalid OTP');
       setOtp(['', '', '', '']);
