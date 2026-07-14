@@ -221,7 +221,7 @@ const OpeningCard = ({ opening, onApply, applied }) => {
                 </button>
                 <button onClick={handleApply} disabled={applying}
                   style={{ flex: 1, padding: '14px', backgroundColor: applying ? '#93B4FD' : '#155DFC', color: 'white', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 900, cursor: applying ? 'not-allowed' : 'pointer', boxShadow: applying ? 'none' : '0 4px 0 0 #0C3EB5' }}>
-                  {applying ? 'Applying...' : 'Submit Application'}
+                  {applying ? 'Applying...' : 'Submit'}
                 </button>
               </div>
             </div>

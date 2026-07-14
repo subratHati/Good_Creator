@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createCreatorProfile } from '../api/creator';
 import { createBrandProfile } from '../api/brand';
+import CategoryPolicyDialog from './CategoryPolicyDialog';
 import toast from 'react-hot-toast';
 
 const CREATOR_CATEGORIES = [
@@ -13,24 +14,38 @@ const BRAND_CATEGORIES = [
   'lifestyle', 'travel', 'education', 'finance', 'other'
 ];
 
+const MAX_CREATOR_CATEGORIES = 3;
+const MIN_CREATOR_CATEGORIES = 1;
+
 export const CreatorSetupModal = ({ onComplete }) => {
   const [form, setForm] = useState({ name: '', city: '', state: '', categories: [] });
   const [saving, setSaving] = useState(false);
+  const [showPolicyDialog, setShowPolicyDialog] = useState(false);
 
   const toggleCategory = (cat) => {
-    setForm(prev => ({
-      ...prev,
-      categories: prev.categories.includes(cat)
-        ? prev.categories.filter(c => c !== cat)
-        : [...prev.categories, cat],
-    }));
+    setForm(prev => {
+      const alreadySelected = prev.categories.includes(cat);
+
+      if (!alreadySelected && prev.categories.length >= MAX_CREATOR_CATEGORIES) {
+        setShowPolicyDialog(true);
+        return prev;
+      }
+
+      return {
+        ...prev,
+        categories: alreadySelected
+          ? prev.categories.filter(c => c !== cat)
+          : [...prev.categories, cat],
+      };
+    });
   };
 
   const handleSubmit = async () => {
     if (!form.name.trim()) return toast.error('Please enter your name');
     if (!form.city.trim()) return toast.error('Please enter your city');
     if (!form.state.trim()) return toast.error('Please enter your state');
-    if (form.categories.length < 3) return toast.error('Please select at least 3 categories');
+    if (form.categories.length < MIN_CREATOR_CATEGORIES) return toast.error('Please select at least 1 category');
+    if (form.categories.length > MAX_CREATOR_CATEGORIES) return setShowPolicyDialog(true);
     setSaving(true);
     try {
       await createCreatorProfile({
@@ -76,18 +91,36 @@ export const CreatorSetupModal = ({ onComplete }) => {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Content categories <span className="text-red-500">*</span>
-                <span className="text-gray-400 font-normal ml-1">(select at least 3 · {form.categories.length} selected)</span>
+                <span className="text-gray-400 font-normal ml-1">(select 1-3 · {form.categories.length} selected)</span>
               </label>
               <div className="flex flex-wrap gap-2">
-                {CREATOR_CATEGORIES.map(cat => (
-                  <button key={cat} type="button" onClick={() => toggleCategory(cat)}
-                    className={`px-3 py-2 rounded-full text-xs font-semibold border capitalize transition-all ${form.categories.includes(cat) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'}`}>
-                    {cat}
-                  </button>
-                ))}
+                {CREATOR_CATEGORIES.map(cat => {
+                  const isSelected = form.categories.includes(cat);
+                  const isDisabled = !isSelected && form.categories.length >= MAX_CREATOR_CATEGORIES;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => toggleCategory(cat)}
+                      disabled={isDisabled}
+                      className={`px-3 py-2 rounded-full text-xs font-semibold border capitalize transition-all ${
+                        isSelected
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : isDisabled
+                            ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+                            : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
               </div>
-              {form.categories.length > 0 && form.categories.length < 3 && (
-                <p className="text-xs text-amber-600 mt-2">Select {3 - form.categories.length} more</p>
+              {form.categories.length === 0 && (
+                <p className="text-xs text-amber-600 mt-2">Select at least 1 category</p>
+              )}
+              {form.categories.length >= MAX_CREATOR_CATEGORIES && (
+                <p className="text-xs text-gray-400 mt-2">Maximum {MAX_CREATOR_CATEGORIES} categories selected</p>
               )}
             </div>
           </div>
@@ -97,6 +130,10 @@ export const CreatorSetupModal = ({ onComplete }) => {
           <p className="text-xs text-center text-gray-400 mt-3">You can add more details (pricing, Instagram, bio) from your profile anytime.</p>
         </div>
       </div>
+
+      {showPolicyDialog && (
+        <CategoryPolicyDialog mode="blocked" onClose={() => setShowPolicyDialog(false)} />
+      )}
     </div>
   );
 };

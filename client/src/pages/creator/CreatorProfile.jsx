@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Camera, RefreshCw, X, Link2, Landmark, ImagePlay, Tag, Pencil, AlertCircle, Sparkles, TrendingUp } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import BankDetailsForm from '../../components/BankDetailsForm';
+import CategoryPolicyDialog from '../../components/CategoryPolicyDialog';
+import ImageCropModal from '../../components/ImageCropModal';
 import {
   getMyCreatorProfile,
   createCreatorProfile,
@@ -60,20 +62,39 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
   const [saving, setSaving] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(profile?.profilePhoto || null);
+  const [showPolicyDialog, setShowPolicyDialog] = useState(false);
+  // raw picked file waiting to be cropped, shown in ImageCropModal
+  const [rawImageForCrop, setRawImageForCrop] = useState(null);
 
   const toggleCategory = (cat) => {
-    setForm(prev => ({
-      ...prev,
-      categories: prev.categories.includes(cat) ? prev.categories.filter(c => c !== cat) : [...prev.categories, cat],
-    }));
+    setForm(prev => {
+      const alreadySelected = prev.categories.includes(cat);
+      if (!alreadySelected && prev.categories.length >= 3) {
+        setShowPolicyDialog(true);
+        return prev;
+      }
+      return {
+        ...prev,
+        categories: alreadySelected ? prev.categories.filter(c => c !== cat) : [...prev.categories, cat],
+      };
+    });
   };
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setPhotoPreview(URL.createObjectURL(file));
+    // don't upload the raw picked file — open the crop modal first, so the
+    // creator can position/zoom into a square before anything gets sent
+    setRawImageForCrop(URL.createObjectURL(file));
+    // reset the input so picking the same file again still fires onChange
+    e.target.value = '';
+  };
+
+  const handleCropDone = async (croppedBlob) => {
+    setRawImageForCrop(null);
+    setPhotoPreview(URL.createObjectURL(croppedBlob));
     const formData = new FormData();
-    formData.append('profilePhoto', file);
+    formData.append('profilePhoto', croppedBlob, 'profile-photo.jpg');
     setPhotoUploading(true);
     try { await uploadCreatorPhoto(formData); toast.success('Photo uploaded'); }
     catch { toast.error('Photo upload failed'); }
@@ -84,7 +105,8 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
     if (!form.name.trim()) return toast.error('Name is required');
     if (!form.city.trim()) return toast.error('City is required');
     if (!form.state.trim()) return toast.error('State is required');
-    if (form.categories.length < 3) return toast.error('Select at least 3 categories');
+    if (form.categories.length < 1) return toast.error('Select at least 1 category');
+    if (form.categories.length > 3) return setShowPolicyDialog(true);
     setSaving(true);
     try {
       const payload = { name: form.name, bio: form.bio, location: { city: form.city, state: form.state }, categories: form.categories };
@@ -100,15 +122,30 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4" onClick={onClose}>
-      <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-lg overflow-y-auto" style={{ maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-lg overflow-y-auto profile-modal-content" style={{ maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+        <style>{`
+          @media (max-width: 767px) {
+            .profile-modal-content { padding-bottom: calc(60px + env(safe-area-inset-bottom) + 16px); }
+          }
+        `}</style>
         <div className="p-6">
           <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden" />
           <h3 className="font-black text-gray-900 text-lg mb-5">Edit Profile Details</h3>
 
           <div className="flex items-center gap-4 mb-5">
             <div className="relative">
-              <div className="w-16 h-16 rounded-full overflow-hidden flex items-center justify-center text-white font-black text-xl" style={{ backgroundColor: bgColor }}>
-                {photoPreview ? <img src={photoPreview} alt="profile" className="w-full h-full object-cover" /> : form.name?.[0]?.toUpperCase() || '?'}
+              <div className="w-16 h-16 rounded-full overflow-hidden relative" style={{ backgroundColor: bgColor }}>
+                {photoPreview ? (
+                  <img
+                    src={photoPreview}
+                    alt="profile"
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' }}
+                  />
+                ) : (
+                  <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 900, fontSize: '20px' }}>
+                    {form.name?.[0]?.toUpperCase() || '?'}
+                  </span>
+                )}
               </div>
               <label className="absolute bottom-0 right-0 w-6 h-6 bg-gray-900 rounded-full flex items-center justify-center cursor-pointer" style={{ border: '2px solid white' }}>
                 <Camera size={10} className="text-white" />
@@ -139,15 +176,24 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">
                 Categories <span className="text-red-500">*</span>
-                <span className="text-gray-400 font-normal ml-1">(min 3, selected: {form.categories.length})</span>
+                <span className="text-gray-400 font-normal ml-1">(select 1-3, selected: {form.categories.length})</span>
               </label>
               <div className="flex flex-wrap gap-2">
-                {CATEGORIES.map(cat => (
-                  <button key={cat} type="button" onClick={() => toggleCategory(cat)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold border capitalize transition-all ${form.categories.includes(cat) ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-600 hover:border-blue-300'}`}>
-                    {cat}
-                  </button>
-                ))}
+                {CATEGORIES.map(cat => {
+                  const isSelected = form.categories.includes(cat);
+                  const isDisabled = !isSelected && form.categories.length >= 3;
+                  return (
+                    <button key={cat} type="button" onClick={() => toggleCategory(cat)} disabled={isDisabled}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border capitalize transition-all ${isSelected
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : isDisabled
+                          ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+                          : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                        }`}>
+                      {cat}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <div>
@@ -167,6 +213,16 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
           </div>
         </div>
       </div>
+      {showPolicyDialog && (
+        <CategoryPolicyDialog mode="blocked" onClose={() => setShowPolicyDialog(false)} />
+      )}
+      {rawImageForCrop && (
+        <ImageCropModal
+          imageSrc={rawImageForCrop}
+          onCancel={() => setRawImageForCrop(null)}
+          onCropDone={handleCropDone}
+        />
+      )}
     </div>
   );
 };
@@ -216,7 +272,12 @@ const RateChartModal = ({ profile, onClose, onSave }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4" onClick={onClose}>
-      <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-lg overflow-y-auto" style={{ maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+      <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-lg overflow-y-auto rate-modal-content" style={{ maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+        <style>{`
+          @media (max-width: 767px) {
+            .rate-modal-content { padding-bottom: calc(60px + env(safe-area-inset-bottom) + 16px); }
+          }
+        `}</style>
         <div className="p-6">
           <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden" />
           <h3 className="font-black text-gray-900 text-lg mb-5">Edit Rate Chart</h3>
@@ -297,11 +358,35 @@ const RateChartModal = ({ profile, onClose, onSave }) => {
 };
 
 // ─── AVATAR COMPONENT ─────────────────────────────────────────────────────────
-const Avatar = ({ name, photo, size = 80 }) => {
+const Avatar = ({ name, photo, size = 80, borderColor, borderWidth = 3, extraShadow }) => {
   const bg = avatarBgs[(name?.charCodeAt(0) || 0) % avatarBgs.length];
+  const resolvedBorderColor = borderColor || `${bg}33`;
   return (
-    <div style={{ width: size, height: size, borderRadius: '50%', backgroundColor: bg, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 900, color: 'white', border: `3px solid ${bg}33`, flexShrink: 0, lineHeight: 1, textAlign: 'center' }}>
-      {photo ? <img src={photo} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} /> : <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>{name?.[0]?.toUpperCase() || '?'}</span>}
+    <div
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        backgroundColor: bg,
+        overflow: 'hidden',
+        position: 'relative',
+        flexShrink: 0,
+        border: `${borderWidth}px solid ${resolvedBorderColor}`,
+        boxSizing: 'border-box',
+        boxShadow: extraShadow,
+      }}
+    >
+      {photo ? (
+        <img
+          src={photo}
+          alt={name}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }}
+        />
+      ) : (
+        <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.35, fontWeight: 900, color: 'white', lineHeight: 1 }}>
+          {name?.[0]?.toUpperCase() || '?'}
+        </span>
+      )}
     </div>
   );
 };
@@ -334,6 +419,10 @@ const CreatorProfile = () => {
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
+  // TEMPORARY: nags creators who already have more than 3 categories from
+  // before the new policy existed. Remove this whole block once migrated.
+  const [showOverLimitDialog, setShowOverLimitDialog] = useState(false);
+
 
   const fetchProfile = async () => {
     try { const res = await getMyCreatorProfile(); setProfile(res.data.creator); }
@@ -342,6 +431,17 @@ const CreatorProfile = () => {
   };
 
   useEffect(() => { fetchProfile(); }, []);
+
+  // TEMPORARY(start): show the over-limit policy dialog every time an existing
+  // creator with more than 3 categories loads their profile. Remove once
+  // all legacy over-limit accounts have been migrated.
+  useEffect(() => {
+    if (profile?.categories?.length > 3) {
+      setShowOverLimitDialog(true);
+    }
+  }, [profile]);
+
+  //All the above code piece are TEMPORARY(end) till all the old creators change there category range from more than 3 to 1-3.
 
   const handleInstagramConnect = async () => {
     try { const res = await getInstagramAuthUrl(); window.location.href = res.data.url; }
@@ -529,9 +629,7 @@ const CreatorProfile = () => {
               {/* avatar — centered, overlapping gradient */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div style={{ position: 'relative', marginTop: '-40px', marginBottom: '12px' }}>
-                  <div style={{ width: '80px', height: '80px', borderRadius: '50%', border: '4px solid white', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-                    <Avatar name={profile?.name} photo={profile?.profilePhoto} size={80} />
-                  </div>
+                  <Avatar name={profile?.name} photo={profile?.profilePhoto} size={80} borderColor="white" borderWidth={4} extraShadow="0 4px 12px rgba(0,0,0,0.15)" />
                   <button onClick={() => setModal('profile')}
                     style={{ position: 'absolute', bottom: 0, right: 0, width: '24px', height: '24px', backgroundColor: '#BE0038', borderRadius: '50%', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <Camera size={10} color="white" />
@@ -793,6 +891,17 @@ const CreatorProfile = () => {
 
       {modal === 'profile' && <ProfileDetailsModal profile={profile} onClose={() => setModal(null)} onSave={fetchProfile} />}
       {modal === 'rates' && hasProfile && <RateChartModal profile={profile} onClose={() => setModal(null)} onSave={fetchProfile} />}
+
+      {showOverLimitDialog && (
+        <CategoryPolicyDialog
+          mode="existing"
+          currentCount={profile?.categories?.length}
+          onFixNow={() => {
+            setShowOverLimitDialog(false);
+            setModal('profile');
+          }}
+        />
+      )}
     </div>
   );
 };
