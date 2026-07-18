@@ -552,6 +552,21 @@ const CreatorProfile = () => {
               <div style={{ fontSize: '9px', fontWeight: 700, color: '#1D4ED8', textTransform: 'uppercase', marginTop: '2px' }}>Avg Views</div>
             </div>
           </div>
+
+          {/* secondary stats — same data mobile already shows */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '12px' }}>
+            {[
+              { label: 'Avg Reach', value: formatNumber(profile.instagram.avgReach), bg: '#FFF7ED', color: '#92400E', shadow: '#FDE68A' },
+              { label: 'Avg Likes', value: formatNumber(profile.instagram.avgLikes), bg: '#FDF2F8', color: '#831843', shadow: '#FBCFE8' },
+              { label: 'Avg Comments', value: formatNumber(profile.instagram.avgComments), bg: '#F0FDF4', color: '#14532D', shadow: '#BBF7D0' },
+              { label: 'Avg Shares', value: formatNumber(profile.instagram.avgShares), bg: '#F5F3FF', color: '#4C1D95', shadow: '#DDD6FE' },
+            ].map((s, i) => (
+              <div key={i} style={{ backgroundColor: s.bg, borderRadius: '10px', padding: '8px 4px', textAlign: 'center', boxShadow: `0 2px 0 0 ${s.shadow}` }}>
+                <div style={{ fontSize: '13px', fontWeight: 900, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: '8px', fontWeight: 700, color: s.color, textTransform: 'uppercase', marginTop: '3px', opacity: 0.7 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
           {showDisconnectConfirm ? (
             <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '12px', padding: '12px' }}>
               <div style={{ fontWeight: 900, fontSize: '13px', color: '#7F1D1D', marginBottom: '4px' }}>Disconnect Instagram?</div>

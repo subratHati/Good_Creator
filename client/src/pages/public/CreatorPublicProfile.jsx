@@ -137,11 +137,10 @@ const CreatorPublicProfile = () => {
             <button
               onClick={handleToggleSave}
               disabled={savingCreator}
-              className={`p-2 rounded-lg transition-colors disabled:opacity-60 ${
-                isSaved
+              className={`p-2 rounded-lg transition-colors disabled:opacity-60 ${isSaved
                   ? 'text-[#155DFC] hover:bg-blue-50'
                   : 'text-gray-400 hover:text-[#101828] hover:bg-gray-100'
-              }`}
+                }`}
               aria-label={isSaved ? 'Remove from saved' : 'Save creator'}
               title={isSaved ? 'Remove from saved' : 'Save creator'}
             >
@@ -197,14 +196,12 @@ const CreatorPublicProfile = () => {
               {/* badges */}
               <div className="flex flex-wrap justify-center gap-2 mb-4">
                 <span
-                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${
-                    creator.isOpenForCollab ? 'bg-blue-50 text-[#155DFC]' : 'bg-gray-100 text-gray-500'
-                  }`}
+                  className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${creator.isOpenForCollab ? 'bg-blue-50 text-[#155DFC]' : 'bg-gray-100 text-gray-500'
+                    }`}
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      creator.isOpenForCollab ? 'bg-[#155DFC]' : 'bg-gray-400'
-                    }`}
+                    className={`w-1.5 h-1.5 rounded-full ${creator.isOpenForCollab ? 'bg-[#155DFC]' : 'bg-gray-400'
+                      }`}
                   />
                   {creator.isOpenForCollab ? 'Open for collab' : 'Closed'}
                 </span>
@@ -331,13 +328,11 @@ const CreatorPublicProfile = () => {
                 <div className="h-px bg-gray-100 mb-4" />
 
                 {/* secondary stats */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {[
                     { label: 'Avg Likes', value: formatNumber(ig.avgLikes) },
                     { label: 'Avg Comments', value: formatNumber(ig.avgComments) },
                     { label: 'Avg Reach', value: formatNumber(ig.avgReach) },
-                    { label: 'Avg Saves', value: formatNumber(ig.avgSaved) },
-                    { label: 'Avg Shares', value: formatNumber(ig.avgShares) },
                   ].map(({ label, value }) => (
                     <div key={label} className="bg-[#F8FAFC] rounded-xl p-3 text-center">
                       <div className="text-xs font-semibold text-gray-400 mb-1">{label}</div>
@@ -394,9 +389,8 @@ const CreatorPublicProfile = () => {
                     .map(({ key, label, desc }, i, arr) => (
                       <div
                         key={key}
-                        className={`flex items-center justify-between py-3 ${
-                          i < arr.length - 1 ? 'border-b border-gray-100' : ''
-                        }`}
+                        className={`flex items-center justify-between py-3 ${i < arr.length - 1 ? 'border-b border-gray-100' : ''
+                          }`}
                       >
                         <div>
                           <div className="text-sm font-medium text-[#101828]">{label}</div>
