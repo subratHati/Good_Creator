@@ -249,6 +249,7 @@ const disconnectInstagram = async (req, res) => {
         'instagram.avgComments': 0,
         'instagram.avgShares': 0,
         'instagram.avgReach': 0,
+        'profilePhoto': '',
       });
     } else if (req.user.role === 'brand') {
       await Brand.findOneAndUpdate({ userId: req.user.id }, {
