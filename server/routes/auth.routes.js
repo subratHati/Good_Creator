@@ -10,6 +10,7 @@ const {
   login,
   forgotPassword,
   resetPassword,
+  saveReferralSource,
   getMe,
 } = require('../controllers/auth.controller');
 
@@ -31,5 +32,6 @@ router.post('/login', loginValidation, login);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.get('/me', protect, getMe);
+router.put('/referral-source', protect, saveReferralSource);
 
 module.exports = router;

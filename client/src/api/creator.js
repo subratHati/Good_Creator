@@ -23,5 +23,8 @@ export const getInstagramAuthUrl = () =>
 export const syncInstagram = () =>
   axiosInstance.post('/instagram/sync');
 
+export const addManualInstagramStats = (data) =>
+  axiosInstance.post('/instagram/manual-stats', data);
+
 export const disconnectInstagram = () =>
   axiosInstance.post('/instagram/disconnect');

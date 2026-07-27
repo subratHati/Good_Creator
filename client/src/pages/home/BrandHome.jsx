@@ -9,6 +9,7 @@ import { searchCreators } from '../../api/creator';
 import useAuth from '../../hooks/useAuth';
 import useNotifications from '../../hooks/useNotifications';
 import CreatorCardSmall from '../../components/CreatorCardSmall';
+import ReferralSourceModal from '../../components/ReferralSourceModal';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -136,6 +137,7 @@ const BrandHome = () => {
   const [suggestedCreators, setSuggestedCreators] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showSetupModal, setShowSetupModal] = useState(false);
+  const [showReferralModal, setShowReferralModal] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -337,9 +339,20 @@ const BrandHome = () => {
       {showSetupModal && (
         <BrandSetupModal
           onComplete={async () => {
-            try { const res = await getMyBrandProfile(); setProfile(res.data.brand); setShowSetupModal(false); }
+            try {
+              const res = await getMyBrandProfile();
+              setProfile(res.data.brand);
+              setShowSetupModal(false);
+              setShowReferralModal(true);
+            }
             catch { setShowSetupModal(true); }
           }}
+        />
+      )}
+
+      {showReferralModal && (
+        <ReferralSourceModal
+          onClose={() => setShowReferralModal(false)}
         />
       )}
     </div>

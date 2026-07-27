@@ -47,6 +47,7 @@ const creatorSchema = new mongoose.Schema({
         avgShares: { type: Number, default: 0 },
         engagementRate: { type: Number, default: 0 },
         isConnected: { type: Boolean, default: false },
+        isManuallyAdded: { type: Boolean, default: false },
         lastSynced: { type: Date, default: null },
         tokenRefreshedAt: { type: Date, default: Date.now },
     },
@@ -77,7 +78,7 @@ const creatorSchema = new mongoose.Schema({
         type: [String],
         default: [],
     },
-    
+
     bankDetails: {
         accountHolderName: { type: String, default: '' },
         accountNumber: { type: String, default: '' },

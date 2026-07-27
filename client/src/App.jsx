@@ -37,7 +37,9 @@ import CreatorPublicProfile from './pages/public/CreatorPublicProfile';
 import BrandPublicProfile from './pages/public/BrandPublicProfile';
 import HomePage from './pages/home/HomePage';
 
-// test deploy trigger
+// admin 
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 const App = () => {
   return (
@@ -107,6 +109,10 @@ const App = () => {
           <Route path="/messages/:id" element={
             <ProtectedRoute><ChatWindow /></ProtectedRoute>
           } />
+
+          {/* Admin  */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
 
           <Route path="*" element={<Navigate to="/login" replace />} />

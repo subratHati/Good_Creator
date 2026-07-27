@@ -4,6 +4,7 @@ import { ArrowLeft, ExternalLink, MapPin, CheckCircle, Bookmark } from 'lucide-r
 import axiosInstance from '../../api/axiosInstance';
 import { getOrCreateConversation } from '../../api/chat';
 import { getSavedCreators, saveCreator } from '../../api/brand';
+import { addManualInstagramStats } from '../../api/creator';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
 

@@ -35,6 +35,11 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  referralSource: {
+    type: String,
+    enum: ['instagram', 'friend_referral', 'google_search', 'whatsapp', 'other', ''],
+    default: '',
+  },
 }, { timestamps: true });
 
 // hash password before saving

@@ -212,4 +212,22 @@ const getMe = async (req, res) => {
   }
 };
 
-module.exports = { register, verifyOtp, resendOtp, login, forgotPassword, resetPassword, getMe };
+// ─── PUT /api/auth/referral-source ───────────────────────────────────────────
+const saveReferralSource = async (req, res) => {
+  const { referralSource } = req.body;
+
+  const validSources = ['instagram', 'friend_referral', 'google_search', 'whatsapp', 'other'];
+  if (!referralSource || !validSources.includes(referralSource)) {
+    return res.status(400).json({ message: 'A valid referral source is required' });
+  }
+
+  try {
+    await User.findByIdAndUpdate(req.user.id, { referralSource });
+    res.json({ message: 'Thanks for letting us know!' });
+  } catch (error) {
+    console.error('saveReferralSource error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { register, verifyOtp, resendOtp, login, forgotPassword, saveReferralSource, resetPassword, getMe };

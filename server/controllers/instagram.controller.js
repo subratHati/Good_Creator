@@ -173,6 +173,62 @@ const connectInstagram = async (req, res) => {
   }
 };
 
+const addManualStats = async (req, res) => {
+  if (req.user.role !== 'creator') {
+    return res.status(403).json({ message: 'Only creators can add manual Instagram stats' });
+  }
+
+  const { followersCount, reelViews } = req.body;
+
+  if (followersCount === undefined || followersCount === null) {
+    return res.status(400).json({ message: 'Followers count is required' });
+  }
+  if (!Number.isFinite(Number(followersCount)) || Number(followersCount) < 0) {
+    return res.status(400).json({ message: 'Followers count must be a valid positive number' });
+  }
+
+  if (!Array.isArray(reelViews) || reelViews.length !== 5) {
+    return res.status(400).json({ message: 'Please provide view counts for exactly 5 reels' });
+  }
+
+  const parsedViews = reelViews.map(v => Number(v));
+  if (parsedViews.some(v => !Number.isFinite(v) || v < 0)) {
+    return res.status(400).json({ message: 'All reel view counts must be valid positive numbers' });
+  }
+
+  const avgViews = Math.round(parsedViews.reduce((sum, v) => sum + v, 0) / parsedViews.length);
+
+  try {
+    const updated = await Creator.findOneAndUpdate(
+      { userId: req.user.id },
+      {
+        'instagram.followersCount': Number(followersCount),
+        'instagram.avgViews': avgViews,
+        'instagram.isManuallyAdded': true,
+        'instagram.isConnected': false,
+        'instagram.lastSynced': new Date(),
+      },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Creator profile not found' });
+    }
+
+    res.json({
+      message: 'Instagram stats added successfully',
+      instagram: {
+        followersCount: updated.instagram.followersCount,
+        avgViews: updated.instagram.avgViews,
+        isManuallyAdded: updated.instagram.isManuallyAdded,
+      },
+    });
+  } catch (error) {
+    console.error('[MANUAL STATS] Error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 const syncInstagram = async (req, res) => {
   try {
     if (req.user.role === 'creator') {
@@ -266,4 +322,4 @@ const disconnectInstagram = async (req, res) => {
   }
 };
 
-module.exports = { getAuthUrl, connectInstagram, syncInstagram, disconnectInstagram };
+module.exports = { getAuthUrl, connectInstagram, addManualStats, syncInstagram, disconnectInstagram };

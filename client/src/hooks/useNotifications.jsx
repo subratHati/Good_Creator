@@ -77,6 +77,24 @@ const useNotifications = ({ limit = 10, pollIntervalMs = 60000 } = {}) => {
         }
       }
 
+      // admin-sent notifications apply to both creators and brands
+      try {
+        const adminNotifRes = await axiosInstance.get('/notifications/my');
+        const adminNotifs = adminNotifRes.data.notifications || [];
+        adminNotifs.forEach((n) => {
+          items.push({
+            id: n._id,
+            type: 'admin',
+            title: n.title,
+            preview: n.message,
+            time: n.createdAt,
+            action: { path: n.actionPath || '/' },
+          });
+        });
+      } catch {
+        // don't let a failed admin-notifications fetch break the whole list
+      }
+
       items.sort((a, b) => new Date(b.time) - new Date(a.time));
       setNotifications(items.slice(0, limit));
     } catch {

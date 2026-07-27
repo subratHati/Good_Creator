@@ -6,6 +6,9 @@ export const registerUser = (data) =>
 export const loginUser = (data) =>
   axiosInstance.post('/auth/login', data);
 
+export const saveReferralSource = (data) =>
+  axiosInstance.put('/auth/referral-source', data);
+
 // export const getMe = () =>
 //   axiosInstance.get('/auth/me');
 

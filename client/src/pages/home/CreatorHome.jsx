@@ -6,6 +6,7 @@ import { CreatorSetupModal } from '../../components/ProfileSetupModals';
 import { getMyCreatorProfile } from '../../api/creator';
 import { searchOpenings } from '../../api/openings';
 import useAuth from '../../hooks/useAuth';
+import ReferralSourceModal from '../../components/ReferralSourceModal';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -145,6 +146,7 @@ const CreatorHome = () => {
   const [openings, setOpenings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showSetupModal, setShowSetupModal] = useState(false);
+  const [showReferralModal, setShowReferralModal] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -167,6 +169,8 @@ const CreatorHome = () => {
     };
     fetchAll();
   }, []);
+
+
 
   const ig = profile?.instagram;
 
@@ -390,10 +394,18 @@ const CreatorHome = () => {
               const res = await getMyCreatorProfile();
               setProfile(res.data.creator);
               setShowSetupModal(false);
+              setShowReferralModal(true);
             } catch { setShowSetupModal(true); }
           }}
         />
       )}
+
+      {showReferralModal && (
+        <ReferralSourceModal
+          onClose={() => setShowReferralModal(false)}
+        />
+      )}
+
     </div>
   );
 };
