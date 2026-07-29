@@ -57,6 +57,21 @@ const messageSchema = new mongoose.Schema({
     approvedAt: Date,
   },
 
+  // tracks whether the admin has actually completed the manual bank
+// transfer to the creator after delivery was approved. Separate from
+// delivery.status since approval and payout are two different events —
+// approval happens automatically when the brand clicks Approve, payout
+// happens manually whenever the admin actually sends the money.
+payoutStatus: {
+    type: String,
+    enum: ['not_applicable', 'pending', 'completed'],
+    default: 'not_applicable',
+},
+payoutCompletedAt: {
+    type: Date,
+    default: null,
+},
+
   seen: { type: Boolean, default: false },
 }, { timestamps: true });
 

@@ -40,6 +40,7 @@ import HomePage from './pages/home/HomePage';
 // admin 
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminPayments from './pages/admin/AdminPayments';
 
 const App = () => {
   return (
@@ -113,6 +114,7 @@ const App = () => {
           {/* Admin  */}
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/payments" element={<AdminPayments />} />
 
 
           <Route path="*" element={<Navigate to="/login" replace />} />

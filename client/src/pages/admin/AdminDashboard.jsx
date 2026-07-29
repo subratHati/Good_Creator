@@ -210,6 +210,7 @@ const AdminDashboard = () => {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <h1 className="font-black text-white">
             Good<span style={{ color: '#155DFC' }}>Creator</span> <span style={{ color: 'rgba(255,255,255,0.4)' }}>Admin</span>
+
           </h1>
           <button onClick={handleLogout} className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: 'rgba(255,255,255,0.6)' }}>
             <LogOut size={15} /> Log out
@@ -218,6 +219,19 @@ const AdminDashboard = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
+
+        {/* payments section link */}
+        <button
+          onClick={() => navigate('/admin/payments')}
+          className="w-full flex items-center justify-between bg-white rounded-2xl border p-5 mb-6 hover:bg-gray-50 transition-colors"
+          style={{ borderColor: '#E5E7EB' }}
+        >
+          <div className="text-left">
+            <div className="text-sm font-black" style={{ color: '#101828' }}>💰 Payments Dashboard</div>
+            <div className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>View collections, commissions, and pending creator payouts</div>
+          </div>
+          <span style={{ color: '#155DFC', fontSize: '20px' }}>→</span>
+        </button>
 
         {/* referral source stats */}
         {referralStats && (

@@ -128,10 +128,13 @@ const releasePayment = async (req, res) => {
   const { conversationId, deliveryMessageId } = req.body;
 
   try {
-    // update delivery status
+    // update delivery status — payoutStatus starts as 'pending' the moment
+    // delivery is approved, since that's the exact trigger for the admin's
+    // 24-hour manual payout window
     await Message.findByIdAndUpdate(deliveryMessageId, {
       'delivery.status': 'approved',
       'delivery.approvedAt': new Date(),
+      payoutStatus: 'pending',
     });
 
     // find the paid payment request in this conversation
@@ -213,10 +216,164 @@ const saveCreatorBankDetails = async (req, res) => {
   }
 };
 
+// ─── GET /api/payment/admin/overview ─────────────────────────────────────────
+// Single endpoint computing everything the admin payment dashboard needs.
+// Built around the fact that paymentRequest and delivery live on SEPARATE
+// Message documents, correlated only by conversationId — there is no single
+// document that says "this payment is paid AND delivered". So this function
+// first finds all paid payment requests, then checks each one's conversation
+// for an approved delivery, and buckets accordingly.
+const getAdminPaymentOverview = async (req, res) => {
+  try {
+    // all paid payment requests — the base set everything else is derived from
+    const paidRequests = await Message.find({
+      type: 'payment_request',
+      'paymentRequest.status': 'paid',
+    }).select('conversationId senderId paymentRequest createdAt');
+
+    const conversationIds = paidRequests.map((r) => r.conversationId);
+
+    // approved deliveries for those same conversations — one query instead
+    // of one-per-conversation, then matched up in memory below
+    const approvedDeliveries = await Message.find({
+      type: 'delivery',
+      'delivery.status': 'approved',
+      conversationId: { $in: conversationIds },
+    }).select('conversationId delivery payoutStatus payoutCompletedAt createdAt');
+
+    // map conversationId -> its approved delivery (if any), for quick lookup.
+    // if a conversation somehow has more than one approved delivery, this
+    // takes the most recently created one, which is the practically correct
+    // choice (e.g. a revision that was re-approved later)
+    const deliveryByConversation = {};
+    approvedDeliveries.forEach((d) => {
+      const key = d.conversationId.toString();
+      if (!deliveryByConversation[key] || d.createdAt > deliveryByConversation[key].createdAt) {
+        deliveryByConversation[key] = d;
+      }
+    });
+
+    const PLATFORM_FEE_RATE = 0.15;
+
+    let totalCollected = 0;
+    let commissionRealized = 0;
+    let commissionUpcoming = 0;
+    const activeCollaborations = []; // paid, no approved delivery yet
+    const payoutQueue = []; // approved delivery, payout still pending
+    const completedPayouts = []; // approved delivery, payout already completed
+
+    for (const paymentReq of paidRequests) {
+      const amount = paymentReq.paymentRequest?.amount || 0;
+      const commission = Math.round(amount * PLATFORM_FEE_RATE);
+      const creatorAmount = amount - commission;
+      totalCollected += amount;
+
+      const delivery = deliveryByConversation[paymentReq.conversationId.toString()];
+
+      if (!delivery) {
+        commissionUpcoming += commission;
+        activeCollaborations.push({
+          conversationId: paymentReq.conversationId,
+          creatorUserId: paymentReq.senderId,
+          amount,
+          commission,
+          creatorAmount,
+          description: paymentReq.paymentRequest?.description || '',
+          requestedAt: paymentReq.createdAt,
+        });
+        continue;
+      }
+
+      commissionRealized += commission;
+
+      const entry = {
+        conversationId: paymentReq.conversationId,
+        creatorUserId: paymentReq.senderId,
+        amount,
+        commission,
+        creatorAmount,
+        description: paymentReq.paymentRequest?.description || '',
+        approvedAt: delivery.delivery?.approvedAt || null,
+        payoutCompletedAt: delivery.payoutCompletedAt || null,
+        deliveryMessageId: delivery._id,
+      };
+
+      if (delivery.payoutStatus === 'completed') {
+        completedPayouts.push(entry);
+      } else {
+        payoutQueue.push(entry);
+      }
+    }
+
+    // attach creator name/handle to payout queue + completed payouts, since
+    // the admin needs to know WHO to pay, not just a raw ObjectId
+    const allCreatorUserIds = [...payoutQueue, ...completedPayouts].map((e) => e.creatorUserId);
+    const creators = await Creator.find({ userId: { $in: allCreatorUserIds } })
+      .select('userId name profilePhoto bankDetails instagram.handle');
+    const creatorByUserId = {};
+    creators.forEach((c) => { creatorByUserId[c.userId.toString()] = c; });
+
+    const attachCreator = (entry) => {
+      const creator = creatorByUserId[entry.creatorUserId.toString()];
+      return {
+        ...entry,
+        creatorName: creator?.name || 'Unknown creator',
+        creatorHandle: creator?.instagram?.handle || '',
+        hasBankDetails: !!(creator?.bankDetails?.accountNumber),
+        bankDetails: creator?.bankDetails || null,
+      };
+    };
+
+    res.json({
+      totalCollected,
+      commissionRealized,
+      commissionUpcoming,
+      activeCollaborations: activeCollaborations.sort((a, b) => b.requestedAt - a.requestedAt),
+      payoutQueue: payoutQueue.map(attachCreator).sort((a, b) => a.approvedAt - b.approvedAt),
+      completedPayouts: completedPayouts.map(attachCreator).sort((a, b) => b.payoutCompletedAt - a.payoutCompletedAt),
+    });
+  } catch (error) {
+    console.error('getAdminPaymentOverview error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ─── POST /api/payment/admin/mark-paid ───────────────────────────────────────
+// Admin marks a payout as actually completed, after manually transferring
+// the money. This is the only place payoutStatus ever moves from 'pending'
+// to 'completed' — there is no automatic payout yet (see the TODO in
+// releasePayment), so this is a deliberate, manual confirmation step.
+const markPayoutCompleted = async (req, res) => {
+  const { deliveryMessageId } = req.body;
+
+  if (!deliveryMessageId) {
+    return res.status(400).json({ message: 'deliveryMessageId is required' });
+  }
+
+  try {
+    const updated = await Message.findOneAndUpdate(
+      { _id: deliveryMessageId, type: 'delivery', 'delivery.status': 'approved' },
+      { payoutStatus: 'completed', payoutCompletedAt: new Date() },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: 'Approved delivery message not found' });
+    }
+
+    res.json({ message: 'Payout marked as completed', deliveryMessageId: updated._id });
+  } catch (error) {
+    console.error('markPayoutCompleted error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   createOrder,
   verifyPayment,
   releasePayment,
   getCreatorBankDetails,
   saveCreatorBankDetails,
+  getAdminPaymentOverview,
+  markPayoutCompleted,
 };

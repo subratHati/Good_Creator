@@ -11,3 +11,9 @@ export const sendAdminMessage = (data) =>
 
 export const getReferralStats = () =>
   axiosInstance.get('/admin/referral-stats');
+
+export const getPaymentOverview = () =>
+  axiosInstance.get('/payment/admin/overview');
+
+export const markPayoutCompleted = (deliveryMessageId) =>
+  axiosInstance.post('/payment/admin/mark-paid', { deliveryMessageId });

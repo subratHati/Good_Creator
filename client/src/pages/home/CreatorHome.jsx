@@ -7,6 +7,9 @@ import { getMyCreatorProfile } from '../../api/creator';
 import { searchOpenings } from '../../api/openings';
 import useAuth from '../../hooks/useAuth';
 import ReferralSourceModal from '../../components/ReferralSourceModal';
+import InstagramReminderModal from '../../components/InstagramReminderModal';
+import InstagramConnectChoiceModal from '../../components/InstagramConnectChoiceModal';
+import toast from 'react-hot-toast';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -147,6 +150,8 @@ const CreatorHome = () => {
   const [loading, setLoading] = useState(true);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
+  const [showInstagramReminder, setShowInstagramReminder] = useState(false);
+  const [showInstagramChoiceFromHome, setShowInstagramChoiceFromHome] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -169,6 +174,17 @@ const CreatorHome = () => {
     };
     fetchAll();
   }, []);
+
+  // show the "Instagram not connected" reminder once per session, only
+  // after profile data has loaded and only if handle is genuinely empty
+  useEffect(() => {
+    if (!profile) return;
+    if (profile?.instagram?.handle) return; // already has a username set
+    const alreadyShownThisSession = sessionStorage.getItem('instagramReminderShown');
+    if (alreadyShownThisSession) return;
+    sessionStorage.setItem('instagramReminderShown', 'true');
+    setShowInstagramReminder(true);
+  }, [profile]);
 
 
 
@@ -403,6 +419,31 @@ const CreatorHome = () => {
       {showReferralModal && (
         <ReferralSourceModal
           onClose={() => setShowReferralModal(false)}
+        />
+      )}
+
+      {showInstagramReminder && (
+        <InstagramReminderModal
+          onClose={() => setShowInstagramReminder(false)}
+          onOpenChoice={() => {
+            setShowInstagramReminder(false);
+            setShowInstagramChoiceFromHome(true);
+          }}
+        />
+      )}
+
+      {showInstagramChoiceFromHome && (
+        <InstagramConnectChoiceModal
+          onClose={() => setShowInstagramChoiceFromHome(false)}
+          onChooseOAuth={() => {
+            setShowInstagramChoiceFromHome(false);
+            toast.error('Instagram connection is temporarily unavailable — please use manual stats entry for now.');
+          }}
+          onChooseManual={() => {
+            setShowInstagramChoiceFromHome(false);
+            navigate('/creator/profile');
+            toast('Click "Connect Instagram" on your profile to add stats manually', { icon: '👉' });
+          }}
         />
       )}
 

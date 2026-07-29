@@ -178,7 +178,11 @@ const addManualStats = async (req, res) => {
     return res.status(403).json({ message: 'Only creators can add manual Instagram stats' });
   }
 
-  const { followersCount, reelViews } = req.body;
+  const { handle, followersCount, reelViews } = req.body;
+
+  if (!handle || !handle.trim()) {
+    return res.status(400).json({ message: 'Instagram username is required' });
+  }
 
   if (followersCount === undefined || followersCount === null) {
     return res.status(400).json({ message: 'Followers count is required' });
@@ -202,6 +206,7 @@ const addManualStats = async (req, res) => {
     const updated = await Creator.findOneAndUpdate(
       { userId: req.user.id },
       {
+        'instagram.handle': handle.trim().replace(/^@/, ''), // strip a leading @ if the creator typed one
         'instagram.followersCount': Number(followersCount),
         'instagram.avgViews': avgViews,
         'instagram.isManuallyAdded': true,
@@ -218,6 +223,7 @@ const addManualStats = async (req, res) => {
     res.json({
       message: 'Instagram stats added successfully',
       instagram: {
+        handle: updated.instagram.handle,
         followersCount: updated.instagram.followersCount,
         avgViews: updated.instagram.avgViews,
         isManuallyAdded: updated.instagram.isManuallyAdded,
