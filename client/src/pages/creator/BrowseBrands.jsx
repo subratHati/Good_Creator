@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { SlidersHorizontal, X } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { searchOpenings } from '../../api/openings';
 import { applyToOpening } from '../../api/applications';
 import useCreatorProfileGuard from '../../hooks/useCreatorProfileGuard';
 import toast from 'react-hot-toast';
-import useBackButtonClose from '../../hooks/useBackButtonClose';
 
 const categoryColors = {
   fashion: { bg: '#FED7AA', color: '#7C2D12' },
@@ -24,22 +23,7 @@ const categoryColors = {
 
 // ─── OPENING CARD — horizontal single column ──────────────────────────────────
 const OpeningCard = ({ opening, onApply, applied }) => {
-  const [showApplyModal, setShowApplyModal] = useState(false);
-  const [coverNote, setCoverNote] = useState('');
-  const [applying, setApplying] = useState(false);
-
-  useBackButtonClose(showApplyModal, () => setShowApplyModal(false));
-
-  const handleApply = async () => {
-    setApplying(true);
-    try {
-      await onApply(opening._id, coverNote);
-      setShowApplyModal(false);
-      setCoverNote('');
-    } finally {
-      setApplying(false);
-    }
-  };
+  const navigate = useNavigate();
 
   const cat = opening.brandId?.category?.toLowerCase() || 'other';
   const catStyle = categoryColors[cat] || categoryColors.other;
@@ -59,7 +43,7 @@ const OpeningCard = ({ opening, onApply, applied }) => {
     <>
 
       <div
-        onClick={() => !applied && setShowApplyModal(true)}
+        onClick={() => navigate(`/openings/${opening._id}`)}
         style={{ cursor: 'pointer', display: 'flex', flexDirection: 'row', alignItems: 'stretch', gap: '12px' }}
       >
         {/* left — image */}
@@ -130,107 +114,7 @@ const OpeningCard = ({ opening, onApply, applied }) => {
           </div>
         </div>
       </div>
-
-
-      {/* apply modal */}
-      {showApplyModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4"
-          onClick={() => setShowApplyModal(false)}>
-          <div style={{ backgroundColor: 'white', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: '480px', maxHeight: '85vh', overflowY: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom) + 80px)' }}
-            onClick={e => e.stopPropagation()}>
-
-            {/* drag handle */}
-            <div style={{ position: 'sticky', top: 0, backgroundColor: 'white', paddingTop: '12px', paddingBottom: '4px', zIndex: 1 }}>
-              <div style={{ width: '40px', height: '4px', backgroundColor: '#E5E7EB', borderRadius: '2px', margin: '0 auto 16px' }} />
-            </div>
-
-            <div style={{ padding: '0 20px 20px' }}>
-              {/* campaign header */}
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '20px', padding: '14px', backgroundColor: '#F8FAFC', borderRadius: '16px', border: '1px solid #E5E7EB' }}>
-                <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: '#F0F0F0', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {opening.brandId?.logo
-                    ? <img src={opening.brandId.logo} alt="brand" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span style={{ fontSize: '20px' }}>🏷️</span>
-                  }
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: '14px', color: '#101828', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{opening.title}</div>
-                  <div style={{ fontSize: '12px', color: '#16A34A', fontWeight: 600 }}>By {opening.brandId?.brandName || 'Brand'}</div>
-                </div>
-              </div>
-
-              {/* preferred niches */}
-              {opening.requirements?.categories?.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Preferred Niches</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {opening.requirements.categories.map(cat => {
-                      const cs = categoryColors[cat] || categoryColors.other;
-                      return (
-                        <span key={cat} style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '99px', backgroundColor: cs.bg, color: cs.color, textTransform: 'capitalize' }}>
-                          {cat}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* deliverables summary */}
-              {boxes.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Deliverables</div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {boxes.map((b, i) => (
-                      <div key={i} style={{ backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB', borderRadius: '10px', padding: '6px 12px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '8px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase' }}>{b.type}</div>
-                        <div style={{ fontSize: '16px', fontWeight: 900, color: '#101828' }}>{b.qty}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* budget */}
-              <div style={{ marginBottom: '16px', padding: '12px 14px', backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '12px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: '#78350F', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px' }}>Budget</div>
-                <div style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A' }}>
-                  {opening.budgetMin > 0 && opening.budgetMax > 0
-                    ? `₹${opening.budgetMin.toLocaleString('en-IN')} – ₹${opening.budgetMax.toLocaleString('en-IN')}`
-                    : opening.budgetMax > 0
-                      ? `Up to ₹${opening.budgetMax.toLocaleString('en-IN')}`
-                      : opening.isBarter ? 'Barter' : 'Open to discuss'
-                  }
-                </div>
-              </div>
-
-              {/* cover note */}
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>
-                  Cover note <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(optional)</span>
-                </label>
-                <textarea value={coverNote} onChange={e => setCoverNote(e.target.value)} rows={3}
-                  placeholder="Tell the brand why you're a great fit..."
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: '14px', border: '1.5px solid #E5E7EB', fontSize: '14px', resize: 'none', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
-                  onFocus={e => e.target.style.borderColor = '#155DFC'}
-                  onBlur={e => e.target.style.borderColor = '#E5E7EB'} />
-              </div>
-
-              {/* buttons — sticky at bottom */}
-              <div style={{ position: 'sticky', bottom: 0, backgroundColor: 'white', paddingTop: '12px', borderTop: '1px solid #F0F0F0', display: 'flex', gap: '10px' }}>
-                <button onClick={() => setShowApplyModal(false)}
-                  style={{ flex: 1, padding: '14px', border: '1.5px solid #E5E7EB', borderRadius: '14px', fontSize: '14px', fontWeight: 700, color: '#6B7280', background: 'white', cursor: 'pointer' }}>
-                  Cancel
-                </button>
-                <button onClick={handleApply} disabled={applying}
-                  style={{ flex: 1, padding: '14px', backgroundColor: applying ? '#93B4FD' : '#155DFC', color: 'white', border: 'none', borderRadius: '14px', fontSize: '14px', fontWeight: 900, cursor: applying ? 'not-allowed' : 'pointer', boxShadow: applying ? 'none' : '0 4px 0 0 #0C3EB5' }}>
-                  {applying ? 'Applying...' : 'Submit'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+             
     </>
   );
 };

@@ -14,3 +14,6 @@ export const deleteOpening = (id) =>
 
 export const searchOpenings = (params) =>
   axiosInstance.get('/openings/search', { params });
+
+export const getOpeningById = (id) =>
+  axiosInstance.get(`/openings/${id}`);

@@ -96,11 +96,14 @@ const searchOpenings = async (req, res) => {
       maxBudget,
       categories, // comma-separated e.g. "fashion,beauty,food"
       city,
+      brandId,
       page = 1,
       limit = 12,
     } = req.query;
 
     const query = { status: 'active' };
+
+    if (brandId) query.brandId = brandId;
 
     if (contentType) query.contentType = contentType;
     if (isBarter === 'true') query.isBarter = true;

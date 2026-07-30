@@ -191,7 +191,7 @@ const DesktopSidebar = ({ filters, onFilterChange, onApply, onClear }) => (
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 const BrowseCreators = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [creators, setCreators] = useState([]);
   const [total, setTotal] = useState(0);
@@ -206,12 +206,12 @@ const BrowseCreators = () => {
   const [filters, setFilters] = useState({
     category: searchParams.get('category') || '',
     city: searchParams.get('city') || '',
-    minFollowers: '',
-    maxFollowers: '',
-    minEngagement: '',
-    barterEnabled: '',
-    isOpenForCollab: 'true',
-    sortBy: 'newest',
+    minFollowers: searchParams.get('minFollowers') || '',
+    maxFollowers: searchParams.get('maxFollowers') || '',
+    minEngagement: searchParams.get('minEngagement') || '',
+    barterEnabled: searchParams.get('barterEnabled') || '',
+    isOpenForCollab: searchParams.get('isOpenForCollab') || 'true',
+    sortBy: searchParams.get('sortBy') || 'newest',
   });
 
   const fetchCreators = async (f = filters, pg = 1) => {
@@ -249,11 +249,35 @@ const BrowseCreators = () => {
     init();
   }, []);
 
-  const handleFilterChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
+  // writes the current filter state into the URL's query string, so
+  // navigating away (e.g. to a creator profile) and back restores exactly
+  // this state instead of resetting — the URL becomes the actual source
+  // of truth, not just component memory that gets wiped on unmount
+  const syncFiltersToUrl = (f) => {
+    const params = {};
+    if (f.category) params.category = f.category;
+    if (f.city) params.city = f.city;
+    if (f.minFollowers) params.minFollowers = f.minFollowers;
+    if (f.maxFollowers) params.maxFollowers = f.maxFollowers;
+    if (f.minEngagement) params.minEngagement = f.minEngagement;
+    if (f.barterEnabled) params.barterEnabled = f.barterEnabled;
+    if (f.isOpenForCollab && f.isOpenForCollab !== 'true') params.isOpenForCollab = f.isOpenForCollab;
+    if (f.sortBy && f.sortBy !== 'newest') params.sortBy = f.sortBy;
+    setSearchParams(params, { replace: true });
+  };
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => {
+      const updated = { ...prev, [key]: value };
+      syncFiltersToUrl(updated);
+      return updated;
+    });
+  };
 
   const handleClearFilters = () => {
     const cleared = { category: '', city: '', minFollowers: '', maxFollowers: '', minEngagement: '', barterEnabled: '', isOpenForCollab: 'true', sortBy: 'newest' };
     setFilters(cleared);
+    syncFiltersToUrl(cleared);
     fetchCreators(cleared);
   };
 

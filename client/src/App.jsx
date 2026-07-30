@@ -22,6 +22,8 @@ import BrowseBrands from './pages/creator/BrowseBrands';
 import MyApplications from './pages/creator/MyApplications';
 import CreatorEnquiries from './pages/creator/CreatorEnquiries';
 import BankDetails from './pages/creator/BankDetails';
+import CampaignDetails from './pages/creator/CampaignDetails';
+
 
 // brand
 import BrandDashboard from './pages/brand/BrandDashboard';
@@ -76,10 +78,10 @@ const App = () => {
           <Route path="/creator/enquiries" element={
             <ProtectedRoute allowedRole="creator"><CreatorEnquiries /></ProtectedRoute>
           } />
-
           <Route path="/creator/bank-details" element={
            <ProtectedRoute allowedRole="creator" > <BankDetails /> </ProtectedRoute> 
             } />
+            <Route path="/openings/:id" element={<CampaignDetails />} />
 
           {/* brand */}
           <Route path="/brand/dashboard" element={
