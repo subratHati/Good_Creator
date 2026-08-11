@@ -7,6 +7,7 @@ import { saveCreator, getSavedCreators } from '../../api/brand';
 import CreatorCard from '../../components/CreatorCard';
 import toast from 'react-hot-toast';
 import useBackButtonClose from '../../hooks/useBackButtonClose';
+import CreatorListSkeleton from '../../components/CreatorListSkeleton';
 
 const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'other'];
 
@@ -211,7 +212,7 @@ const BrowseCreators = () => {
     minEngagement: searchParams.get('minEngagement') || '',
     barterEnabled: searchParams.get('barterEnabled') || '',
     isOpenForCollab: searchParams.get('isOpenForCollab') || 'true',
-    sortBy: searchParams.get('sortBy') || 'newest',
+    sortBy: searchParams.get('sortBy') || '',
   });
 
   const fetchCreators = async (f = filters, pg = 1) => {
@@ -262,7 +263,7 @@ const BrowseCreators = () => {
     if (f.minEngagement) params.minEngagement = f.minEngagement;
     if (f.barterEnabled) params.barterEnabled = f.barterEnabled;
     if (f.isOpenForCollab && f.isOpenForCollab !== 'true') params.isOpenForCollab = f.isOpenForCollab;
-    if (f.sortBy && f.sortBy !== 'newest') params.sortBy = f.sortBy;
+    if (f.sortBy) params.sortBy = f.sortBy;
     setSearchParams(params, { replace: true });
   };
 
@@ -275,7 +276,7 @@ const BrowseCreators = () => {
   };
 
   const handleClearFilters = () => {
-    const cleared = { category: '', city: '', minFollowers: '', maxFollowers: '', minEngagement: '', barterEnabled: '', isOpenForCollab: 'true', sortBy: 'newest' };
+    const cleared = { category: '', city: '', minFollowers: '', maxFollowers: '', minEngagement: '', barterEnabled: '', isOpenForCollab: 'true', sortBy: '' };
     setFilters(cleared);
     syncFiltersToUrl(cleared);
     fetchCreators(cleared);
@@ -333,7 +334,7 @@ const BrowseCreators = () => {
           </button>
           <select value={filters.sortBy} onChange={e => { handleFilterChange('sortBy', e.target.value); fetchCreators({ ...filters, sortBy: e.target.value }); }}
             className="flex-shrink-0 px-2 py-1.5 border border-gray-200 rounded-full text-xs text-gray-600 bg-white focus:outline-none">
-            <option value="newest">New</option>
+            <option value="">Recommended</option>
             <option value="followers">Followers</option>
             <option value="engagement">Engage</option>
           </select>
@@ -359,13 +360,13 @@ const BrowseCreators = () => {
               </div>
               <select value={filters.sortBy} onChange={e => { handleFilterChange('sortBy', e.target.value); fetchCreators({ ...filters, sortBy: e.target.value }); }}
                 className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="newest">Newest</option>
+                <option value="">Recommended</option>
                 <option value="followers">Most followers</option>
                 <option value="engagement">Best engagement</option>
               </select>
             </div>
 
-            {loading ? <LoadingSpinner /> : creators.length === 0 ? <EmptyState /> : (
+            {loading ? <CreatorListSkeleton /> : creators.length === 0 ? <EmptyState /> : (
               <div className="flex flex-col gap-4 max-w-3xl">
                 {creators.map(creator => (
                   <CreatorCard key={creator._id} creator={creator} onSave={handleSave}
@@ -389,7 +390,7 @@ const BrowseCreators = () => {
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-black" style={{ color: '#101828' }}>{total} creators</span>
           </div>
-          {loading ? <LoadingSpinner /> : creators.length === 0 ? <EmptyState /> : (
+          {loading ? <CreatorListSkeleton /> : creators.length === 0 ? <EmptyState /> : (
             <div className="grid grid-cols gap-3">
               {creators.map(creator => (
                 <CreatorCard key={creator._id} creator={creator} onSave={handleSave}

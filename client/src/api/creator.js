@@ -28,3 +28,6 @@ export const addManualInstagramStats = (data) =>
 
 export const disconnectInstagram = () =>
   axiosInstance.post('/instagram/disconnect');
+
+export const getCreatorReviews = (id) =>
+  axiosInstance.get(`/creators/${id}/reviews`);

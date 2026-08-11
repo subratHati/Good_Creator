@@ -10,6 +10,7 @@ import ReferralSourceModal from '../../components/ReferralSourceModal';
 import InstagramReminderModal from '../../components/InstagramReminderModal';
 import InstagramConnectChoiceModal from '../../components/InstagramConnectChoiceModal';
 import toast from 'react-hot-toast';
+import CreatorHomeSkeleton from '../../components/CreatorHomeSkeleton';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -198,9 +199,7 @@ const CreatorHome = () => {
     return (
       <div className="min-h-screen bg-white">
         <Navbar />
-        <div className="flex items-center justify-center h-96">
-          <div className="w-10 h-10 rounded-full animate-spin" style={{ border: '3px solid #F0F0F0', borderTopColor: '#155DFC' }} />
-        </div>
+        <CreatorHomeSkeleton />
       </div>
     );
   }
@@ -437,7 +436,8 @@ const CreatorHome = () => {
           onClose={() => setShowInstagramChoiceFromHome(false)}
           onChooseOAuth={() => {
             setShowInstagramChoiceFromHome(false);
-            toast.error('Instagram connection is temporarily unavailable — please use manual stats entry for now.');
+            navigate('/creator/profile');
+            toast('Click "Connect Instagram" on your profile to complete the connection', { icon: '👉' });
           }}
           onChooseManual={() => {
             setShowInstagramChoiceFromHome(false);

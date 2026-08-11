@@ -1166,17 +1166,13 @@ const CreatorProfile = () => {
           onClose={() => setShowInstagramChoice(false)}
           onChooseOAuth={() => {
             setShowInstagramChoice(false);
-            setShowOAuthUnavailable(true);
+            handleInstagramConnect();
           }}
           onChooseManual={() => {
             setShowInstagramChoice(false);
             setShowManualStatsModal(true);
           }}
         />
-      )}
-
-      {showOAuthUnavailable && (
-        <OAuthUnavailableModal onClose={() => setShowOAuthUnavailable(false)} />
       )}
 
       {showManualStatsModal && (

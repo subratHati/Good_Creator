@@ -6,15 +6,16 @@ import { getMyOpenings, deleteOpening } from '../../api/openings';
 import toast from 'react-hot-toast';
 
 const statusStyles = {
-  active: { bg: '#DCFCE7', color: '#166534', shadow: '0 2px 0 0 #86EFAC' },
-  closed: { bg: '#F3F4F6', color: '#6B7280', shadow: '0 2px 0 0 #D1D5DB' },
-  draft: { bg: '#FEF9C3', color: '#854D0E', shadow: '0 2px 0 0 #FDE047' },
+  active: { bg: '#F0FDF4', color: '#166534', dot: '#22C55E' },
+  closed: { bg: '#F9FAFB', color: '#6B7280', dot: '#9CA3AF' },
+  draft: { bg: '#FFFBEB', color: '#92400E', dot: '#F59E0B' },
 };
 
 const ManageOpenings = () => {
   const [openings, setOpenings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [confirmCloseId, setConfirmCloseId] = useState(null);
+  const [selectedOpening, setSelectedOpening] = useState(null);
 
   useEffect(() => {
     const fetch = async () => {
@@ -40,7 +41,7 @@ const ManageOpenings = () => {
       <div className="min-h-screen bg-white flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
         <Navbar />
         <div className="flex items-center justify-center flex-1">
-          <div className="w-10 h-10 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
+          <div className="w-8 h-8 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
         </div>
       </div>
     );
@@ -51,20 +52,22 @@ const ManageOpenings = () => {
   const closed = openings.filter(o => o.status === 'closed').length;
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F5F5F7', height: '100vh', overflow: 'hidden' }}>
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#F8FAFC', height: '100vh', overflow: 'hidden' }}>
       <Navbar />
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 pb-24 md:pb-10">
 
           {/* header */}
           <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-black" style={{ color: '#101828' }}>My Campaigns</h1>
-              <p className="text-sm text-gray-400 mt-0.5">Manage your collab opportunities</p>
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold truncate" style={{ color: '#101828' }}>My Campaigns</h1>
+              <p className="text-sm mt-0.5 truncate" style={{ color: '#9CA3AF' }}>Manage your collab opportunities</p>
             </div>
-            <Link to="/brand/openings/create"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl font-black text-white text-sm transition-transform hover:scale-95"
-              style={{ backgroundColor: '#155DFC', boxShadow: '0 3px 0 0 #0c3eb5' }}>
+            <Link
+              to="/brand/openings/create"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-white text-sm hover:opacity-90 transition-opacity flex-shrink-0 whitespace-nowrap"
+              style={{ backgroundColor: '#155DFC' }}
+            >
               <Plus size={15} /> New Campaign
             </Link>
           </div>
@@ -72,27 +75,28 @@ const ManageOpenings = () => {
           {/* stats row */}
           <div className="grid grid-cols-3 gap-3 mb-6">
             {[
-              { label: 'Active', count: active, bg: '#DCFCE7', color: '#166534', shadow: '0 3px 0 0 #86EFAC' },
-              { label: 'Draft', count: draft, bg: '#FEF9C3', color: '#854D0E', shadow: '0 3px 0 0 #FDE047' },
-              { label: 'Closed', count: closed, bg: '#F3F4F6', color: '#6B7280', shadow: '0 3px 0 0 #D1D5DB' },
+              { label: 'Active', count: active },
+              { label: 'Draft', count: draft },
+              { label: 'Closed', count: closed },
             ].map(s => (
-              <div key={s.label} className="rounded-2xl p-4 text-center"
-                style={{ backgroundColor: s.bg, boxShadow: s.shadow }}>
-                <div className="text-2xl font-black" style={{ color: s.color }}>{s.count}</div>
-                <div className="text-xs font-bold uppercase tracking-wider mt-1" style={{ color: s.color }}>{s.label}</div>
+              <div key={s.label} className="bg-white rounded-2xl border p-4 text-center" style={{ borderColor: '#E5E7EB' }}>
+                <div className="text-2xl font-bold" style={{ color: '#101828' }}>{s.count}</div>
+                <div className="text-xs font-semibold uppercase tracking-wide mt-1" style={{ color: '#9CA3AF' }}>{s.label}</div>
               </div>
             ))}
           </div>
 
           {/* empty state */}
           {openings.length === 0 ? (
-            <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center" style={{ boxShadow: '0 4px 0 0 #E5E5E5' }}>
-              <div className="text-5xl mb-4">📋</div>
-              <div className="font-black text-gray-900 mb-2 text-lg">No campaigns yet</div>
-              <div className="text-sm text-gray-400 mb-6">Create your first campaign to start receiving applications from creators.</div>
-              <Link to="/brand/openings/create"
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl font-black text-white text-sm"
-                style={{ backgroundColor: '#155DFC', boxShadow: '0 3px 0 0 #0c3eb5' }}>
+            <div className="bg-white rounded-2xl border p-12 text-center" style={{ borderColor: '#E5E7EB' }}>
+              <div className="text-4xl mb-4">📋</div>
+              <div className="font-bold mb-2" style={{ color: '#101828' }}>No campaigns yet</div>
+              <div className="text-sm mb-6" style={{ color: '#9CA3AF' }}>Create your first campaign to start receiving applications from creators.</div>
+              <Link
+                to="/brand/openings/create"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-white text-sm hover:opacity-90 transition-opacity"
+                style={{ backgroundColor: '#155DFC' }}
+              >
                 <Plus size={15} /> Create Campaign
               </Link>
             </div>
@@ -101,7 +105,6 @@ const ManageOpenings = () => {
               {openings.map(opening => {
                 const st = statusStyles[opening.status] || statusStyles.closed;
 
-                // build deliverables
                 const d = opening.deliverables || {};
                 const delBoxes = [
                   { type: 'Reel', qty: d.reels || 0 },
@@ -114,69 +117,70 @@ const ManageOpenings = () => {
                 }
 
                 return (
-                  <div key={opening._id} className="bg-white rounded-3xl overflow-hidden"
-                    style={{ border: '1.5px solid #F0F0F0', boxShadow: '0 3px 0 0 #E5E5E5' }}>
-
-                    {/* colored top strip based on status */}
-                    <div style={{ height: '4px', backgroundColor: opening.status === 'active' ? '#22C55E' : opening.status === 'draft' ? '#FACC15' : '#D1D5DB' }} />
-
+                  <div
+                    key={opening._id}
+                    onClick={() => setSelectedOpening(opening)}
+                    className="bg-white rounded-2xl border overflow-hidden cursor-pointer transition-colors hover:bg-gray-50"
+                    style={{ borderColor: '#E5E7EB' }}
+                  >
                     <div className="p-4 md:p-5">
-                      {/* top row — title + status + actions */}
+
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <h3 className="font-black text-base truncate" style={{ color: '#101828' }}>{opening.title}</h3>
-                            <span className="text-xs font-black px-2.5 py-1 rounded-full capitalize flex-shrink-0"
-                              style={{ backgroundColor: st.bg, color: st.color, boxShadow: st.shadow }}>
+                            <h3 className="font-bold text-base truncate" style={{ color: '#101828' }}>{opening.title}</h3>
+                            <span
+                              className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full capitalize flex-shrink-0"
+                              style={{ backgroundColor: st.bg, color: st.color }}
+                            >
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: st.dot }} />
                               {opening.status}
                             </span>
                             {opening.isBarter && (
-                              <span className="text-xs font-black px-2.5 py-1 rounded-full flex-shrink-0"
-                                style={{ backgroundColor: '#FEF3C7', color: '#92400E', boxShadow: '0 2px 0 0 #FDE68A' }}>
+                              <span className="text-xs font-semibold px-2.5 py-1 rounded-full flex-shrink-0" style={{ backgroundColor: '#FFFBEB', color: '#92400E' }}>
                                 Barter
                               </span>
                             )}
                           </div>
                           {opening.description && (
-                            <p className="text-xs text-gray-400 line-clamp-1">{opening.description}</p>
+                            <p className="text-xs line-clamp-1" style={{ color: '#9CA3AF' }}>{opening.description}</p>
                           )}
                         </div>
 
-                        {/* action buttons */}
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <Link to={`/brand/openings/${opening._id}/applicants`}
-                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-transform hover:scale-95"
-                            style={{ backgroundColor: '#EFF6FF', color: '#155DFC' }}>
+                          <Link
+                            to={`/brand/openings/${opening._id}/applicants`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors hover:bg-blue-100"
+                            style={{ backgroundColor: '#EFF6FF', color: '#155DFC' }}
+                          >
                             <Users size={12} /> Applicants
                           </Link>
                           {opening.status !== 'closed' && (
-                            <button onClick={() => setConfirmCloseId(opening._id)}
-                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-transform hover:scale-95"
-                              style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setConfirmCloseId(opening._id); }}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-colors hover:bg-red-100"
+                              style={{ backgroundColor: '#FEF2F2', color: '#DC2626' }}
+                            >
                               <X size={12} /> Close
                             </button>
                           )}
                         </div>
                       </div>
 
-                      {/* deliverable boxes */}
                       {delBoxes.length > 0 && (
                         <div className="flex gap-2 mb-3 flex-wrap">
                           {delBoxes.map((b, i) => (
-                            <div key={i} className="text-center rounded-xl px-3 py-1.5"
-                              style={{ backgroundColor: '#F8FAFF', border: '1.5px solid #DBEAFE' }}>
-                              <div className="text-xs font-black" style={{ color: '#1E3A8A' }}>{b.qty} {b.type}</div>
+                            <div key={i} className="rounded-lg px-3 py-1.5" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB' }}>
+                              <span className="text-xs font-semibold" style={{ color: '#374151' }}>{b.qty} {b.type}</span>
                             </div>
                           ))}
                         </div>
                       )}
 
-                      {/* bottom info row */}
-                      <div className="flex flex-wrap items-center gap-3">
-                        {/* budget */}
-                        <div className="rounded-xl px-3 py-1.5 flex items-center gap-1.5"
-                          style={{ backgroundColor: '#FACC15', boxShadow: '0 2px 0 0 #B45309' }}>
-                          <span className="text-xs font-black" style={{ color: '#0F172A' }}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="rounded-lg px-3 py-1.5" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB' }}>
+                          <span className="text-xs font-semibold" style={{ color: '#101828' }}>
                             {opening.budgetMin > 0 && opening.budgetMax > 0
                               ? `₹${opening.budgetMin.toLocaleString('en-IN')} – ₹${opening.budgetMax.toLocaleString('en-IN')}`
                               : opening.budgetMax > 0
@@ -186,21 +190,17 @@ const ManageOpenings = () => {
                           </span>
                         </div>
 
-                        {/* deadline */}
                         {opening.deadline && (
-                          <div className="rounded-xl px-3 py-1.5"
-                            style={{ backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB' }}>
-                            <span className="text-xs font-bold" style={{ color: '#6B7280' }}>
+                          <div className="rounded-lg px-3 py-1.5" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB' }}>
+                            <span className="text-xs" style={{ color: '#6B7280' }}>
                               Due {new Date(opening.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                             </span>
                           </div>
                         )}
 
-                        {/* requirements */}
                         {opening.requirements?.minFollowers > 0 && (
-                          <div className="rounded-xl px-3 py-1.5"
-                            style={{ backgroundColor: '#F0FFF4', border: '1px solid #BBF7D0' }}>
-                            <span className="text-xs font-bold" style={{ color: '#166534' }}>
+                          <div className="rounded-lg px-3 py-1.5" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB' }}>
+                            <span className="text-xs" style={{ color: '#6B7280' }}>
                               Min {(opening.requirements.minFollowers / 1000).toFixed(0)}K followers
                             </span>
                           </div>
@@ -212,32 +212,165 @@ const ManageOpenings = () => {
               })}
             </div>
           )}
-
         </div>
       </div>
+
       {confirmCloseId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4"
-          onClick={() => setConfirmCloseId(null)}>
-          <div className="bg-white rounded-3xl p-6 w-full max-w-sm"
-            style={{ boxShadow: '0 8px 0 0 #E5E5E5' }}
-            onClick={e => e.stopPropagation()}>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
-              style={{ backgroundColor: '#FEE2E2' }}>
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4"
+          onClick={() => setConfirmCloseId(null)}
+        >
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#FEF2F2' }}>
               <X size={22} color="#DC2626" />
             </div>
-            <h3 className="font-black text-lg text-center mb-2" style={{ color: '#101828' }}>Close Campaign?</h3>
-            <p className="text-sm text-center text-gray-400 mb-6">
+            <h3 className="font-bold text-lg text-center mb-2" style={{ color: '#101828' }}>Close Campaign?</h3>
+            <p className="text-sm text-center mb-6" style={{ color: '#9CA3AF' }}>
               This will stop new applications. Existing applicants won't be affected. This cannot be undone.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmCloseId(null)}
-                className="flex-1 py-3 rounded-2xl text-sm font-black border border-gray-200 text-gray-600">
+              <button
+                onClick={() => setConfirmCloseId(null)}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold border"
+                style={{ borderColor: '#E5E7EB', color: '#6B7280' }}
+              >
                 Cancel
               </button>
-              <button onClick={() => { handleClose(confirmCloseId); setConfirmCloseId(null); }}
-                className="flex-1 py-3 rounded-2xl text-sm font-black text-white"
-                style={{ backgroundColor: '#DC2626', boxShadow: '0 3px 0 0 #991B1B' }}>
-                Yes, Close It
+              <button
+                onClick={() => { handleClose(confirmCloseId); setConfirmCloseId(null); }}
+                className="flex-1 py-3 rounded-xl text-sm font-semibold text-white"
+                style={{ backgroundColor: '#DC2626' }}
+              >
+                Yes, close it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedOpening && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4"
+          onClick={() => setSelectedOpening(null)}
+        >
+          <div
+            className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-lg overflow-y-auto"
+            style={{ maxHeight: '85vh' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden" />
+
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <h2 className="text-lg font-bold" style={{ color: '#101828' }}>{selectedOpening.title}</h2>
+                <button onClick={() => setSelectedOpening(null)} style={{ color: '#9CA3AF' }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              {(() => {
+                const st = statusStyles[selectedOpening.status] || statusStyles.closed;
+                return (
+                  <span
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full capitalize mb-4"
+                    style={{ backgroundColor: st.bg, color: st.color }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: st.dot }} />
+                    {selectedOpening.status}
+                  </span>
+                );
+              })()}
+
+              {selectedOpening.description && (
+                <p className="text-sm mb-5" style={{ color: '#6B7280' }}>{selectedOpening.description}</p>
+              )}
+
+              {/* deliverables */}
+              {(() => {
+                const d = selectedOpening.deliverables || {};
+                const boxes = [
+                  { type: 'Reel', qty: d.reels || 0 },
+                  { type: 'Post', qty: d.posts || 0 },
+                  { type: 'Story', qty: d.stories || 0 },
+                  { type: 'UGC', qty: d.ugc || 0 },
+                ].filter(b => b.qty > 0);
+                if (boxes.length === 0) return null;
+                return (
+                  <div className="mb-5">
+                    <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#9CA3AF' }}>Deliverables</div>
+                    <div className="flex gap-2 flex-wrap">
+                      {boxes.map((b, i) => (
+                        <div key={i} className="rounded-xl px-4 py-2.5 text-center" style={{ backgroundColor: '#F8FAFC', border: '1px solid #E5E7EB' }}>
+                          <div className="text-xs font-semibold" style={{ color: '#9CA3AF' }}>{b.type}</div>
+                          <div className="text-lg font-bold" style={{ color: '#101828' }}>{b.qty}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* preferred niches */}
+              {selectedOpening.requirements?.categories?.length > 0 && (
+                <div className="mb-5">
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#9CA3AF' }}>Preferred Niches</div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedOpening.requirements.categories.map(c => (
+                      <span key={c} className="text-xs font-semibold px-3 py-1 rounded-full capitalize" style={{ backgroundColor: '#F8FAFC', color: '#374151', border: '1px solid #E5E7EB' }}>
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* creator requirements */}
+              {(selectedOpening.requirements?.minFollowers > 0 || selectedOpening.requirements?.minEngagement > 0) && (
+                <div className="mb-5">
+                  <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#9CA3AF' }}>Creator Requirements</div>
+                  <div className="flex gap-2 flex-wrap">
+                    {selectedOpening.requirements?.minFollowers > 0 && (
+                      <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ backgroundColor: '#F8FAFC', color: '#374151', border: '1px solid #E5E7EB' }}>
+                        Min {selectedOpening.requirements.minFollowers.toLocaleString('en-IN')} followers
+                      </span>
+                    )}
+                    {selectedOpening.requirements?.minEngagement > 0 && (
+                      <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ backgroundColor: '#F8FAFC', color: '#374151', border: '1px solid #E5E7EB' }}>
+                        Min {selectedOpening.requirements.minEngagement}% engagement
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* budget */}
+              <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: '#78350F' }}>Budget</div>
+                <div className="text-lg font-bold" style={{ color: '#0F172A' }}>
+                  {selectedOpening.budgetMin > 0 && selectedOpening.budgetMax > 0
+                    ? `₹${selectedOpening.budgetMin.toLocaleString('en-IN')} – ₹${selectedOpening.budgetMax.toLocaleString('en-IN')}`
+                    : selectedOpening.budgetMax > 0
+                      ? `Up to ₹${selectedOpening.budgetMax.toLocaleString('en-IN')}`
+                      : selectedOpening.isBarter ? 'Barter only' : 'Budget TBD'
+                  }
+                </div>
+                {selectedOpening.isBarter && selectedOpening.barterDetails && (
+                  <div className="text-xs mt-1" style={{ color: '#92400E' }}>Barter: {selectedOpening.barterDetails}</div>
+                )}
+              </div>
+
+              {selectedOpening.deadline && (
+                <div className="text-xs mb-4" style={{ color: '#9CA3AF' }}>
+                  Deadline: {new Date(selectedOpening.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </div>
+              )}
+
+              <button
+                onClick={() => setSelectedOpening(null)}
+                className="w-full py-3 rounded-xl text-sm font-semibold border"
+                style={{ borderColor: '#E5E7EB', color: '#6B7280' }}
+              >
+                Close
               </button>
             </div>
           </div>

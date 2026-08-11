@@ -2,6 +2,7 @@ const axios = require('axios');
 const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
 const { encryptToken, decryptToken } = require('../services/instagram.service');
+const calculateQualityScore = require('../utils/calculateQualityScore');
 
 const calculateEngagementRate = (metrics, followersCount) => {
   if (!followersCount) return 0;
@@ -147,6 +148,12 @@ const connectInstagram = async (req, res) => {
         { new: true }
       );
       console.log('[CONNECT] Saved — avgViews:', updated?.instagram?.avgViews, 'engagementRate:', updated?.instagram?.engagementRate);
+
+      // recalculate quality score now that engagement rate may have changed
+      if (updated) {
+        const newScore = await calculateQualityScore(updated);
+        await Creator.findByIdAndUpdate(updated._id, { qualityScore: newScore });
+      }
     } else if (req.user.role === 'brand') {
       await Brand.findOneAndUpdate(
         { userId: req.user.id },
@@ -220,6 +227,13 @@ const addManualStats = async (req, res) => {
       return res.status(404).json({ message: 'Creator profile not found' });
     }
 
+    // recalculate quality score — note: manual stats don't set engagementRate
+    // at all (only followers + avgViews are collected manually), so this
+    // mainly picks up any profile-completeness change, but it's cheap and
+    // keeps the score consistently fresh regardless of which path updated the creator
+    const newScore = await calculateQualityScore(updated);
+    await Creator.findByIdAndUpdate(updated._id, { qualityScore: newScore });
+
     res.json({
       message: 'Instagram stats added successfully',
       instagram: {
@@ -275,6 +289,12 @@ const syncInstagram = async (req, res) => {
         { new: true }
       );
       console.log('[SYNC] Done — avgViews:', updated?.instagram?.avgViews, 'engagementRate:', updated?.instagram?.engagementRate);
+
+      // recalculate quality score now that engagement rate may have changed
+      if (updated) {
+        const newScore = await calculateQualityScore(updated);
+        await Creator.findByIdAndUpdate(updated._id, { qualityScore: newScore });
+      }
       return res.json({ message: 'Instagram synced successfully' });
     }
     if (req.user.role === 'brand') {

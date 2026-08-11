@@ -10,6 +10,7 @@ import useAuth from '../../hooks/useAuth';
 import useNotifications from '../../hooks/useNotifications';
 import CreatorCardSmall from '../../components/CreatorCardSmall';
 import ReferralSourceModal from '../../components/ReferralSourceModal';
+import BrandHomeSkeleton from '../../components/BrandHomeSkeleton';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -158,16 +159,16 @@ const BrandHome = () => {
 
   const activeCount = openings.filter(o => o.status === 'active').length;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
-        <Navbar />
-        <div className="flex items-center justify-center flex-1">
-          <div className="w-10 h-10 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
-        </div>
+ if (loading) {
+  return (
+    <div className="min-h-screen bg-white flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
+      <Navbar />
+      <div className="flex-1 overflow-y-auto">
+        <BrandHomeSkeleton />
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   const CreatorCards = ({ size = 'md' }) => (
     suggestedCreators.length === 0 ? (

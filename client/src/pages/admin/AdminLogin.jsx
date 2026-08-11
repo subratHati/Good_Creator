@@ -52,7 +52,7 @@ const AdminLogin = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              placeholder="admin@goodcreator.in"
+              placeholder="Please enter your admin email"
               className="w-full px-4 py-2.5 rounded-lg border text-sm focus:outline-none focus:ring-2"
               style={{ borderColor: '#E5E7EB' }}
             />

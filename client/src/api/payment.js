@@ -14,3 +14,12 @@ export const getCreatorBankDetails = () =>
 
 export const saveCreatorBankDetails = (data) =>
   axiosInstance.put('/payment/creator-bank', data);
+
+export const submitCreatorReview = (data) =>
+  axiosInstance.post('/payment/review', data);
+
+export const getAvailableCollabs = (conversationId) =>
+  axiosInstance.get(`/payment/available-collabs/${conversationId}`);
+
+export const rejectDelivery = (data) =>
+  axiosInstance.post('/payment/reject-delivery', data);

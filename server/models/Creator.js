@@ -87,6 +87,18 @@ const creatorSchema = new mongoose.Schema({
         isVerified: { type: Boolean, default: false },
     },
 
+    // pre-computed composite score (engagement + profile completeness +
+    // rating), recalculated whenever the underlying data changes (profile
+    // update, Instagram sync, new review) — NOT recalculated on every browse
+    // request. This is what lets browse queries stay fast even at 15K+
+    // creators: the expensive-to-compute parts are already sitting on the
+    // document, ready to sort by directly.
+    qualityScore: {
+        type: Number,
+        default: 0,
+        index: true, // sorting/filtering by this field needs to be fast
+    },
+
 },
     { timestamps: true }
 );

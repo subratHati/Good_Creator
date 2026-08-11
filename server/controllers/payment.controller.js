@@ -3,6 +3,10 @@ const crypto = require('crypto');
 const Message = require('../models/Message');
 const Conversation = require('../models/Conversation');
 const Creator = require('../models/Creator');
+const Brand = require('../models/Brand');
+const Review = require('../models/Review');
+const generateCollabId = require('../utils/generateCollabId');
+const calculateQualityScore = require('../utils/calculateQualityScore');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -46,7 +50,7 @@ const createOrder = async (req, res) => {
       keyId: process.env.RAZORPAY_KEY_ID,
       messageId,
       conversationId,
-      description: message.paymentRequest.description,
+      description: 'GoodCreator collab payment',
       creatorAmount,
       platformFee,
     });
@@ -82,12 +86,17 @@ const verifyPayment = async (req, res) => {
 
     console.log('[PAYMENT] Signature verified for payment:', razorpay_payment_id);
 
+    // generate this collab's unique reference ID now that payment is real
+    const collabId = await generateCollabId();
+
     // update message payment status
     await Message.findByIdAndUpdate(messageId, {
       'paymentRequest.status': 'paid',
       'paymentRequest.razorpayOrderId': razorpay_order_id,
       'paymentRequest.razorpayPaymentId': razorpay_payment_id,
       'paymentRequest.paidAt': new Date(),
+      'paymentRequest.deliveryStatus': 'awaiting_delivery',
+      collabId, // top-level field now, not nested under paymentRequest
     });
 
     // send payment confirmed message in chat
@@ -98,6 +107,7 @@ const verifyPayment = async (req, res) => {
       senderRole: req.user.role,
       type: 'payment_confirmed',
       text: `Payment of ₹${req.body.amount ? (req.body.amount / 100).toLocaleString('en-IN') : ''} received! Money is held securely. Complete the deliverable to release payment.`,
+      collabId, // same top-level field, shared value, not a new one
     });
 
     // update conversation
@@ -128,23 +138,47 @@ const releasePayment = async (req, res) => {
   const { conversationId, deliveryMessageId } = req.body;
 
   try {
+    // find the delivery message first — we need its collabId to look up
+    // the EXACT right payment request, not just "any paid one in this
+    // conversation" (a conversation can have several over time)
+    const deliveryMsg = await Message.findById(deliveryMessageId);
+    if (!deliveryMsg) {
+      return res.status(404).json({ message: 'Delivery message not found' });
+    }
+    if (!deliveryMsg.collabId) {
+      return res.status(400).json({ message: 'This delivery has no linked collab ID — cannot determine payout amount' });
+    }
+
+    // find the SPECIFIC payment request this delivery is fulfilling,
+    // matched by collabId — this is the actual fix for the old bug where
+    // findOne() with no filter could grab an unrelated paid request from
+    // the same conversation
+    const paymentMsg = await Message.findOne({
+      conversationId,
+      type: 'payment_request',
+      collabId: deliveryMsg.collabId,
+      'paymentRequest.status': 'paid',
+    });
+    if (!paymentMsg) {
+      return res.status(404).json({ message: 'Could not find the payment request for this collab' });
+    }
+
     // update delivery status — payoutStatus starts as 'pending' the moment
     // delivery is approved, since that's the exact trigger for the admin's
-    // 24-hour manual payout window
+    // 48-hour manual payout window
     await Message.findByIdAndUpdate(deliveryMessageId, {
       'delivery.status': 'approved',
       'delivery.approvedAt': new Date(),
       payoutStatus: 'pending',
     });
 
-    // find the paid payment request in this conversation
-    const paymentMsg = await Message.findOne({
-      conversationId,
-      type: 'payment_request',
-      'paymentRequest.status': 'paid',
+    // mark this specific collab as fully approved — permanently removed
+    // from the "available for delivery" dropdown from this point on
+    await Message.findByIdAndUpdate(paymentMsg._id, {
+      'paymentRequest.deliveryStatus': 'approved',
     });
 
-    const amount = paymentMsg?.paymentRequest?.amount || 0;
+    const amount = paymentMsg.paymentRequest?.amount || 0;
     const platformFee = Math.round(amount * 0.15);
     const creatorAmount = amount - platformFee;
 
@@ -159,7 +193,8 @@ const releasePayment = async (req, res) => {
       senderId: req.user.id,
       senderRole: req.user.role,
       type: 'payment_released',
-      text: `🎉 Delivery approved! ₹${creatorAmount.toLocaleString('en-IN')} will be credited to ${creator?.name || 'creator'}'s bank account within 24 hours.`,
+      collabId: deliveryMsg.collabId,
+      text: `🎉 Delivery approved! ₹${creatorAmount.toLocaleString('en-IN')} will be credited to ${creator?.name || 'creator'}'s bank account within 48 hours.`,
     });
 
     await Conversation.findByIdAndUpdate(conversationId, {
@@ -184,6 +219,84 @@ const releasePayment = async (req, res) => {
   } catch (error) {
     console.error('[PAYMENT] releasePayment error:', error.message);
     res.status(500).json({ message: 'Failed to release payment' });
+  }
+};
+
+// ─── GET /api/payment/available-collabs/:conversationId ─────────────────────
+// Returns paid collabs in this conversation that are awaiting delivery —
+// i.e. NOT already submitted for review, and NOT already approved. This
+// is exactly the dropdown list a creator should see when submitting a
+// new delivery, per the state machine: a collabId becomes unavailable
+// the moment a delivery is submitted for it (pending_review), and stays
+// unavailable permanently once approved. If a delivery is rejected, the
+// collab reverts to awaiting_delivery and becomes selectable again.
+const getAvailableCollabs = async (req, res) => {
+  try {
+    const collabs = await Message.find({
+      conversationId: req.params.conversationId,
+      type: 'payment_request',
+      'paymentRequest.status': 'paid',
+      'paymentRequest.deliveryStatus': 'awaiting_delivery',
+    })
+      .select('collabId paymentRequest.amount paymentRequest.deliverables paymentRequest.deadline createdAt')
+      .sort({ createdAt: -1 });
+
+    res.json({ collabs });
+  } catch (error) {
+    console.error('getAvailableCollabs error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// ─── POST /api/payment/reject-delivery ───────────────────────────────────────
+// Brand rejects a delivery submission (e.g. wrong content, doesn't match
+// what was agreed). This reverts the collab back to 'awaiting_delivery',
+// making it selectable again in the creator's delivery-submission dropdown.
+const rejectDelivery = async (req, res) => {
+  const { conversationId, deliveryMessageId, reason } = req.body;
+
+  try {
+    const deliveryMsg = await Message.findById(deliveryMessageId);
+    if (!deliveryMsg) {
+      return res.status(404).json({ message: 'Delivery message not found' });
+    }
+
+    await Message.findByIdAndUpdate(deliveryMessageId, {
+      'delivery.status': 'revision_requested',
+    });
+
+    // revert the collab back to awaiting_delivery so it reappears in
+    // the dropdown for a fresh delivery submission
+    if (deliveryMsg.collabId) {
+      await Message.findOneAndUpdate(
+        {
+          conversationId,
+          type: 'payment_request',
+          collabId: deliveryMsg.collabId,
+        },
+        { 'paymentRequest.deliveryStatus': 'awaiting_delivery' }
+      );
+    }
+
+    const releaseMessage = await Message.create({
+      conversationId,
+      senderId: req.user.id,
+      senderRole: req.user.role,
+      type: 'text',
+      text: reason
+        ? `Delivery needs revision: ${reason}`
+        : 'Delivery needs revision. Please resubmit.',
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`conversation_${conversationId}`).emit('new_message', releaseMessage);
+    }
+
+    res.json({ success: true, releaseMessage });
+  } catch (error) {
+    console.error('rejectDelivery error:', error.message);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
@@ -368,6 +481,44 @@ const markPayoutCompleted = async (req, res) => {
   }
 };
 
+const submitCreatorReview = async (req, res) => {
+  const { creatorId, rating, reviewText, conversationId } = req.body;
+
+  if (!creatorId) {
+    return res.status(400).json({ message: 'creatorId is required' });
+  }
+  if (!rating || rating < 1 || rating > 10) {
+    return res.status(400).json({ message: 'Rating must be between 1 and 10' });
+  }
+
+  try {
+    const brand = await Brand.findOne({ userId: req.user.id }).select('brandName');
+    if (!brand) {
+      return res.status(404).json({ message: 'Brand profile not found' });
+    }
+
+    await Review.create({
+      creatorId,
+      brandName: brand.brandName,
+      rating: Number(rating),
+      reviewText: reviewText || '',
+      conversationId: conversationId || null,
+    });
+
+    // recalculate quality score now that a new review exists
+    const creator = await Creator.findById(creatorId);
+    if (creator) {
+      const newScore = await calculateQualityScore(creator);
+      await Creator.findByIdAndUpdate(creatorId, { qualityScore: newScore });
+    }
+
+    res.json({ message: 'Review submitted successfully' });
+  } catch (error) {
+    console.error('submitCreatorReview error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   createOrder,
   verifyPayment,
@@ -376,4 +527,8 @@ module.exports = {
   saveCreatorBankDetails,
   getAdminPaymentOverview,
   markPayoutCompleted,
+  submitCreatorReview,
+  getAvailableCollabs,
+  rejectDelivery,
+
 };

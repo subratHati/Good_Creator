@@ -6,13 +6,14 @@ const {
   updateProfile,
   getPublicProfile,
   searchCreators,
+  getCreatorReviews,
 } = require('../controllers/creator.controller');
-const { protect } = require('../middleware/auth.middleware');
+const { protect, optionalAuth } = require('../middleware/auth.middleware');
 const { isCreator } = require('../middleware/role.middleware');
 const { uploadSingle } = require('../middleware/upload.middleware');
 
 // public routes — most specific first
-router.get('/search', searchCreators);
+router.get('/search', optionalAuth, searchCreators);
 
 // protected creator-only routes
 router.get('/me', protect, isCreator, getMyProfile);
@@ -21,6 +22,9 @@ router.post('/profile', protect, isCreator, uploadSingle('profilePhoto'), create
 // split update routes — text only vs photo upload
 router.put('/profile/details', protect, isCreator, updateProfile);
 router.put('/profile/photo', protect, isCreator, uploadSingle('profilePhoto'), updateProfile);
+
+// specific sub-routes before the dynamic :id catch-all
+router.get('/:id/reviews', getCreatorReviews);
 
 // dynamic route — always last
 router.get('/:id', getPublicProfile);

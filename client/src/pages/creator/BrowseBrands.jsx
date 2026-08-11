@@ -6,6 +6,7 @@ import { searchOpenings } from '../../api/openings';
 import { applyToOpening } from '../../api/applications';
 import useCreatorProfileGuard from '../../hooks/useCreatorProfileGuard';
 import toast from 'react-hot-toast';
+import OpeningListSkeleton from '../../components/OpeningListSkeleton';
 
 const categoryColors = {
   fashion: { bg: '#FED7AA', color: '#7C2D12' },
@@ -355,7 +356,7 @@ const BrowseBrands = () => {
                 <p style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '4px' }}>Find brands looking for creators like you</p>
               </div>
             </div>
-            {loading ? <LoadingSpinner /> : (
+            {loading ? <OpeningListSkeleton /> : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {openings.length === 0 && filters.category && <EmptyState category={filters.category} />}
                 {openings.map((opening, index) => (
@@ -386,7 +387,7 @@ const BrowseBrands = () => {
         {/* MOBILE */}
         <div className="md:hidden">
           <div style={{ fontSize: '13px', fontWeight: 800, color: '#101828', marginBottom: '12px' }}>{total} campaigns</div>
-          {loading ? <LoadingSpinner /> : (
+          {loading ? <OpeningListSkeleton /> : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {openings.length === 0 && filters.category && <EmptyState category={filters.category} />}
               {openings.map((opening, index) => (

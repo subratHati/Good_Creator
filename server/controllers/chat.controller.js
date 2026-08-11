@@ -125,11 +125,47 @@ const getMessages = async (req, res) => {
 // ─── POST /api/chat/conversations/:id/messages ────────────────────────────────
 const sendMessage = async (req, res) => {
   const { id } = req.params;
-  const { text, type, enquiry, paymentRequest, delivery } = req.body;
+  const { text, type, enquiry, paymentRequest, delivery, collabId } = req.body;
 
   try {
     const conversation = await Conversation.findById(id);
     if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
+
+    // delivery messages need extra validation + a state transition on
+    // the collab they're fulfilling — handled before creating the message
+    // itself, so a failed validation never creates a half-valid delivery
+    if (type === 'delivery') {
+      if (!collabId) {
+        return res.status(400).json({ message: 'Please select which collab this delivery is for' });
+      }
+
+      const hasAtLeastOneMedium = !!(
+        delivery?.instagramLink || delivery?.whatsappNumber || delivery?.email || delivery?.otherMedium
+      );
+      if (!hasAtLeastOneMedium) {
+        return res.status(400).json({ message: 'Please provide at least one way to access the content' });
+      }
+
+      // confirm this collabId is genuinely still awaiting delivery —
+      // re-checked here server-side, not just trusted from the frontend
+      // dropdown, in case of a race condition (e.g. two tabs open)
+      const targetCollab = await Message.findOne({
+        conversationId: id,
+        type: 'payment_request',
+        collabId,
+        'paymentRequest.status': 'paid',
+        'paymentRequest.deliveryStatus': 'awaiting_delivery',
+      });
+      if (!targetCollab) {
+        return res.status(400).json({ message: 'This collab is no longer available for delivery submission' });
+      }
+
+      // flip the collab's state so it disappears from the dropdown until
+      // this delivery is approved or rejected
+      await Message.findByIdAndUpdate(targetCollab._id, {
+        'paymentRequest.deliveryStatus': 'pending_review',
+      });
+    }
 
     const message = await Message.create({
       conversationId: id,
@@ -140,6 +176,7 @@ const sendMessage = async (req, res) => {
       enquiry,
       paymentRequest,
       delivery,
+      collabId: type === 'delivery' ? collabId : undefined,
     });
 
     // update conversation last message
