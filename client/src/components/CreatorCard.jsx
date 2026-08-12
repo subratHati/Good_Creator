@@ -3,6 +3,7 @@
 
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Unlink } from 'lucide-react';
+import { formatDisplayRating, getRatingColorBand } from '../utils/ratingDisplay';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -88,15 +89,53 @@ const CreatorCard = ({ creator, onViewProfile }) => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '14px' }}>
 
           {/* name block */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '15px', fontWeight: 700, color: '#101828', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-            {ig.isConnected && ig.handle
-              ? <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '6px', background: 'linear-gradient(90deg, #833AB4, #E1306C, #F77737)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>@{ig.handle}</div>
-              : <div style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Unlink size={12} color="#F59E0B" /> Not verified
-              </div>
-            }
-          </div>
+       {/* name block */}
+{/* name block */}
+<div style={{ flex: 1, minWidth: 0 }}>
+  <div style={{ fontSize: '15px', fontWeight: 700, color: '#101828', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>{name}</div>
+  {ig.isConnected && ig.handle
+    ? <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '2px', background: 'linear-gradient(90deg, #833AB4, #E1306C, #F77737)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>@{ig.handle}</div>
+    : <div style={{ fontSize: '11px', color: '#F59E0B', fontWeight: 600, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+      <Unlink size={12} color="#F59E0B" /> Not verified
+    </div>
+  }
+{(() => {
+  const displayRating = formatDisplayRating(creator.avgRating);
+  if (!displayRating) return null;
+  const band = getRatingColorBand(displayRating);
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '7px',
+        marginTop: '4px',
+        width: 'fit-content',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1px' }}>
+        {[1, 2, 3, 4, 5].map((star) => {
+          const fill = Math.min(Math.max(displayRating - star + 1, 0), 1);
+          return (
+            <div key={star} style={{ position: 'relative', width: '20px', height: '20px' }}>
+              <span style={{ position: 'absolute', inset: 0, color: '#E5E7EB', fontSize: '20px', lineHeight: '20px' }}>★</span>
+              <span style={{ position: 'absolute', inset: 0, color: band.color, fontSize: '20px', lineHeight: '20px', width: `${fill * 100}%`, overflow: 'hidden' }}>★</span>
+            </div>
+          );
+        })}
+      </div>
+      <span style={{ fontSize: '14px', fontWeight: 800, color: band.color, lineHeight: 1 }}>
+        {displayRating.toFixed(1)}
+      </span>
+      {creator.reviewCount > 0 && (
+        <span style={{ fontSize: '12px', fontWeight: 600, color: band.color, lineHeight: 1 }}>
+          ({creator.reviewCount})
+        </span>
+      )}
+    </div>
+  );
+})()}
+</div>
 
           {/* price box */}
           <div style={{ backgroundColor: '#EFF6FF', borderRadius: '10px', padding: '9px 12px', flexShrink: 0, textAlign: 'right' }}>

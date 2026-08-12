@@ -98,6 +98,14 @@ const creatorSchema = new mongoose.Schema({
         default: 0,
         index: true, // sorting/filtering by this field needs to be fast
     },
+    avgRating: {
+        type: Number,
+        default: 0, // 0 means no reviews yet — frontend should treat 0 as "not rated"
+    },
+    reviewCount: {
+        type: Number,
+        default: 0,
+    },
 
 },
     { timestamps: true }

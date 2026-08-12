@@ -505,11 +505,23 @@ const submitCreatorReview = async (req, res) => {
       conversationId: conversationId || null,
     });
 
-    // recalculate quality score now that a new review exists
+    // recalculate both quality score and the cached avgRating now that a
+    // new review exists — avgRating is stored directly on Creator (rather
+    // than computed live from the Review collection) so it's cheap to
+    // display on every card in a browse list without an extra query per card
     const creator = await Creator.findById(creatorId);
     if (creator) {
       const newScore = await calculateQualityScore(creator);
-      await Creator.findByIdAndUpdate(creatorId, { qualityScore: newScore });
+
+      const allReviews = await Review.find({ creatorId }).select('rating');
+      const newAvgRating = allReviews.length > 0
+        ? allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length
+        : 0;
+      await Creator.findByIdAndUpdate(creatorId, {
+        qualityScore: newScore,
+        avgRating: Math.round(newAvgRating * 100) / 100,
+        reviewCount: allReviews.length,
+      });
     }
 
     res.json({ message: 'Review submitted successfully' });

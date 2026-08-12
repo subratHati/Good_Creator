@@ -5,6 +5,7 @@ import axiosInstance from '../../api/axiosInstance';
 import { getOrCreateConversation } from '../../api/chat';
 import { getSavedCreators, saveCreator } from '../../api/brand';
 import { addManualInstagramStats } from '../../api/creator';
+import { formatDisplayRating, getRatingColorBand } from '../../utils/ratingDisplay';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
 
@@ -29,6 +30,8 @@ const CreatorPublicProfile = () => {
   const [messaging, setMessaging] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [savingCreator, setSavingCreator] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
 
   useEffect(() => {
     const fetchCreator = async () => {
@@ -42,6 +45,20 @@ const CreatorPublicProfile = () => {
       }
     };
     fetchCreator();
+  }, [id]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const res = await getCreatorReviews(id);
+        setReviews(res.data.reviews || []);
+      } catch {
+        setReviews([]);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+    fetchReviews();
   }, [id]);
 
   // check if this creator is already in the brand's saved list
@@ -139,8 +156,8 @@ const CreatorPublicProfile = () => {
               onClick={handleToggleSave}
               disabled={savingCreator}
               className={`p-2 rounded-lg transition-colors disabled:opacity-60 ${isSaved
-                  ? 'text-[#155DFC] hover:bg-blue-50'
-                  : 'text-gray-400 hover:text-[#101828] hover:bg-gray-100'
+                ? 'text-[#155DFC] hover:bg-blue-50'
+                : 'text-gray-400 hover:text-[#101828] hover:bg-gray-100'
                 }`}
               aria-label={isSaved ? 'Remove from saved' : 'Save creator'}
               title={isSaved ? 'Remove from saved' : 'Save creator'}
@@ -428,11 +445,87 @@ const CreatorPublicProfile = () => {
                 </div>
               </div>
             )}
-          </div>
+         </div>
+        </div>
+
+        {/* ratings & reviews — full width, below the main columns */}
+        <div className="mt-6 bg-white rounded-2xl border border-gray-200 p-6">
+          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Ratings &amp; Reviews</div>
+
+          {(() => {
+            const displayRating = formatDisplayRating(creator.avgRating);
+            if (!displayRating) {
+              return (
+                <div className="text-sm text-gray-400 py-4">No reviews yet.</div>
+              );
+            }
+            const band = getRatingColorBand(displayRating);
+            return (
+              <>
+                {/* overall average */}
+                <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const fill = Math.min(Math.max(displayRating - star + 1, 0), 1);
+                      return (
+                        <div key={star} style={{ position: 'relative', width: '24px', height: '24px' }}>
+                          <span style={{ position: 'absolute', inset: 0, color: '#E5E7EB', fontSize: '24px', lineHeight: '24px' }}>★</span>
+                          <span style={{ position: 'absolute', inset: 0, color: band.color, fontSize: '24px', lineHeight: '24px', width: `${fill * 100}%`, overflow: 'hidden' }}>★</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <span className="text-2xl font-extrabold" style={{ color: band.color }}>{displayRating.toFixed(1)}</span>
+                  {creator.reviewCount > 0 && (
+                    <span className="text-sm font-semibold text-gray-400">
+                      based on {creator.reviewCount} review{creator.reviewCount !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+
+                {/* individual review cards */}
+                {reviewsLoading ? (
+                  <div className="text-sm text-gray-400 py-2">Loading reviews...</div>
+                ) : (
+                  <div className="space-y-3">
+                    {reviews.map((r) => {
+                      const reviewStars = formatDisplayRating(r.rating);
+                      const reviewBand = reviewStars ? getRatingColorBand(reviewStars) : null;
+                      return (
+                        <div key={r._id} className="bg-[#F8FAFC] rounded-xl p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-bold text-[#101828]">{r.brandName}</span>
+                            {reviewStars && (
+                              <div className="flex items-center gap-1">
+                                <div className="flex items-center" style={{ gap: '1px' }}>
+                                  {[1, 2, 3, 4, 5].map((star) => {
+                                    const fill = Math.min(Math.max(reviewStars - star + 1, 0), 1);
+                                    return (
+                                      <div key={star} style={{ position: 'relative', width: '13px', height: '13px' }}>
+                                        <span style={{ position: 'absolute', inset: 0, color: '#E5E7EB', fontSize: '13px', lineHeight: '13px' }}>★</span>
+                                        <span style={{ position: 'absolute', inset: 0, color: reviewBand.color, fontSize: '13px', lineHeight: '13px', width: `${fill * 100}%`, overflow: 'hidden' }}>★</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          {r.reviewText && (
+                            <p className="text-sm text-gray-600 leading-relaxed mb-2">{r.reviewText}</p>
+                          )}
+                          <div className="text-xs text-gray-400">{formatDate(r.createdAt)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>
   );
 };
-
 export default CreatorPublicProfile;
