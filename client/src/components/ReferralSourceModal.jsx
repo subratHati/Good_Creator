@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { saveReferralSource } from '../api/auth';
 import toast from 'react-hot-toast';
+import { usePostHog } from '@posthog/react'
 
 const OPTIONS = [
   { value: 'instagram', label: 'Instagram', emoji: '📸' },
@@ -18,14 +19,19 @@ const OPTIONS = [
 // BottomNav's stacking — centering avoids that class of bug entirely,
 // since the card never approaches the bottom of the screen.
 const ReferralSourceModal = ({ onClose }) => {
+
+  const posthog = usePostHog();
+
   const [selected, setSelected] = useState('');
   const [saving, setSaving] = useState(false);
+  
 
   const handleSubmit = async () => {
     if (!selected) return toast.error('Please select an option');
     setSaving(true);
     try {
       await saveReferralSource({ referralSource: selected });
+      posthog.capture('referral_source_selected', { source: selected });
       onClose();
     } catch {
       // this is internal analytics only — never block the user from

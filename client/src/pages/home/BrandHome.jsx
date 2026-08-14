@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Plus, TrendingUp, Bell } from 'lucide-react';
+import { usePostHog } from '@posthog/react';
 import Navbar from '../../components/Navbar';
 import { BrandSetupModal } from '../../components/ProfileSetupModals';
 import { getMyBrandProfile } from '../../api/brand';
@@ -11,6 +12,7 @@ import useNotifications from '../../hooks/useNotifications';
 import CreatorCardSmall from '../../components/CreatorCardSmall';
 import ReferralSourceModal from '../../components/ReferralSourceModal';
 import BrandHomeSkeleton from '../../components/BrandHomeSkeleton';
+import PaymentAnnouncementBanner from '../../components/PaymentAnnouncementBanner';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -133,6 +135,7 @@ const NotificationsList = () => {
 const BrandHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const posthog = usePostHog();
   const [profile, setProfile] = useState(null);
   const [openings, setOpenings] = useState([]);
   const [suggestedCreators, setSuggestedCreators] = useState([]);
@@ -159,16 +162,16 @@ const BrandHome = () => {
 
   const activeCount = openings.filter(o => o.status === 'active').length;
 
- if (loading) {
-  return (
-    <div className="min-h-screen bg-white flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
-      <Navbar />
-      <div className="flex-1 overflow-y-auto">
-        <BrandHomeSkeleton />
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
+        <Navbar />
+        <div className="flex-1 overflow-y-auto">
+          <BrandHomeSkeleton />
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   const CreatorCards = ({ size = 'md' }) => (
     suggestedCreators.length === 0 ? (
@@ -189,6 +192,7 @@ const BrandHome = () => {
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
       <Navbar />
+      <PaymentAnnouncementBanner />
       <div className="flex-1 overflow-y-auto">
 
         {/* ══ MOBILE ══ */}
@@ -344,6 +348,7 @@ const BrandHome = () => {
               const res = await getMyBrandProfile();
               setProfile(res.data.brand);
               setShowSetupModal(false);
+              posthog.capture('profile_completed', { role: 'brand' });
               setShowReferralModal(true);
             }
             catch { setShowSetupModal(true); }

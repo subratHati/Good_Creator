@@ -3,10 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import { registerUser, verifyOtp, resendOtp } from '../../api/auth';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
+import { usePostHog } from '@posthog/react'
 
 const Register = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const posthog = usePostHog();
 
   const [step, setStep] = useState('register'); // 'register' | 'otp'
   const [formData, setFormData] = useState({ email: '', password: '', role: '' });
@@ -16,6 +18,7 @@ const Register = () => {
   const otpRefs = [useRef(), useRef(), useRef(), useRef()];
   // separate ref set for the desktop OTP boxes so mobile/desktop DOM nodes don't collide
   const otpRefsDesktop = [useRef(), useRef(), useRef(), useRef()];
+
 
   const handleChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
   const handleRoleSelect = role => setFormData({ ...formData, role });
@@ -67,6 +70,7 @@ const Register = () => {
     try {
       const res = await verifyOtp({ email: formData.email, otp: otpString });
       login(res.data.user, res.data.token);
+      posthog.capture('user_registered', { role: formData.role });
       toast.success('Email verified! Welcome to GoodCreator 🎉');
       navigate('/', { replace: true });
     } catch (error) {

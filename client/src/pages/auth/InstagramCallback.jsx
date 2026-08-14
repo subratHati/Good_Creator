@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
+import { usePostHog } from '@posthog/react'
 
 const formatNumber = (num) => {
   if (!num) return '0';
@@ -13,6 +14,7 @@ const formatNumber = (num) => {
 
 const InstagramCallback = () => {
   const navigate = useNavigate();
+  const posthog = usePostHog();
   const { user } = useAuth();
   const [status, setStatus] = useState('connecting');
   const [accounts, setAccounts] = useState([]);
@@ -47,6 +49,7 @@ const InstagramCallback = () => {
         } else {
           // single account — auto connected
           setStatus('success');
+          posthog.capture('instagram_connected', { method: 'oauth' });
           toast.success('Instagram connected successfully!');
           setTimeout(() => navigate(`/${user?.role}/profile`, { replace: true }), 1500);
         }

@@ -11,6 +11,8 @@ import InstagramReminderModal from '../../components/InstagramReminderModal';
 import InstagramConnectChoiceModal from '../../components/InstagramConnectChoiceModal';
 import toast from 'react-hot-toast';
 import CreatorHomeSkeleton from '../../components/CreatorHomeSkeleton';
+import { usePostHog } from '@posthog/react'
+import PaymentAnnouncementBanner from '../../components/PaymentAnnouncementBanner';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -146,6 +148,7 @@ const CategoryGrid = ({ onCategoryClick }) => {
 const CreatorHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const posthog = usePostHog();
   const [profile, setProfile] = useState(null);
   const [openings, setOpenings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -207,7 +210,7 @@ const CreatorHome = () => {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F8FAFC' }}>
       <Navbar />
-
+      <PaymentAnnouncementBanner />
       {/* ══ MOBILE ══ */}
       <div className="md:hidden" style={{ position: 'relative' }}>
 
@@ -409,6 +412,7 @@ const CreatorHome = () => {
               const res = await getMyCreatorProfile();
               setProfile(res.data.creator);
               setShowSetupModal(false);
+              posthog.capture('profile_completed', { role: 'creator' });
               setShowReferralModal(true);
             } catch { setShowSetupModal(true); }
           }}

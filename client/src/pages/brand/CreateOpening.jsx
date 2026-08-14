@@ -6,6 +6,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import Navbar from '../../components/Navbar';
 import { createOpening } from '../../api/openings';
 import toast from 'react-hot-toast';
+import { usePostHog } from '@posthog/react';
 
 const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'other'];
 
@@ -34,6 +35,7 @@ const DeliverableCounter = ({ label, emoji, value, onChange }) => (
 
 const CreateOpening = () => {
   const navigate = useNavigate();
+  const posthog = usePostHog();
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
@@ -123,6 +125,7 @@ const CreateOpening = () => {
         deadline: form.deadline ? form.deadline.toISOString() : null,
         status: form.status,
       });
+      posthog.capture('campaign_posted', { title: form.title });
       toast.success('Opening created successfully');
       navigate('/brand/openings');
     } catch (error) {

@@ -21,6 +21,7 @@ import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { usePostHog } from '@posthog/react'
 
 const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -363,6 +364,7 @@ const RatingModal = ({ onClose, onSubmit }) => {
 };
 
 const PaymentReleasedMessage = ({ message, isOwn, conversation, userRole }) => {
+  const posthog = usePostHog();
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
@@ -375,6 +377,7 @@ const PaymentReleasedMessage = ({ message, isOwn, conversation, userRole }) => {
         conversationId: conversation?._id,
       });
       toast.success('Review submitted!');
+      posthog.capture('review_submitted', { rating });
       setReviewSubmitted(true);
       setShowRatingModal(false);
     } catch {
@@ -979,6 +982,7 @@ const DeliveryModal = ({ conversationId, onClose, onSend }) => {
 const ChatWindow = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const posthog = usePostHog();
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [conversation, setConversation] = useState(null);
@@ -1110,6 +1114,7 @@ const ChatWindow = () => {
         return [...prev, res.data.message];
       });
       setShowPaymentModal(false);
+      posthog.capture('collab_created', { amount: Number(form.amount) });
       toast.success('Payment request sent');
     } catch {
       toast.error('Failed to send payment request');
@@ -1135,6 +1140,7 @@ const ChatWindow = () => {
         return [...prev, res.data.message];
       });
       setShowDeliveryModal(false);
+      posthog.capture('delivery_submitted');
       toast.success('Delivery submitted');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to submit delivery');
@@ -1176,6 +1182,7 @@ const ChatWindow = () => {
               amount,
             });
             toast.success('Payment successful! 🎉');
+            posthog.capture('payment_completed', { amount: message.paymentRequest.amount });
             const res = await getMessages(id);
             setMessages(res.data.messages);
           } catch {

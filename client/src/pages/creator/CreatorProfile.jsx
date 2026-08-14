@@ -5,6 +5,7 @@ import Navbar from '../../components/Navbar';
 import BankDetailsForm from '../../components/BankDetailsForm';
 import CategoryPolicyDialog from '../../components/CategoryPolicyDialog';
 import ImageCropModal from '../../components/ImageCropModal';
+import { usePostHog } from '@posthog/react'
 import {
   getMyCreatorProfile,
   createCreatorProfile,
@@ -77,6 +78,7 @@ const OAuthUnavailableModal = ({ onClose }) => (
 
 // ─── MANUAL INSTAGRAM STATS MODAL ─────────────────────────────────────────────
 const ManualStatsModal = ({ profile, onClose, onSave }) => {
+  const posthog = usePostHog();
   const [handle, setHandle] = useState(profile?.instagram?.handle || '');
   const [followersCount, setFollowersCount] = useState(
     profile?.instagram?.followersCount ? String(profile.instagram.followersCount) : ''
@@ -112,6 +114,7 @@ const ManualStatsModal = ({ profile, onClose, onSave }) => {
         reelViews: reelViews.map(v => Number(v)),
       });
       toast.success('Instagram stats added!');
+      posthog.capture('instagram_connected', { method: 'manual' });
       onSave();
       onClose();
     } catch (err) {

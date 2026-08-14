@@ -10,9 +10,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@posthog/react": "^1.10.3",
     "axios": "^1.15.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.8.0",
+    "posthog-js": "^1.416.0",
     "react": "^19.2.5",
     "react-datepicker": "^9.1.0",
     "react-dom": "^19.2.5",
