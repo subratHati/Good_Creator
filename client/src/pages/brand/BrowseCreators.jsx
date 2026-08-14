@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { SlidersHorizontal, X, Bookmark } from 'lucide-react';
+import { SlidersHorizontal, X, Bookmark, Search } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { searchCreators } from '../../api/creator';
 import { saveCreator, getSavedCreators } from '../../api/brand';
@@ -205,6 +205,7 @@ const BrowseCreators = () => {
   const [loadingMore, setLoadingMore] = useState(false);
 
   const [filters, setFilters] = useState({
+    search: searchParams.get('search') || '',
     category: searchParams.get('category') || '',
     city: searchParams.get('city') || '',
     minFollowers: searchParams.get('minFollowers') || '',
@@ -220,6 +221,7 @@ const BrowseCreators = () => {
     else setLoadingMore(true);
     try {
       const params = { page: pg, limit: 12 };
+      if (f.search) params.search = f.search;
       if (f.category) params.category = f.category;
       if (f.city) params.city = f.city;
       if (f.minFollowers) params.minFollowers = f.minFollowers;
@@ -256,6 +258,7 @@ const BrowseCreators = () => {
   // of truth, not just component memory that gets wiped on unmount
   const syncFiltersToUrl = (f) => {
     const params = {};
+    if (f.search) params.search = f.search;
     if (f.category) params.category = f.category;
     if (f.city) params.city = f.city;
     if (f.minFollowers) params.minFollowers = f.minFollowers;
@@ -275,8 +278,27 @@ const BrowseCreators = () => {
     });
   };
 
+  const searchTimeoutRef = useRef(null);
+  const handleSearchChange = (value) => {
+    setFilters(prev => {
+      const updated = { ...prev, search: value };
+      syncFiltersToUrl(updated);
+      return updated;
+    });
+    clearTimeout(searchTimeoutRef.current);
+
+    // only search once the user has typed at least 2 characters (or cleared
+    // the field entirely, to restore the unfiltered list) — a 1-character
+    // search matches almost everything and isn't useful, just wasted work
+    if (value.length > 0 && value.length < 2) return;
+
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchCreators({ ...filters, search: value });
+    }, 500);
+  };
+
   const handleClearFilters = () => {
-    const cleared = { category: '', city: '', minFollowers: '', maxFollowers: '', minEngagement: '', barterEnabled: '', isOpenForCollab: 'true', sortBy: '' };
+    const cleared = { search: '', category: '', city: '', minFollowers: '', maxFollowers: '', minEngagement: '', barterEnabled: '', isOpenForCollab: 'true', sortBy: '' };
     setFilters(cleared);
     syncFiltersToUrl(cleared);
     fetchCreators(cleared);
@@ -314,6 +336,20 @@ const BrowseCreators = () => {
         onApply={() => fetchCreators(filters)} onClear={handleClearFilters} />
 
       {/* mobile top bar */}
+      {/* mobile search */}
+      <div className="md:hidden bg-white px-4 pt-3 pb-2">
+        <div className="relative">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={filters.search}
+            onChange={e => handleSearchChange(e.target.value)}
+            placeholder="Search creators..."
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+      </div>
+      {/* mobile top bar */}
       <div className="md:hidden bg-white border-b border-gray-200 px-4 py-3 sticky top-14 z-30">
         <div className="flex items-center gap-2">
           <div className="flex gap-2 overflow-x-auto flex-1 pb-0.5" style={{ scrollbarWidth: 'none' }}>
@@ -350,21 +386,34 @@ const BrowseCreators = () => {
 
           <div className="flex-1 min-w-0">
             {/* desktop header */}
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h1 className="text-2xl font-black" style={{ color: '#101828' }}>
-                  Discover Creators
-                  <span className="ml-3 text-sm font-bold px-3 py-1 rounded-full" style={{ backgroundColor: '#EFF6FF', color: '#155DFC' }}>{total} results</span>
-                </h1>
-                <p className="text-sm mt-1 text-gray-400">Find the right creator for your next campaign</p>
+            <div className="mb-5">
+              <div className="relative mb-4">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={filters.search}
+                  onChange={e => handleSearchChange(e.target.value)}
+                  placeholder="Search by name, category, or Instagram username..."
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
-              <select value={filters.sortBy} onChange={e => { handleFilterChange('sortBy', e.target.value); fetchCreators({ ...filters, sortBy: e.target.value }); }}
-                className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Recommended</option>
-                <option value="followers">Most followers</option>
-                <option value="engagement">Best engagement</option>
-              </select>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-black" style={{ color: '#101828' }}>
+                    Discover Creators
+                    <span className="ml-3 text-sm font-bold px-3 py-1 rounded-full" style={{ backgroundColor: '#EFF6FF', color: '#155DFC' }}>{total} results</span>
+                  </h1>
+                  <p className="text-sm mt-1 text-gray-400">Find the right creator for your next campaign</p>
+                </div>
+                <select value={filters.sortBy} onChange={e => { handleFilterChange('sortBy', e.target.value); fetchCreators({ ...filters, sortBy: e.target.value }); }}
+                  className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Recommended</option>
+                  <option value="followers">Most followers</option>
+                  <option value="engagement">Best engagement</option>
+                </select>
+              </div>
             </div>
+
 
             {loading ? <CreatorListSkeleton /> : creators.length === 0 ? <EmptyState /> : (
               <div className="flex flex-col gap-4 max-w-3xl">

@@ -94,9 +94,10 @@ const searchOpenings = async (req, res) => {
       isBarter,
       minBudget,
       maxBudget,
-      categories, // comma-separated e.g. "fashion,beauty,food"
+      categories,
       city,
       brandId,
+      search,
       page = 1,
       limit = 12,
     } = req.query;
@@ -104,6 +105,26 @@ const searchOpenings = async (req, res) => {
     const query = { status: 'active' };
 
     if (brandId) query.brandId = brandId;
+
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+
+      // "brand name" and "category" both live on the Brand document, not on
+      // Opening itself — find matching brands first, then combine with a
+      // direct search on Opening's own fields (title, description,
+      // requirements.categories)
+      const matchingBrands = await Brand.find({
+        $or: [{ brandName: searchRegex }, { category: searchRegex }],
+      }).select('_id');
+      const matchingBrandIds = matchingBrands.map(b => b._id);
+
+      query.$or = [
+        { title: searchRegex },
+        { description: searchRegex },
+        { 'requirements.categories': searchRegex },
+        { brandId: { $in: matchingBrandIds } },
+      ];
+    }
 
     if (contentType) query.contentType = contentType;
     if (isBarter === 'true') query.isBarter = true;
@@ -114,12 +135,12 @@ const searchOpenings = async (req, res) => {
     }
 
     // filter by brand category matching creator categories
-   if (categories) {
-  const categoryList = categories.split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
-  if (categoryList.length > 0) {
-    query['requirements.categories'] = { $in: categoryList };
-  }
-}
+    if (categories) {
+      const categoryList = categories.split(',').map(c => c.trim().toLowerCase()).filter(Boolean);
+      if (categoryList.length > 0) {
+        query['requirements.categories'] = { $in: categoryList };
+      }
+    }
 
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -133,7 +154,7 @@ const searchOpenings = async (req, res) => {
     ]);
 
     // if category filter returned too few results, backfill with recent openings
-    
+
     // let finalOpenings = openings;
     // if (categories && openings.length < Number(limit)) {
     //   const existingIds = openings.map(o => o._id.toString());

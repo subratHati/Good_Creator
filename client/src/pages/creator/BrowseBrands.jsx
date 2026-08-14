@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal, X, Search } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { searchOpenings } from '../../api/openings';
 import { applyToOpening } from '../../api/applications';
@@ -98,7 +98,7 @@ const OpeningCard = ({ opening, onApply, applied }) => {
               </div>
             </div>
             <button
-              onClick={e => { e.stopPropagation(); applied ? null : setShowApplyModal(true); }}
+              onClick={e => { e.stopPropagation(); if (!applied) navigate(`/openings/${opening._id}`); }}
               disabled={applied}
               style={{
                 flexShrink: 0, padding: '8px 16px', borderRadius: '10px',
@@ -115,7 +115,7 @@ const OpeningCard = ({ opening, onApply, applied }) => {
           </div>
         </div>
       </div>
-             
+
     </>
   );
 };
@@ -225,12 +225,13 @@ const BrowseBrands = () => {
   const { checking } = useCreatorProfileGuard();
   const location = useLocation();
 
-  const [filters, setFilters] = useState({ contentType: '', isBarter: '', minBudget: '', maxBudget: '', category: '' })
+  const [filters, setFilters] = useState({ search: '', contentType: '', isBarter: '', minBudget: '', maxBudget: '', category: '' })
 
   const fetchOpenings = async (f = filters) => {
     setLoading(true);
     try {
       const params = {};
+      if (f.search) params.search = f.search;
       if (f.contentType) params.contentType = f.contentType;
       if (f.isBarter) params.isBarter = f.isBarter;
       if (f.minBudget) params.minBudget = f.minBudget;
@@ -275,8 +276,18 @@ const BrowseBrands = () => {
 
   const handleFilterChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
 
+  const searchTimeoutRef = useRef(null);
+  const handleSearchChange = (value) => {
+    setFilters(prev => ({ ...prev, search: value }));
+    clearTimeout(searchTimeoutRef.current);
+    if (value.length > 0 && value.length < 2) return;
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchOpenings({ ...filters, search: value });
+    }, 500);
+  };
+
   const handleClear = () => {
-    const cleared = { contentType: '', isBarter: '', minBudget: '', maxBudget: '', category: '' };
+    const cleared = { search: '', contentType: '', isBarter: '', minBudget: '', maxBudget: '', category: '' };
     setFilters(cleared);
     fetchOpenings(cleared);
   };
@@ -315,6 +326,19 @@ const BrowseBrands = () => {
         filters={filters} onFilterChange={handleFilterChange}
         onApply={() => fetchOpenings(filters)} onClear={handleClear} />
 
+      {/* mobile search */}
+      <div className="md:hidden" style={{ backgroundColor: 'white', padding: '10px 14px 4px' }}>
+        <div style={{ position: 'relative' }}>
+          <Search size={15} style={{ position: 'absolute', left: '13px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+          <input
+            type="text"
+            value={filters.search}
+            onChange={e => handleSearchChange(e.target.value)}
+            placeholder="Search campaigns..."
+            style={{ width: '100%', paddingLeft: '36px', paddingRight: '16px', paddingTop: '10px', paddingBottom: '10px', borderRadius: '12px', border: '1.5px solid #E5E7EB', fontSize: '14px', outline: 'none' }}
+          />
+        </div>
+      </div>
       {/* mobile filter bar */}
       <div className="md:hidden sticky top-14 z-30" style={{ backgroundColor: 'white', borderBottom: '1px solid #E5E7EB', padding: '10px 14px' }}>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -347,13 +371,25 @@ const BrowseBrands = () => {
           <DesktopSidebar filters={filters} onFilterChange={handleFilterChange}
             onApply={() => fetchOpenings(filters)} onClear={handleClear} />
           <div className="flex-1 min-w-0">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <div>
-                <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#101828', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  Browse Campaigns
-                  <span style={{ fontSize: '13px', fontWeight: 700, padding: '4px 12px', borderRadius: '99px', backgroundColor: '#EFF6FF', color: '#155DFC' }}>{total} active</span>
-                </h1>
-                <p style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '4px' }}>Find brands looking for creators like you</p>
+            <div style={{ marginBottom: '20px' }}>
+              <div style={{ position: 'relative', marginBottom: '16px' }}>
+                <Search size={16} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                <input
+                  type="text"
+                  value={filters.search}
+                  onChange={e => handleSearchChange(e.target.value)}
+                  placeholder="Search by brand name, campaign, or category..."
+                  style={{ width: '100%', paddingLeft: '40px', paddingRight: '16px', paddingTop: '10px', paddingBottom: '10px', borderRadius: '12px', border: '1.5px solid #E5E7EB', fontSize: '14px', outline: 'none' }}
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#101828', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    Browse Campaigns
+                    <span style={{ fontSize: '13px', fontWeight: 700, padding: '4px 12px', borderRadius: '99px', backgroundColor: '#EFF6FF', color: '#155DFC' }}>{total} active</span>
+                  </h1>
+                  <p style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '4px' }}>Find brands looking for creators like you</p>
+                </div>
               </div>
             </div>
             {loading ? <OpeningListSkeleton /> : (

@@ -100,12 +100,24 @@ const searchCreators = async (req, res) => {
       barterEnabled,
       isOpenForCollab,
       sortBy,
+      search,
       page = 1,
       limit = 12,
     } = req.query;
 
     const query = {};
     if (category) query.categories = { $in: [category] };
+
+    // text search — matches creator name, category, or Instagram handle
+    // (only meaningful for creators who've actually connected/added Instagram)
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+      query.$or = [
+        { name: searchRegex },
+        { categories: searchRegex },
+        { 'instagram.handle': searchRegex },
+      ];
+    }
     if (city) query['location.city'] = { $regex: city, $options: 'i' };
     if (minFollowers || maxFollowers) {
       query['instagram.followersCount'] = {};
