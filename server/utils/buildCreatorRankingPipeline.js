@@ -34,11 +34,15 @@
 //
 // ── ROTATION ────────────────────────────────────────────────────────────
 // Within a bracket, creators are sorted by (qualityScore + a small
-// random jitter), recalculated fresh on every request. The jitter is
-// small enough that it can meaningfully reshuffle relative order within
-// a bracket, but mathematically cannot push a creator's effective score
+// weighted contribution from their stored rotationValue). rotationValue
+// is a plain random number refreshed once daily by a scheduled job (see
+// routes/cron.js), NOT recalculated per-request — this keeps sort order
+// completely stable for pagination within a day, while still rotating
+// who ranks where across different days. The contribution is small
+// enough that it can meaningfully reshuffle relative order within a
+// bracket, but mathematically cannot push a creator's effective score
 // across a bracket boundary, since bracket is always the primary sort
-// key, evaluated before the jittered qualityScore tiebreak.
+// key, evaluated before the rotated-score tiebreak.
 
 const QUALITY_TIER = {
   BEST_MIN: 4,
@@ -46,7 +50,12 @@ const QUALITY_TIER = {
   // anything > 0 and < GOOD_MIN is "Average"; exactly 0 is "Below Average"
 };
 
-const JITTER_RANGE = 0.4; // +/- 0.2, small enough to never cross a real bracket gap
+// rotationValue is stored as a plain 0-1 random number (see Creator.js
+// and routes/cron.js). This weight scales its contribution to the final
+// sort score — kept small (max contribution of 0.2) so it can never push
+// a creator's effective score across a real bracket boundary, same
+// safety property the earlier jitter design had.
+const ROTATION_WEIGHT = 0.2;
 
 const buildCreatorRankingPipeline = ({ matchQuery, brandCategory, brandCity, brandState, skip, limit }) => {
   return [
@@ -118,22 +127,49 @@ const buildCreatorRankingPipeline = ({ matchQuery, brandCategory, brandCity, bra
       },
     },
 
-    // ── rotation jitter, recalculated fresh every request ───────────────
+    // ── rotation, using a STORED field instead of live computation ──────
+    // Earlier versions tried to compute rotation live, per-request, using
+    // either $rand (genuinely random every call — caused Load More
+    // duplicates, since sort order could shift between page 1 and page 2)
+    // or a seeded hash via $function (blocked outright on this Atlas
+    // tier). Both approaches added real complexity for a problem that
+    // has a much simpler solution: rotationValue is a plain number
+    // stored directly on each Creator document, refreshed once daily by
+    // a scheduled job (see routes/cron.js), not computed here at all.
+    // Reading a stored field is trivial for MongoDB — no hashing, no
+    // $function, no per-request randomness, and critically: completely
+    // stable within a day, so Load More pagination can never duplicate
+    // or skip a creator, since the value driving the sort doesn't change
+    // between page 1 and page 2 requests made on the same day.
     {
       $addFields: {
-        _jitter: { $subtract: [{ $multiply: [{ $rand: {} }, JITTER_RANGE] }, JITTER_RANGE / 2] },
+        _sortScore: {
+          $add: ['$qualityScore', { $multiply: [{ $ifNull: ['$rotationValue', 0] }, ROTATION_WEIGHT] }],
+        },
       },
     },
-    { $addFields: { _sortScore: { $add: ['$qualityScore', '$_jitter'] } } },
 
-    // ── final ordering: bracket first (hard boundary), then jittered score ──
-    { $sort: { _bracket: 1, _sortScore: -1 } },
+    // ── final ordering: bracket first (hard boundary), then rotated score,
+    // then _id as a final tiebreaker ────────────────────────────────────
+    // _sortScore ties are still possible even with rotation blended in
+    // (two creators could theoretically land on the same combined value),
+    // so _id stays as the last-resort tiebreaker, guaranteeing a fully
+    // deterministic, duplicate-free order regardless.
+    // Without a tiebreaker, MongoDB doesn't guarantee a consistent order
+    // among tied documents across separate query executions, even with
+    // the same seed — which was the remaining cause of duplicate/skipped
+    // creators across Load More pages. _id is unique per document, so
+    // adding it as the last sort key makes the full ordering fully
+    // deterministic, closing that gap completely.
+    { $sort: { _bracket: 1, _sortScore: -1, _id: 1 } },
 
     { $skip: skip },
     { $limit: limit },
 
     // strip internal-only fields before returning to the client — these
-    // are implementation details, not something the frontend needs
+    // are implementation details, not something the frontend needs.
+    // Note: rotationValue itself is intentionally NOT excluded — it's a
+    // real, harmless field the frontend can ignore, no need to strip it.
     {
       $project: {
         'instagram.accessToken': 0,
@@ -142,7 +178,6 @@ const buildCreatorRankingPipeline = ({ matchQuery, brandCategory, brandCity, bra
         _matchCount: 0,
         _tier: 0,
         _bracket: 0,
-        _jitter: 0,
         _sortScore: 0,
       },
     },

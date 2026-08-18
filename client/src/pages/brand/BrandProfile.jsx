@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Camera } from 'lucide-react';
+import { Camera, HelpCircle } from 'lucide-react';
 import Navbar from '../../components/Navbar';
+import { useNavigate } from 'react-router-dom';
 import {
   getMyBrandProfile,
   createBrandProfile,
@@ -10,19 +11,42 @@ import {
 import { getMyOpenings } from '../../api/openings';
 import toast from 'react-hot-toast';
 
-const CATEGORIES = ['fashion', 'food', 'beauty', 'tech', 'fitness', 'travel', 'education', 'finance', 'lifestyle', 'other'];
 
+
+const CATEGORIES = ['fashion', 'food', 'beauty', 'tech', 'fitness', 'travel', 'education', 'finance', 'lifestyle', 'entertainment', 'parenting_family', 'vlogging', 'dance', 'religious', 'news_politics', 'video_editing', 'ai_content', 'pets_wildlife', 'other'];
 const categoryColors = {
-  fashion:   { bg: '#FED7AA', color: '#7C2D12' },
-  beauty:    { bg: '#FBCFE8', color: '#831843' },
-  food:      { bg: '#FDE68A', color: '#78350F' },
-  tech:      { bg: '#DDD6FE', color: '#4C1D95' },
-  fitness:   { bg: '#BBF7D0', color: '#064E3B' },
+  fashion: { bg: '#FED7AA', color: '#7C2D12' },
+  beauty: { bg: '#FBCFE8', color: '#831843' },
+  food: { bg: '#FDE68A', color: '#78350F' },
+  tech: { bg: '#DDD6FE', color: '#4C1D95' },
+  fitness: { bg: '#BBF7D0', color: '#064E3B' },
   lifestyle: { bg: '#BFDBFE', color: '#1E3A8A' },
-  travel:    { bg: '#A7F3D0', color: '#064E3B' },
+  travel: { bg: '#A7F3D0', color: '#064E3B' },
   education: { bg: '#FDE68A', color: '#78350F' },
-  finance:   { bg: '#BBF7D0', color: '#064E3B' },
-  other:     { bg: '#E5E7EB', color: '#374151' },
+  finance: { bg: '#BBF7D0', color: '#064E3B' },
+  entertainment: { bg: '#FCE7F3', color: '#9D174D' },
+  parenting_family: { bg: '#FEF3C7', color: '#92400E' },
+  vlogging: { bg: '#E0E7FF', color: '#3730A3' },
+  dance: { bg: '#FBCFE8', color: '#9D174D' },
+  religious: { bg: '#FEF9C3', color: '#713F12' },
+  news_politics: { bg: '#E5E7EB', color: '#1F2937' },
+  video_editing: { bg: '#CFFAFE', color: '#155E75' },
+  ai_content: { bg: '#EDE9FE', color: '#5B21B6' },
+  pets_wildlife: { bg: '#D1FAE5', color: '#065F46' },
+  other: { bg: '#E5E7EB', color: '#374151' },
+};
+
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 };
 
 const avatarBgs = ['#FF6B35', '#155DFC', '#E1306C', '#16A34A', '#8B5CF6', '#F59E0B'];
@@ -80,9 +104,9 @@ const EditModal = ({ profile, onClose, onSave }) => {
   const bgColor = avatarBgs[(form.brandName?.charCodeAt(0) || 0) % avatarBgs.length];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4" onClick={onClose}>
-      <div className="bg-white w-full md:max-w-lg overflow-y-auto" style={{ borderRadius: '24px 24px 0 0', maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
-        <div style={{ padding: '24px' }}>
+    <div className="fixed bg-black bg-opacity-50 flex items-end md:items-center justify-center px-0 md:px-4" style={{ zIndex: 99999, top: 0, left: 0, right: 0, bottom: 'calc(60px + env(safe-area-inset-bottom))' }} onClick={onClose}>
+      <div className="bg-white w-full md:max-w-lg overflow-y-auto" style={{ borderRadius: '24px 24px 0 0', maxHeight: 'calc(90vh - 60px - env(safe-area-inset-bottom))' }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '24px 24px calc(24px + env(safe-area-inset-bottom))' }}>
           <div style={{ width: '40px', height: '4px', backgroundColor: '#E5E7EB', borderRadius: '2px', margin: '0 auto 20px' }} className="md:hidden" />
           <h3 style={{ fontWeight: 900, fontSize: '18px', color: '#101828', marginBottom: '20px' }}>Edit Brand Profile</h3>
 
@@ -150,11 +174,11 @@ const EditModal = ({ profile, onClose, onSave }) => {
 
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>Category <span style={{ color: '#EF4444' }}>*</span></label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
                 {CATEGORIES.map(cat => (
                   <button key={cat} type="button" onClick={() => setForm({ ...form, category: cat })}
-                    style={{ padding: '6px 14px', borderRadius: '99px', fontSize: '12px', fontWeight: 700, border: '1.5px solid', borderColor: form.category === cat ? '#155DFC' : '#E5E7EB', backgroundColor: form.category === cat ? '#155DFC' : 'white', color: form.category === cat ? 'white' : '#6B7280', cursor: 'pointer', textTransform: 'capitalize' }}>
-                    {cat}
+                    style={{ padding: '6px 14px', borderRadius: '99px', fontSize: '12px', fontWeight: 700, border: '1.5px solid', borderColor: form.category === cat ? '#155DFC' : '#E5E7EB', backgroundColor: form.category === cat ? '#155DFC' : 'white', color: form.category === cat ? 'white' : '#6B7280', cursor: 'pointer' }}>
+                    {getCategoryLabel(cat)}
                   </button>
                 ))}
               </div>
@@ -207,6 +231,7 @@ const BrandProfile = () => {
   const [openings, setOpenings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const navigate = useNavigate();
 
   const fetchAll = async () => {
     try {
@@ -261,7 +286,7 @@ const BrandProfile = () => {
   const CategorySection = () => (
     <div>
       {profile?.category
-        ? <span style={{ fontSize: '12px', fontWeight: 700, padding: '5px 14px', borderRadius: '99px', backgroundColor: catStyle.bg, color: catStyle.color, textTransform: 'capitalize', display: 'inline-block' }}>{profile.category}</span>
+        ? <span style={{ fontSize: '12px', fontWeight: 700, padding: '5px 14px', borderRadius: '99px', backgroundColor: catStyle.bg, color: catStyle.color, display: 'inline-block' }}>{getCategoryLabel(profile.category)}</span>
         : <span style={{ fontSize: '12px', color: '#9CA3AF' }}>No category selected</span>
       }
     </div>
@@ -279,7 +304,7 @@ const BrandProfile = () => {
         )}
         {/* gradient overlay */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(0deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.1) 60%)' }} />
-  
+
       </div>
 
       {/* WHITE CARD SLIDES UP */}
@@ -303,8 +328,8 @@ const BrandProfile = () => {
               </span>
             )}
             {profile?.category && (
-              <span style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '99px', backgroundColor: catStyle.bg, color: catStyle.color, textTransform: 'capitalize' }}>
-                {profile.category}
+              <span style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '99px', backgroundColor: catStyle.bg, color: catStyle.color }}>
+                {getCategoryLabel(profile.category)}
               </span>
             )}
             {profile?.instagram?.handle && (
@@ -339,10 +364,24 @@ const BrandProfile = () => {
 
       {/* section cards on gray bg */}
       <div style={{ backgroundColor: '#F8FAFC', padding: '0 16px 100px' }}>
+        <SectionCard title="Transactions">
+          <button
+            onClick={() => navigate('/brand/transactions')}
+            style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer' }}>
+            🧾 View Transaction History
+          </button>
+        </SectionCard>
         <SectionCard title="About the Brand" onEdit={() => setShowModal(true)}><AboutSection /></SectionCard>
         <SectionCard title="Website" onEdit={() => setShowModal(true)}><WebsiteSection /></SectionCard>
         <SectionCard title="Location" onEdit={() => setShowModal(true)}><LocationSection /></SectionCard>
         <SectionCard title="Category" onEdit={() => setShowModal(true)}><CategorySection /></SectionCard>
+        <SectionCard title="Contact Us & Help">
+          <button
+            onClick={() => navigate('/contact-help')}
+            style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <HelpCircle size={16} /> Get Help & Raise an Issue
+          </button>
+        </SectionCard>
       </div>
     </div>
   );
@@ -369,8 +408,8 @@ const BrandProfile = () => {
               </span>
             )}
             {profile?.category && (
-              <span style={{ fontSize: '11px', fontWeight: 700, padding: '3px 10px', borderRadius: '99px', backgroundColor: catStyle.bg, color: catStyle.color, textTransform: 'capitalize' }}>
-                {profile.category}
+              <span style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '99px', backgroundColor: catStyle.bg, color: catStyle.color }}>
+                {getCategoryLabel(profile.category)}
               </span>
             )}
             {profile?.instagram?.handle && (
@@ -421,10 +460,25 @@ const BrandProfile = () => {
 
         {/* right — section cards */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <SectionCard title="Transactions">
+            <button
+              onClick={() => navigate('/brand/transactions')}
+              style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer' }}>
+              🧾 View Transaction History
+            </button>
+          </SectionCard>
           <SectionCard title="About the Brand" onEdit={() => setShowModal(true)}><AboutSection /></SectionCard>
           <SectionCard title="Location" onEdit={() => setShowModal(true)}><LocationSection /></SectionCard>
           <SectionCard title="Category" onEdit={() => setShowModal(true)}><CategorySection /></SectionCard>
+
           {!profile?.website && <SectionCard title="Website" onEdit={() => setShowModal(true)}><WebsiteSection /></SectionCard>}
+          <SectionCard title="Contact Us & Help">
+            <button
+              onClick={() => navigate('/contact-help')}
+              style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <HelpCircle size={16} /> Get Help & Raise an Issue
+            </button>
+          </SectionCard>
         </div>
       </div>
     </div>

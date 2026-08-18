@@ -8,7 +8,20 @@ import { createOpening } from '../../api/openings';
 import toast from 'react-hot-toast';
 import { usePostHog } from '@posthog/react';
 
-const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'other'];
+const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'finance', 'entertainment', 'parenting_family', 'vlogging', 'dance', 'religious', 'news_politics', 'video_editing', 'ai_content', 'pets_wildlife', 'other'];
+
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
 
 const DeliverableCounter = ({ label, emoji, value, onChange }) => (
   <div className="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-gray-50">
@@ -359,11 +372,11 @@ const CreateOpening = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Preferred creator niches</label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 overflow-y-auto pr-1" style={{ maxHeight: '220px' }}>
                 {CATEGORIES.map(cat => (
                   <button key={cat} type="button" onClick={() => toggleCategory(cat)}
-                    className={`px-3 py-1.5 rounded-full text-sm font-medium border capitalize transition-all cursor-pointer ${form.categories.includes(cat) ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-600 hover:border-blue-300'
-                      }`}>{cat}</button>
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all cursor-pointer ${form.categories.includes(cat) ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-200 text-gray-600 hover:border-blue-300'
+                      }`}>{getCategoryLabel(cat)}</button>
                 ))}
               </div>
             </div>

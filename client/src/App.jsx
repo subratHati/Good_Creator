@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 import MessagesPage from './pages/messages/MessagesPage';
 import ChatWindow from './pages/messages/ChatWindow';
+import ContactHelp from './pages/ContactHelp';
 
 // auth
 import Login from './pages/auth/Login';
@@ -23,6 +24,7 @@ import MyApplications from './pages/creator/MyApplications';
 import CreatorEnquiries from './pages/creator/CreatorEnquiries';
 import BankDetails from './pages/creator/BankDetails';
 import CampaignDetails from './pages/creator/CampaignDetails';
+import PaymentDashboard from './pages/creator/PaymentDashboard';
 
 
 // brand
@@ -33,6 +35,7 @@ import CreateOpening from './pages/brand/CreateOpening';
 import ManageOpenings from './pages/brand/ManageOpenings';
 import ViewApplicants from './pages/brand/ViewApplicants';
 import SavedCreators from './pages/brand/SavedCreators';
+import BrandTransactionHistory from './pages/brand/BrandTransactionHistory';
 
 //public
 import CreatorPublicProfile from './pages/public/CreatorPublicProfile';
@@ -43,6 +46,9 @@ import HomePage from './pages/home/HomePage';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminPayments from './pages/admin/AdminPayments';
+import AdminIssues from './pages/admin/AdminIssues';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
+
 
 const App = () => {
   return (
@@ -79,9 +85,14 @@ const App = () => {
             <ProtectedRoute allowedRole="creator"><CreatorEnquiries /></ProtectedRoute>
           } />
           <Route path="/creator/bank-details" element={
-           <ProtectedRoute allowedRole="creator" > <BankDetails /> </ProtectedRoute> 
-            } />
-            <Route path="/openings/:id" element={<CampaignDetails />} />
+            <ProtectedRoute allowedRole="creator" > <BankDetails /> </ProtectedRoute>
+          } />
+          <Route path="/creator/payments" element={
+            <ProtectedRoute allowedRole="creator"><PaymentDashboard /></ProtectedRoute>
+          } />
+          <Route path="/openings/:id" element={
+            <ProtectedRoute allowedRole="creator"><CampaignDetails /></ProtectedRoute>
+          } />
 
           {/* brand */}
           <Route path="/brand/dashboard" element={
@@ -105,6 +116,9 @@ const App = () => {
           <Route path="/brand/saved-creators" element={
             <ProtectedRoute allowedRole="brand"><SavedCreators /></ProtectedRoute>
           } />
+          <Route path="/brand/transactions" element={
+            <ProtectedRoute allowedRole="brand"><BrandTransactionHistory /></ProtectedRoute>
+          } />
 
           <Route path="/messages" element={
             <ProtectedRoute><MessagesPage /></ProtectedRoute>
@@ -113,10 +127,24 @@ const App = () => {
             <ProtectedRoute><ChatWindow /></ProtectedRoute>
           } />
 
+          <Route path="/contact-help" element={
+            <ProtectedRoute><ContactHelp /></ProtectedRoute>
+          } />
+
           {/* Admin  */}
           <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/payments" element={<AdminPayments />} />
+          <Route path="/admin/dashboard" element={
+            <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminDashboard /></ProtectedRoute>
+          } />
+          <Route path="/admin/payments" element={
+            <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminPayments /></ProtectedRoute>
+          } />
+          <Route path="/admin/issues" element={
+            <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminIssues /></ProtectedRoute>
+          } />
+          <Route path="/admin/analytics" element={
+            <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminAnalytics /></ProtectedRoute>
+          } />
 
 
           <Route path="*" element={<Navigate to="/login" replace />} />

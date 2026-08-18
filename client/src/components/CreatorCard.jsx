@@ -14,19 +14,6 @@ const formatNumber = (num) => {
 
 const avatarBgs = ['#FF6B35', '#155DFC', '#E1306C', '#16A34A', '#8B5CF6', '#F59E0B'];
 
-const categoryColors = {
-  fashion: { bg: '#FED7AA', color: '#7C2D12' },
-  beauty: { bg: '#FBCFE8', color: '#831843' },
-  food: { bg: '#FDE68A', color: '#78350F' },
-  tech: { bg: '#DDD6FE', color: '#4C1D95' },
-  fitness: { bg: '#BBF7D0', color: '#064E3B' },
-  lifestyle: { bg: '#BFDBFE', color: '#1E3A8A' },
-  travel: { bg: '#A7F3D0', color: '#064E3B' },
-  education: { bg: '#FDE68A', color: '#78350F' },
-  finance: { bg: '#BBF7D0', color: '#064E3B' },
-  gaming: { bg: '#DDD6FE', color: '#4C1D95' },
-  other: { bg: '#E5E7EB', color: '#374151' },
-};
 
 const CheckIcon = () => (
   <svg viewBox="0 0 12 12" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: '9px', height: '9px' }}>
@@ -40,7 +27,6 @@ const CreatorCard = ({ creator, onViewProfile }) => {
   const name = creator.name || creator.userId?.email?.split('@')[0] || 'Creator';
   const bg = avatarBgs[(name?.charCodeAt(0) || 0) % avatarBgs.length];
   const ig = creator.instagram || {};
-  const categories = creator.categories || [];
 
   const handleClick = () => {
     if (onViewProfile) onViewProfile(creator);

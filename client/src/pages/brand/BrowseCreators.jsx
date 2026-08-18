@@ -9,7 +9,20 @@ import toast from 'react-hot-toast';
 import useBackButtonClose from '../../hooks/useBackButtonClose';
 import CreatorListSkeleton from '../../components/CreatorListSkeleton';
 
-const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'other'];
+const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'finance', 'entertainment', 'parenting_family', 'vlogging', 'dance', 'religious', 'news_politics', 'video_editing', 'ai_content', 'pets_wildlife', 'other'];
+
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -41,7 +54,7 @@ const FilterSheet = ({ open, onClose, filters, onFilterChange, onApply, onClear 
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${!filters.category ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600'}`}>All</button>
               {CATEGORIES.map(cat => (
                 <button key={cat} onClick={() => onFilterChange('category', cat)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border capitalize transition-all ${filters.category === cat ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600'}`}>{cat}</button>
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${filters.category === cat ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600'}`}>{getCategoryLabel(cat)}</button>
               ))}
             </div>
           </div>
@@ -106,23 +119,30 @@ const DesktopSidebar = ({ filters, onFilterChange, onApply, onClear }) => (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden sticky top-24">
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <span className="font-black text-sm" style={{ color: '#101828' }}>Filters</span>
-        <button onClick={onClear} className="text-xs font-bold hover:underline" style={{ color: '#155DFC' }}>Clear all</button>
+        <button onClick={onClear} className="text-xs font-bold hover:underline cursor-pointer" style={{ color: '#155DFC' }}>Clear all</button>
+      </div>
+      <div className="px-5 pt-5">
+        <button onClick={onApply}
+          className="w-full py-3 rounded-2xl text-sm font-black text-white transition-opacity hover:opacity-90 cursor-pointer"
+          style={{ backgroundColor: '#155DFC' }}>
+          Apply Filters
+        </button>
       </div>
       <div className="p-5 space-y-5">
         {/* niche */}
         <div>
           <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Niche</div>
-          <div className="space-y-1">
-            <button onClick={() => onFilterChange('category', '')}
-              className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold transition-all"
-              style={{ backgroundColor: !filters.category ? '#101828' : 'transparent', color: !filters.category ? 'white' : '#6B7280' }}>
-              All Niches
-            </button>
+          <button onClick={() => onFilterChange('category', '')}
+            className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold transition-all mb-1 cursor-pointer"
+            style={{ backgroundColor: !filters.category ? '#101828' : 'transparent', color: !filters.category ? 'white' : '#6B7280' }}>
+            All Niches
+          </button>
+          <div className="space-y-1 overflow-y-auto pr-1" style={{ maxHeight: '260px' }}>
             {CATEGORIES.map(cat => (
               <button key={cat} onClick={() => onFilterChange('category', cat)}
-                className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold capitalize transition-all"
+                className="w-full text-left px-3 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer"
                 style={{ backgroundColor: filters.category === cat ? '#101828' : 'transparent', color: filters.category === cat ? 'white' : '#6B7280' }}>
-                {cat}
+                {getCategoryLabel(cat)}
               </button>
             ))}
           </div>
@@ -203,6 +223,7 @@ const BrowseCreators = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [sessionSeed] = useState(() => Math.random().toString(36).slice(2));
 
   const [filters, setFilters] = useState({
     search: searchParams.get('search') || '',
@@ -216,20 +237,25 @@ const BrowseCreators = () => {
     sortBy: searchParams.get('sortBy') || '',
   });
 
+  const buildParams = (f) => {
+    const params = {};
+    if (f.search) params.search = f.search;
+    if (f.category) params.category = f.category;
+    if (f.city) params.city = f.city;
+    if (f.minFollowers) params.minFollowers = f.minFollowers;
+    if (f.maxFollowers) params.maxFollowers = f.maxFollowers;
+    if (f.minEngagement) params.minEngagement = f.minEngagement;
+    if (f.barterEnabled) params.barterEnabled = f.barterEnabled;
+    if (f.isOpenForCollab) params.isOpenForCollab = f.isOpenForCollab;
+    if (f.sortBy) params.sortBy = f.sortBy;
+    return params;
+  };
+
   const fetchCreators = async (f = filters, pg = 1) => {
     if (pg === 1) setLoading(true);
     else setLoadingMore(true);
     try {
-      const params = { page: pg, limit: 12 };
-      if (f.search) params.search = f.search;
-      if (f.category) params.category = f.category;
-      if (f.city) params.city = f.city;
-      if (f.minFollowers) params.minFollowers = f.minFollowers;
-      if (f.maxFollowers) params.maxFollowers = f.maxFollowers;
-      if (f.minEngagement) params.minEngagement = f.minEngagement;
-      if (f.barterEnabled) params.barterEnabled = f.barterEnabled;
-      if (f.isOpenForCollab) params.isOpenForCollab = f.isOpenForCollab;
-      if (f.sortBy) params.sortBy = f.sortBy;
+      const params = { ...buildParams(f), page: pg, limit: 12, seed: sessionSeed };
       const res = await searchCreators(params);
       const newCreators = res.data.creators || [];
       if (pg === 1) setCreators(newCreators);
@@ -247,6 +273,41 @@ const BrowseCreators = () => {
         const savedRes = await getSavedCreators();
         setSavedIds(savedRes.data.savedCreators.map(c => c._id));
       } catch { }
+
+      const savedStateRaw = sessionStorage.getItem('browseCreators_state');
+      if (savedStateRaw) {
+        const savedState = JSON.parse(savedStateRaw);
+        const filtersMatch = JSON.stringify(savedState.filters) === JSON.stringify(filters);
+
+        if (filtersMatch && savedState.page > 1) {
+          // re-fetch every batch up to where they'd been, sequentially,
+          // so the full loaded list is restored — not just a jump to
+          // page 1 like a fresh visit
+          setLoading(true);
+          let allCreators = [];
+          for (let p = 1; p <= savedState.page; p++) {
+            const res = await searchCreators({ ...buildParams(filters), page: p, limit: 12 });
+            allCreators = [...allCreators, ...(res.data.creators || [])];
+            if (p === savedState.page) {
+              setTotal(res.data.pagination.total);
+              setHasMore(p < res.data.pagination.pages);
+            }
+          }
+          setCreators(allCreators);
+          setPage(savedState.page);
+          setLoading(false);
+
+          // wait for the restored content to actually render, then jump
+          // to the saved scroll position — a small delay ensures the DOM
+          // has the right height to scroll into before we try
+          setTimeout(() => window.scrollTo(0, savedState.scrollY), 100);
+
+          sessionStorage.removeItem('browseCreators_state');
+          return;
+        }
+        sessionStorage.removeItem('browseCreators_state');
+      }
+
       fetchCreators(filters, 1);
     };
     init();
@@ -311,6 +372,14 @@ const BrowseCreators = () => {
     } catch { toast.error('Failed to save creator'); }
   };
 
+  const saveScrollState = () => {
+    sessionStorage.setItem('browseCreators_state', JSON.stringify({
+      page,
+      filters,
+      scrollY: window.scrollY,
+    }));
+  };
+
   const activeFilterCount = [filters.category, filters.city, filters.minFollowers, filters.minEngagement, filters.barterEnabled].filter(Boolean).length;
 
   const EmptyState = () => (
@@ -330,14 +399,12 @@ const BrowseCreators = () => {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F5F5F7' }}>
       <Navbar />
-
       <FilterSheet open={showFilterSheet} onClose={() => setShowFilterSheet(false)}
         filters={filters} onFilterChange={handleFilterChange}
         onApply={() => fetchCreators(filters)} onClear={handleClearFilters} />
-
       {/* mobile top bar */}
       {/* mobile search */}
-      <div className="md:hidden bg-white px-4 pt-3 pb-2">
+      <div className="md:hidden bg-white px-4 pt-3 pb-2 flex-shrink-0">
         <div className="relative">
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -357,7 +424,7 @@ const BrowseCreators = () => {
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${!filters.category ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600 bg-white'}`}>All</button>
             {CATEGORIES.map(cat => (
               <button key={cat} onClick={() => { handleFilterChange('category', cat); fetchCreators({ ...filters, category: cat }); }}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border capitalize transition-all ${filters.category === cat ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600 bg-white'}`}>{cat}</button>
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${filters.category === cat ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600 bg-white'}`}>{getCategoryLabel(cat)}</button>
             ))}
           </div>
           <button onClick={() => setShowFilterSheet(true)}
@@ -401,7 +468,6 @@ const BrowseCreators = () => {
                 <div>
                   <h1 className="text-2xl font-black" style={{ color: '#101828' }}>
                     Discover Creators
-                    <span className="ml-3 text-sm font-bold px-3 py-1 rounded-full" style={{ backgroundColor: '#EFF6FF', color: '#155DFC' }}>{total} results</span>
                   </h1>
                   <p className="text-sm mt-1 text-gray-400">Find the right creator for your next campaign</p>
                 </div>
@@ -419,7 +485,7 @@ const BrowseCreators = () => {
               <div className="flex flex-col gap-4 max-w-3xl">
                 {creators.map(creator => (
                   <CreatorCard key={creator._id} creator={creator} onSave={handleSave}
-                    saved={savedIds.includes(creator._id)} onClick={() => navigate(`/creator/${creator._id}`)} />
+                    saved={savedIds.includes(creator._id)} onViewProfile={() => { saveScrollState(); navigate(`/creator/${creator._id}`); }} />
                 ))}
                 {hasMore && (
                   <div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -436,17 +502,14 @@ const BrowseCreators = () => {
 
         {/* MOBILE */}
         <div className="md:hidden">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-black" style={{ color: '#101828' }}>{total} creators</span>
-          </div>
           {loading ? <CreatorListSkeleton /> : creators.length === 0 ? <EmptyState /> : (
-            <div className="grid grid-cols gap-3">
+            <div className="flex flex-col gap-4 max-w-3xl">
               {creators.map(creator => (
                 <CreatorCard key={creator._id} creator={creator} onSave={handleSave}
-                  saved={savedIds.includes(creator._id)} onClick={() => navigate(`/creator/${creator._id}`)} />
+                  saved={savedIds.includes(creator._id)} onViewProfile={() => { saveScrollState(); navigate(`/creator/${creator._id}`); }} />
               ))}
               {hasMore && (
-                <div style={{ textAlign: 'center', padding: '20px 0 80px' }}>
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
                   <button onClick={() => fetchCreators(filters, page + 1)} disabled={loadingMore}
                     style={{ padding: '12px 32px', backgroundColor: 'white', color: '#155DFC', border: '1.5px solid #155DFC', borderRadius: '14px', fontSize: '14px', fontWeight: 700, cursor: loadingMore ? 'not-allowed' : 'pointer' }}>
                     {loadingMore ? 'Loading...' : 'Load More'}

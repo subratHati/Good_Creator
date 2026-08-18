@@ -11,6 +11,19 @@ const statusStyles = {
   draft: { bg: '#FFFBEB', color: '#92400E', dot: '#F59E0B' },
 };
 
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
 const ManageOpenings = () => {
   const [openings, setOpenings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -316,8 +329,8 @@ const ManageOpenings = () => {
                   <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: '#9CA3AF' }}>Preferred Niches</div>
                   <div className="flex flex-wrap gap-2">
                     {selectedOpening.requirements.categories.map(c => (
-                      <span key={c} className="text-xs font-semibold px-3 py-1 rounded-full capitalize" style={{ backgroundColor: '#F8FAFC', color: '#374151', border: '1px solid #E5E7EB' }}>
-                        {c}
+                      <span key={c} className="text-xs font-semibold px-3 py-1 rounded-full" style={{ backgroundColor: '#F8FAFC', color: '#374151', border: '1px solid #E5E7EB' }}>
+                        {getCategoryLabel(c)}
                       </span>
                     ))}
                   </div>

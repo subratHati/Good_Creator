@@ -101,6 +101,7 @@ const searchCreators = async (req, res) => {
       isOpenForCollab,
       sortBy,
       search,
+      seed,
       page = 1,
       limit = 12,
     } = req.query;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Bell, LogOut, CheckCircle, Circle } from 'lucide-react';
+import { Mail, Bell, LogOut, CheckCircle, Circle, AlertTriangle, BarChart3 } from 'lucide-react';
 import { getAllCreators, getAllBrands, sendAdminMessage, getReferralStats } from '../../api/admin';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -219,19 +219,48 @@ const AdminDashboard = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
-
-        {/* payments section link */}
-        <button
-          onClick={() => navigate('/admin/payments')}
-          className="w-full flex items-center justify-between bg-white rounded-2xl border p-5 mb-6 hover:bg-gray-50 transition-colors"
-          style={{ borderColor: '#E5E7EB' }}
-        >
-          <div className="text-left">
-            <div className="text-sm font-black" style={{ color: '#101828' }}>💰 Payments Dashboard</div>
-            <div className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>View collections, commissions, and pending creator payouts</div>
-          </div>
-          <span style={{ color: '#155DFC', fontSize: '20px' }}>→</span>
-        </button>
+        {/* payments + issues section links */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <button
+            onClick={() => navigate('/admin/payments')}
+            className="w-full flex items-center justify-between bg-white rounded-2xl border p-5 hover:bg-gray-50 transition-colors"
+            style={{ borderColor: '#E5E7EB' }}
+          >
+            <div className="text-left">
+              <div className="text-sm font-black" style={{ color: '#101828' }}>💰 Payments Dashboard</div>
+              <div className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>View collections, commissions, and pending creator payouts</div>
+            </div>
+            <span style={{ color: '#155DFC', fontSize: '20px' }}>→</span>
+          </button>
+          <button
+            onClick={() => navigate('/admin/issues')}
+            className="w-full flex items-center justify-between bg-white rounded-2xl border p-5 hover:bg-gray-50 transition-colors"
+            style={{ borderColor: '#E5E7EB' }}
+          >
+            <div className="text-left flex items-center gap-3">
+              <AlertTriangle size={20} color="#DC2626" style={{ flexShrink: 0 }} />
+              <div>
+                <div className="text-sm font-black" style={{ color: '#101828' }}>Reported Issues</div>
+                <div className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>Review issues raised by creators and brands</div>
+              </div>
+            </div>
+            <span style={{ color: '#155DFC', fontSize: '20px' }}>→</span>
+          </button>
+          <button
+            onClick={() => navigate('/admin/analytics')}
+            className="w-full flex items-center justify-between bg-white rounded-2xl border p-5 hover:bg-gray-50 transition-colors"
+            style={{ borderColor: '#E5E7EB' }}
+          >
+            <div className="text-left flex items-center gap-3">
+              <BarChart3 size={20} color="#155DFC" style={{ flexShrink: 0 }} />
+              <div>
+                <div className="text-sm font-black" style={{ color: '#101828' }}>Analytics</div>
+                <div className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>Users, campaigns, and collaboration insights</div>
+              </div>
+            </div>
+            <span style={{ color: '#155DFC', fontSize: '20px' }}>→</span>
+          </button>
+        </div>
 
         {/* referral source stats */}
         {referralStats && (

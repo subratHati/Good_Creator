@@ -21,6 +21,19 @@ const formatDate = (date) =>
     ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
     : 'Never';
 
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
 const CreatorPublicProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -266,6 +279,7 @@ const CreatorPublicProfile = () => {
             </div>
 
             {/* categories */}
+            {/* categories */}
             {creator.categories?.length > 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 p-4">
                 <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Niches</div>
@@ -273,9 +287,9 @@ const CreatorPublicProfile = () => {
                   {creator.categories.map((cat) => (
                     <span
                       key={cat}
-                      className="bg-blue-50 text-[#155DFC] text-xs font-medium px-2.5 py-1 rounded-full capitalize"
+                      className="bg-blue-50 text-[#155DFC] text-xs font-medium px-2.5 py-1 rounded-full"
                     >
-                      {cat}
+                      {getCategoryLabel(cat)}
                     </span>
                   ))}
                 </div>
@@ -445,7 +459,7 @@ const CreatorPublicProfile = () => {
                 </div>
               </div>
             )}
-         </div>
+          </div>
         </div>
 
         {/* ratings & reviews — full width, below the main columns */}

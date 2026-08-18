@@ -12,6 +12,20 @@ const formatNumber = (num) => {
   return num.toString();
 };
 
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
+
 const SavedCreators = () => {
   const navigate = useNavigate();
   const [creators, setCreators] = useState([]);
@@ -98,7 +112,7 @@ const SavedCreators = () => {
                     {creator.isAdminVerified && (
                       <div className="absolute bottom-0 right-0 w-5 h-5 bg-blue-600 rounded-full border-2 border-white flex items-center justify-center">
                         <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                          <path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                       </div>
                     )}
@@ -127,10 +141,11 @@ const SavedCreators = () => {
                 </button>
 
                 {/* categories */}
+                {/* categories */}
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {creator.categories?.slice(0, 3).map((cat) => (
-                    <span key={cat} className="text-xs font-medium px-3 py-1 rounded-full bg-gray-100 text-gray-600 capitalize border border-gray-200">
-                      {cat}
+                    <span key={cat} className="text-xs font-medium px-3 py-1 rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                      {getCategoryLabel(cat)}
                     </span>
                   ))}
                 </div>
@@ -163,14 +178,12 @@ const SavedCreators = () => {
 
                 {/* badges right */}
                 <div className="flex justify-end gap-2 mb-3">
-                  <span className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${
-                    creator.isOpenForCollab
-                      ? 'bg-green-50 text-green-700'
-                      : 'bg-gray-100 text-gray-500'
-                  }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      creator.isOpenForCollab ? 'bg-green-500' : 'bg-gray-400'
-                    }`} />
+                  <span className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1 rounded-full ${creator.isOpenForCollab
+                    ? 'bg-green-50 text-green-700'
+                    : 'bg-gray-100 text-gray-500'
+                    }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${creator.isOpenForCollab ? 'bg-green-500' : 'bg-gray-400'
+                      }`} />
                     {creator.isOpenForCollab ? 'Open' : 'Closed'}
                   </span>
                   {creator.barterEnabled && (
@@ -192,7 +205,7 @@ const SavedCreators = () => {
                 </div>
 
                 {creator.instagram?.handle ? (
-                  
+
                   <a
                     href={"https://instagram.com/" + creator.instagram.handle}
                     target="_blank"
@@ -201,9 +214,9 @@ const SavedCreators = () => {
                     className="w-full flex items-center justify-center gap-2 py-3 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition-colors"
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="2" y="2" width="20" height="20" rx="5"/>
-                      <circle cx="12" cy="12" r="4"/>
-                      <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none"/>
+                      <rect x="2" y="2" width="20" height="20" rx="5" />
+                      <circle cx="12" cy="12" r="4" />
+                      <circle cx="17.5" cy="6.5" r="1.5" fill="currentColor" stroke="none" />
                     </svg>
                     Visit Instagram
                   </a>

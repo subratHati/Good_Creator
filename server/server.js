@@ -8,7 +8,10 @@ const connectDB = require("./config/db");
 const http = require("http");
 const { Server } = require("socket.io");
 
+
 require('./jobs/cleanupUnverifiedUsers')();
+
+const cronRoutes = require('./routes/cron');
 
 const authRoutes = require("./routes/auth.routes");
 const creatorRoutes = require("./routes/creator.routes");
@@ -21,6 +24,12 @@ const chatRoutes = require('./routes/chat.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const adminRoutes = require('./routes/admin.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const collaborationRoutes = require('./routes/collaboration.routes');
+const issueRoutes = require('./routes/issue.routes');
+const analyticsRoutes = require('./routes/analytics.routes');
+
+
+
 
 
 
@@ -81,6 +90,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use('/api/cron', cronRoutes);
+
 console.log("CLIENT_URL:", process.env.CLIENT_URL);
 // routes
 app.use('/api/auth', authLimiter, authRoutes);
@@ -94,6 +105,10 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/collaborations', collaborationRoutes);
+app.use('/api/issues', issueRoutes);
+app.use('/api/analytics', analyticsRoutes);
+
 
 // health check 
 app.get('/api/health', (req, res) => {

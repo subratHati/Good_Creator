@@ -2,6 +2,19 @@ import { useEffect, useState } from 'react';
 import Navbar from '../../components/Navbar';
 import { getMyEnquiries, markEnquirySeen } from '../../api/enquiries';
 
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
 const CreatorEnquiries = () => {
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,7 +27,7 @@ const CreatorEnquiries = () => {
         // mark all as seen
         res.data.enquiries
           .filter((e) => e.status === 'sent')
-          .forEach((e) => markEnquirySeen(e._id).catch(() => {}));
+          .forEach((e) => markEnquirySeen(e._id).catch(() => { }));
       } catch {
         setEnquiries([]);
       } finally {
@@ -58,11 +71,10 @@ const CreatorEnquiries = () => {
             {enquiries.map((enquiry) => (
               <div
                 key={enquiry._id}
-                className={`bg-white rounded-xl border p-5 ${
-                  enquiry.status === 'sent'
-                    ? 'border-blue-200 bg-blue-50'
-                    : 'border-gray-200'
-                }`}
+                className={`bg-white rounded-xl border p-5 ${enquiry.status === 'sent'
+                  ? 'border-blue-200 bg-blue-50'
+                  : 'border-gray-200'
+                  }`}
               >
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -75,8 +87,8 @@ const CreatorEnquiries = () => {
                     <div className="font-semibold text-gray-900 text-sm">
                       {enquiry.brandId?.brandName || 'Brand'}
                     </div>
-                    <div className="text-xs text-gray-500 capitalize">
-                      {enquiry.brandId?.category || ''}
+                    <div className="text-xs text-gray-500">
+                      {enquiry.brandId?.category ? getCategoryLabel(enquiry.brandId.category) : ''}
                       {enquiry.brandId?.location?.city
                         ? ` · ${enquiry.brandId.location.city}`
                         : ''}
@@ -100,7 +112,7 @@ const CreatorEnquiries = () => {
 
                 {enquiry.brandId?.instagram?.handle && (
                   <div className="mt-3">
-                    
+
                     <a
                       href={"https://instagram.com/" + enquiry.brandId.instagram.handle}
                       target="_blank"

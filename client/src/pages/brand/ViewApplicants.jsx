@@ -19,6 +19,19 @@ const formatNumber = (num) => {
   return num.toString();
 };
 
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
 const ViewApplicants = () => {
   const { id } = useParams();
   const [applications, setApplications] = useState([]);
@@ -172,7 +185,7 @@ const ViewApplicants = () => {
                         >
                           💬 Message
                         </button>
-                        
+
                       </div>
                     </div>
 
@@ -193,8 +206,8 @@ const ViewApplicants = () => {
                         </div>
                       </div>
                       {app.creatorId?.categories?.slice(0, 2).map((cat) => (
-                        <span key={cat} className="bg-blue-50 text-blue-700 text-xs font-medium px-2.5 py-1.5 rounded-lg capitalize self-center">
-                          {cat}
+                        <span key={cat} className="bg-blue-50 text-blue-700 text-xs font-medium px-2.5 py-1.5 rounded-lg self-center">
+                          {getCategoryLabel(cat)}
                         </span>
                       ))}
                       {app.creatorId?.barterEnabled && (

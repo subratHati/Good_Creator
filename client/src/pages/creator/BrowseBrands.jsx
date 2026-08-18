@@ -19,7 +19,29 @@ const categoryColors = {
   education: { bg: '#FDE68A', color: '#78350F' },
   finance: { bg: '#BBF7D0', color: '#064E3B' },
   gaming: { bg: '#DDD6FE', color: '#4C1D95' },
+  entertainment: { bg: '#FCE7F3', color: '#9D174D' },
+  parenting_family: { bg: '#FEF3C7', color: '#92400E' },
+  vlogging: { bg: '#E0E7FF', color: '#3730A3' },
+  dance: { bg: '#FBCFE8', color: '#9D174D' },
+  religious: { bg: '#FEF9C3', color: '#713F12' },
+  news_politics: { bg: '#E5E7EB', color: '#1F2937' },
+  video_editing: { bg: '#CFFAFE', color: '#155E75' },
+  ai_content: { bg: '#EDE9FE', color: '#5B21B6' },
+  pets_wildlife: { bg: '#D1FAE5', color: '#065F46' },
   other: { bg: '#E5E7EB', color: '#1F2937' },
+};
+
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 };
 
 // ─── OPENING CARD — horizontal single column ──────────────────────────────────
@@ -62,8 +84,8 @@ const OpeningCard = ({ opening, onApply, applied }) => {
             <div style={{ fontWeight: 800, fontSize: '14px', color: '#101828', lineHeight: 1.3, flex: 1, marginRight: '8px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
               {opening.title || 'Campaign'}
             </div>
-            <span style={{ fontSize: '9px', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', backgroundColor: catStyle.bg, color: catStyle.color, textTransform: 'capitalize', flexShrink: 0 }}>
-              {opening.brandId?.category || opening.contentType || 'Brand'}
+            <span style={{ fontSize: '9px', fontWeight: 700, padding: '3px 8px', borderRadius: '20px', backgroundColor: catStyle.bg, color: catStyle.color, flexShrink: 0 }}>
+              {opening.brandId?.category ? getCategoryLabel(opening.brandId.category) : (opening.contentType || 'Brand')}
             </span>
           </div>
 
@@ -220,6 +242,9 @@ const BrowseBrands = () => {
   const [allOpenings, setAllOpenings] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [appliedIds, setAppliedIds] = useState([]);
   const [showFilterSheet, setShowFilterSheet] = useState(false);
   const { checking } = useCreatorProfileGuard();
@@ -227,10 +252,11 @@ const BrowseBrands = () => {
 
   const [filters, setFilters] = useState({ search: '', contentType: '', isBarter: '', minBudget: '', maxBudget: '', category: '' })
 
-  const fetchOpenings = async (f = filters) => {
-    setLoading(true);
+  const fetchOpenings = async (f = filters, pg = 1) => {
+    if (pg === 1) setLoading(true);
+    else setLoadingMore(true);
     try {
-      const params = {};
+      const params = { page: pg, limit: 12 };
       if (f.search) params.search = f.search;
       if (f.contentType) params.contentType = f.contentType;
       if (f.isBarter) params.isBarter = f.isBarter;
@@ -238,20 +264,24 @@ const BrowseBrands = () => {
       if (f.maxBudget) params.maxBudget = f.maxBudget;
       if (f.category) params.categories = f.category;
       const res = await searchOpenings(params);
-      setOpenings(res.data.openings);
+      const newOpenings = res.data.openings || [];
+      if (pg === 1) setOpenings(newOpenings);
+      else setOpenings(prev => [...prev, ...newOpenings]);
       setTotal(res.data.pagination.total);
+      setHasMore(pg < res.data.pagination.pages);
+      setPage(pg);
 
-      // if category filter active, also fetch all campaigns
-      if (f.category) {
+      // if category filter active, also fetch all campaigns (only on the
+      // first page — this fallback section doesn't need its own pagination)
+      if (f.category && pg === 1) {
         const allRes = await searchOpenings({});
-        // exclude ones already shown
-        const shownIds = new Set(res.data.openings.map(o => o._id));
+        const shownIds = new Set(newOpenings.map(o => o._id));
         setAllOpenings(allRes.data.openings.filter(o => !shownIds.has(o._id)));
-      } else {
+      } else if (pg === 1) {
         setAllOpenings([]);
       }
-    } catch { setOpenings([]); setAllOpenings([]); }
-    finally { setLoading(false); }
+    } catch { if (pg === 1) { setOpenings([]); setAllOpenings([]); } }
+    finally { setLoading(false); setLoadingMore(false); }
   };
 
   useEffect(() => {
@@ -384,9 +414,8 @@ const BrowseBrands = () => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                  <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#101828', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h1 style={{ fontSize: '24px', fontWeight: 900, color: '#101828' }}>
                     Browse Campaigns
-                    <span style={{ fontSize: '13px', fontWeight: 700, padding: '4px 12px', borderRadius: '99px', backgroundColor: '#EFF6FF', color: '#155DFC' }}>{total} active</span>
                   </h1>
                   <p style={{ fontSize: '13px', color: '#9CA3AF', marginTop: '4px' }}>Find brands looking for creators like you</p>
                 </div>
@@ -415,6 +444,14 @@ const BrowseBrands = () => {
                   </>
                 )}
                 {openings.length === 0 && allOpenings.length === 0 && !filters.category && <EmptyState />}
+                {hasMore && !filters.category && (
+                  <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <button onClick={() => fetchOpenings(filters, page + 1)} disabled={loadingMore}
+                      style={{ padding: '12px 32px', backgroundColor: 'white', color: '#155DFC', border: '1.5px solid #155DFC', borderRadius: '14px', fontSize: '14px', fontWeight: 700, cursor: loadingMore ? 'not-allowed' : 'pointer' }}>
+                      {loadingMore ? 'Loading...' : 'Load More'}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -422,7 +459,6 @@ const BrowseBrands = () => {
 
         {/* MOBILE */}
         <div className="md:hidden">
-          <div style={{ fontSize: '13px', fontWeight: 800, color: '#101828', marginBottom: '12px' }}>{total} campaigns</div>
           {loading ? <OpeningListSkeleton /> : (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {openings.length === 0 && filters.category && <EmptyState category={filters.category} />}
@@ -438,7 +474,6 @@ const BrowseBrands = () => {
                     <span style={{ fontSize: '11px', color: '#C4C4C4', fontWeight: 500, whiteSpace: 'nowrap' }}>Explore other campaigns</span>
                     <div style={{ flex: 1, height: '1px', backgroundColor: '#F0F0F0' }} />
                   </div>
-
                   {allOpenings.map((opening, index) => (
                     <div key={opening._id}>
                       <OpeningCard opening={opening} onApply={handleApply} applied={appliedIds.includes(opening._id)} />
@@ -447,6 +482,14 @@ const BrowseBrands = () => {
                 </>
               )}
               {openings.length === 0 && allOpenings.length === 0 && !filters.category && <EmptyState />}
+              {hasMore && !filters.category && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <button onClick={() => fetchOpenings(filters, page + 1)} disabled={loadingMore}
+                    style={{ padding: '12px 32px', backgroundColor: 'white', color: '#155DFC', border: '1.5px solid #155DFC', borderRadius: '14px', fontSize: '14px', fontWeight: 700, cursor: loadingMore ? 'not-allowed' : 'pointer' }}>
+                    {loadingMore ? 'Loading...' : 'Load More'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

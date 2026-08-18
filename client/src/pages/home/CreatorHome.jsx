@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, TrendingUp, TrendingDown, Shirt, Sparkles, UtensilsCrossed, Laptop, Dumbbell, Sun, Plane, GraduationCap, Gamepad2, LayoutGrid, TrendingUp as TrendUp, ChevronRight } from 'lucide-react';
+import { ArrowRight, TrendingUp, TrendingDown, Shirt, Sparkles, UtensilsCrossed, Laptop, Dumbbell, Sun, Plane, GraduationCap, Gamepad2, LayoutGrid, TrendingUp as TrendUp, ChevronRight, Clapperboard, Baby, Video, Music, HandHeart, Newspaper, Film, Bot, PawPrint } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { CreatorSetupModal } from '../../components/ProfileSetupModals';
 import { getMyCreatorProfile } from '../../api/creator';
@@ -13,6 +13,7 @@ import toast from 'react-hot-toast';
 import CreatorHomeSkeleton from '../../components/CreatorHomeSkeleton';
 import { usePostHog } from '@posthog/react'
 import PaymentAnnouncementBanner from '../../components/PaymentAnnouncementBanner';
+import GenderMigrationModal from '../../components/GenderMigrationModal';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -21,18 +22,17 @@ const formatNumber = (num) => {
   return num.toString();
 };
 
-const categoryColors = {
-  fashion: { bg: '#FED7AA', color: '#7C2D12' },
-  beauty: { bg: '#FBCFE8', color: '#831843' },
-  food: { bg: '#FDE68A', color: '#78350F' },
-  tech: { bg: '#DDD6FE', color: '#4C1D95' },
-  fitness: { bg: '#BBF7D0', color: '#064E3B' },
-  lifestyle: { bg: '#BFDBFE', color: '#1E3A8A' },
-  travel: { bg: '#A7F3D0', color: '#064E3B' },
-  education: { bg: '#FDE68A', color: '#78350F' },
-  finance: { bg: '#BBF7D0', color: '#064E3B' },
-  gaming: { bg: '#DDD6FE', color: '#4C1D95' },
-  other: { bg: '#E5E7EB', color: '#1F2937' },
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 };
 
 
@@ -124,6 +124,15 @@ const CategoryGrid = ({ onCategoryClick }) => {
     { key: 'education', icon: GraduationCap },
     { key: 'finance', icon: TrendUp },
     { key: 'gaming', icon: Gamepad2 },
+    { key: 'entertainment', icon: Clapperboard },
+    { key: 'parenting_family', icon: Baby },
+    { key: 'vlogging', icon: Video },
+    { key: 'dance', icon: Music },
+    { key: 'religious', icon: HandHeart },
+    { key: 'news_politics', icon: Newspaper },
+    { key: 'video_editing', icon: Film },
+    { key: 'ai_content', icon: Bot },
+    { key: 'pets_wildlife', icon: PawPrint },
     { key: 'other', icon: LayoutGrid },
   ];
 
@@ -137,7 +146,7 @@ const CategoryGrid = ({ onCategoryClick }) => {
           <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#155DFC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Icon size={18} color="white" strokeWidth={2} />
           </div>
-          <span style={{ fontSize: '13px', fontWeight: 800, color: '#101828', textTransform: 'capitalize' }}>{key}</span>
+          <span style={{ fontSize: '13px', fontWeight: 800, color: '#101828' }}>{getCategoryLabel(key)}</span>
         </button>
       ))}
     </div>
@@ -156,6 +165,7 @@ const CreatorHome = () => {
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [showInstagramReminder, setShowInstagramReminder] = useState(false);
   const [showInstagramChoiceFromHome, setShowInstagramChoiceFromHome] = useState(false);
+  const [showGenderMigration, setShowGenderMigration] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -190,6 +200,11 @@ const CreatorHome = () => {
     setShowInstagramReminder(true);
   }, [profile]);
 
+  useEffect(() => {
+    if (!profile) return;
+    if (profile.gender) return; // already has a gender set
+    setShowGenderMigration(true);
+  }, [profile]);
 
 
   const ig = profile?.instagram;
@@ -341,6 +356,15 @@ const CreatorHome = () => {
                 { key: 'education', icon: GraduationCap },
                 { key: 'finance', icon: TrendUp },
                 { key: 'gaming', icon: Gamepad2 },
+                { key: 'entertainment', icon: Clapperboard },
+                { key: 'parenting_family', icon: Baby },
+                { key: 'vlogging', icon: Video },
+                { key: 'dance', icon: Music },
+                { key: 'religious', icon: HandHeart },
+                { key: 'news_politics', icon: Newspaper },
+                { key: 'video_editing', icon: Film },
+                { key: 'ai_content', icon: Bot },
+                { key: 'pets_wildlife', icon: PawPrint },
                 { key: 'other', icon: LayoutGrid },
               ].map(({ key, icon: Icon }) => (
                 <button key={key} onClick={() => handleCategoryClick(key)}
@@ -350,7 +374,7 @@ const CreatorHome = () => {
                   <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#155DFC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <Icon size={20} color="white" strokeWidth={2} />
                   </div>
-                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#101828', textTransform: 'capitalize' }}>{key}</span>
+                  <span style={{ fontSize: '14px', fontWeight: 800, color: '#101828' }}>{getCategoryLabel(key)}</span>
                 </button>
               ))}
             </div>
@@ -447,6 +471,15 @@ const CreatorHome = () => {
             setShowInstagramChoiceFromHome(false);
             navigate('/creator/profile');
             toast('Click "Connect Instagram" on your profile to add stats manually', { icon: '👉' });
+          }}
+        />
+      )}
+
+      {showGenderMigration && (
+        <GenderMigrationModal
+          onSaved={() => {
+            setShowGenderMigration(false);
+            setProfile(prev => prev ? { ...prev, gender: 'set' } : prev);
           }}
         />
       )}

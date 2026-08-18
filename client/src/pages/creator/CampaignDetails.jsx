@@ -17,7 +17,29 @@ const categoryColors = {
   education: { bg: '#FDE68A', color: '#78350F' },
   finance: { bg: '#BBF7D0', color: '#064E3B' },
   gaming: { bg: '#DDD6FE', color: '#4C1D95' },
+  entertainment: { bg: '#FCE7F3', color: '#9D174D' },
+  parenting_family: { bg: '#FEF3C7', color: '#92400E' },
+  vlogging: { bg: '#E0E7FF', color: '#3730A3' },
+  dance: { bg: '#FBCFE8', color: '#9D174D' },
+  religious: { bg: '#FEF9C3', color: '#713F12' },
+  news_politics: { bg: '#E5E7EB', color: '#1F2937' },
+  video_editing: { bg: '#CFFAFE', color: '#155E75' },
+  ai_content: { bg: '#EDE9FE', color: '#5B21B6' },
+  pets_wildlife: { bg: '#D1FAE5', color: '#065F46' },
   other: { bg: '#E5E7EB', color: '#1F2937' },
+};
+
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 };
 
 const formatBudget = (opening) => {
@@ -197,10 +219,10 @@ const CampaignDetails = () => {
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               {brand.category && (
                 <span
-                  className="text-xs font-bold px-2.5 py-0.5 rounded-full capitalize"
+                  className="text-xs font-bold px-2.5 py-0.5 rounded-full"
                   style={{ backgroundColor: catStyle.bg, color: catStyle.color }}
                 >
-                  {brand.category}
+                  {getCategoryLabel(brand.category)}
                 </span>
               )}
               {brand.location?.city && (
@@ -231,8 +253,8 @@ const CampaignDetails = () => {
                 {opening.requirements.categories.map(c => {
                   const cs = categoryColors[c] || categoryColors.other;
                   return (
-                    <span key={c} className="text-xs font-bold px-3 py-1 rounded-full capitalize" style={{ backgroundColor: cs.bg, color: cs.color }}>
-                      {c}
+                    <span key={c} className="text-xs font-bold px-3 py-1 rounded-full" style={{ backgroundColor: cs.bg, color: cs.color }}>
+                      {getCategoryLabel(c)}
                     </span>
                   );
                 })}

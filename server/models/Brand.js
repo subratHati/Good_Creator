@@ -26,7 +26,7 @@ const brandSchema = new mongoose.Schema({
     },
     category: {
         type: String,
-        enum: ['fashion', 'food', 'beauty', 'tech', 'fitness', 'travel', 'education', 'finance', 'lifestyle', 'other'],
+        enum: ['fashion', 'food', 'beauty', 'tech', 'fitness', 'travel', 'education', 'finance', 'lifestyle', 'entertainment', 'parenting_family', 'vlogging', 'dance', 'religious', 'news_politics', 'video_editing', 'ai_content', 'pets_wildlife', 'other'],
         default: 'other',
     },
     location: {

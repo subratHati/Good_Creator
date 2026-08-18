@@ -21,6 +21,19 @@ const formatNumber = (num) => {
   return num.toString();
 };
 
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
 const slides = [
   { src: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&q=80' },
   { src: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80' },
@@ -222,7 +235,7 @@ const BrandHome = () => {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-base font-black" style={{ color: '#101828' }}>
-                  {profile?.category ? `🎯 ${profile.category.charAt(0).toUpperCase() + profile.category.slice(1)} Creators` : '🎯 Featured Creators'}
+                  {profile?.category ? `🎯 ${getCategoryLabel(profile.category)} Creators` : '🎯 Featured Creators'}
                 </h2>
                 <button onClick={() => navigate('/brand/browse-creators')} className="flex items-center gap-1 text-xs font-black" style={{ color: '#155DFC' }}>See all <ArrowRight size={12} /></button>
               </div>
@@ -282,7 +295,7 @@ const BrandHome = () => {
               <div className="rounded-3xl overflow-hidden p-6 min-w-0 flex flex-col" style={{ border: '1.5px solid #F0F0F0', boxShadow: '0 4px 0 0 #E5E5E5' }}>
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-lg font-black" style={{ color: '#101828' }}>
-                    {profile?.category ? `🎯 ${profile.category.charAt(0).toUpperCase() + profile.category.slice(1)} Creators` : '🎯 Featured Creators'}
+                    {profile?.category ? `🎯 ${getCategoryLabel(profile.category)} Creators` : '🎯 Featured Creators'}
                   </h2>
                   <button onClick={() => navigate('/brand/browse-creators')} className="flex items-center gap-1 text-sm font-black hover:underline" style={{ color: '#155DFC' }}>See all <ArrowRight size={14} /></button>
                 </div>

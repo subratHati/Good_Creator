@@ -7,6 +7,7 @@ const Brand = require('../models/Brand');
 const Review = require('../models/Review');
 const generateCollabId = require('../utils/generateCollabId');
 const calculateQualityScore = require('../utils/calculateQualityScore');
+const Collaboration = require('../models/Collaboration');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -70,7 +71,6 @@ const verifyPayment = async (req, res) => {
     messageId,
     conversationId,
   } = req.body;
-
   try {
     // verify signature
     const body = razorpay_order_id + '|' + razorpay_payment_id;
@@ -78,16 +78,20 @@ const verifyPayment = async (req, res) => {
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
       .update(body.toString())
       .digest('hex');
-
     if (expectedSignature !== razorpay_signature) {
       console.error('[PAYMENT] Signature mismatch');
       return res.status(400).json({ message: 'Payment verification failed' });
     }
-
     console.log('[PAYMENT] Signature verified for payment:', razorpay_payment_id);
 
     // generate this collab's unique reference ID now that payment is real
     const collabId = await generateCollabId();
+
+    // fetch the original payment_request BEFORE updating it, so we have
+    // its amount/deliverables/deadline in hand for the Collaboration
+    // record below — these values don't actually change during this
+    // update, but fetching once and reusing avoids a redundant query
+    const originalPaymentMsg = await Message.findById(messageId);
 
     // update message payment status
     await Message.findByIdAndUpdate(messageId, {
@@ -96,18 +100,36 @@ const verifyPayment = async (req, res) => {
       'paymentRequest.razorpayPaymentId': razorpay_payment_id,
       'paymentRequest.paidAt': new Date(),
       'paymentRequest.deliveryStatus': 'awaiting_delivery',
-      collabId, // top-level field now, not nested under paymentRequest
+      collabId,
+    });
+
+    // fetch conversation once, reused below for both the Collaboration
+    // record and the unread-count update
+    const conversation = await Conversation.findById(conversationId);
+
+    // create the durable Collaboration record — this is the one moment a
+    // Collaboration document comes into existence, matching exactly when
+    // a Collab genuinely becomes a real, paid engagement (not before)
+    await Collaboration.create({
+      collabId,
+      creatorId: conversation.creatorId,
+      brandId: conversation.brandId,
+      conversationId,
+      amount: originalPaymentMsg.paymentRequest.amount,
+      deliverables: originalPaymentMsg.paymentRequest.deliverables,
+      deadline: originalPaymentMsg.paymentRequest.deadline,
+      status: 'pending',
+      paidAt: new Date(),
     });
 
     // send payment confirmed message in chat
-    const conversation = await Conversation.findById(conversationId);
     const paymentMessage = await Message.create({
       conversationId,
       senderId: req.user.id,
       senderRole: req.user.role,
       type: 'payment_confirmed',
       text: `Payment of ₹${req.body.amount ? (req.body.amount / 100).toLocaleString('en-IN') : ''} received! Money is held securely. Complete the deliverable to release payment.`,
-      collabId, // same top-level field, shared value, not a new one
+      collabId,
     });
 
     // update conversation
@@ -458,20 +480,26 @@ const getAdminPaymentOverview = async (req, res) => {
 // releasePayment), so this is a deliberate, manual confirmation step.
 const markPayoutCompleted = async (req, res) => {
   const { deliveryMessageId } = req.body;
-
   if (!deliveryMessageId) {
     return res.status(400).json({ message: 'deliveryMessageId is required' });
   }
-
   try {
     const updated = await Message.findOneAndUpdate(
       { _id: deliveryMessageId, type: 'delivery', 'delivery.status': 'approved' },
       { payoutStatus: 'completed', payoutCompletedAt: new Date() },
       { new: true }
     );
-
     if (!updated) {
       return res.status(404).json({ message: 'Approved delivery message not found' });
+    }
+
+    // transition the Collaboration record to 'completed' — the admin has
+    // confirmed the actual bank transfer to the creator happened
+    if (updated.collabId) {
+      await Collaboration.findOneAndUpdate(
+        { collabId: updated.collabId },
+        { status: 'completed', completedAt: new Date() }
+      );
     }
 
     res.json({ message: 'Payout marked as completed', deliveryMessageId: updated._id });

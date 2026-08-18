@@ -27,8 +27,12 @@ const creatorSchema = new mongoose.Schema({
     },
     categories: {
         type: [String],
-        enum: ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'finance', 'other'],
+        enum: ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'finance', 'entertainment', 'parenting_family', 'vlogging', 'dance', 'religious', 'news_politics', 'video_editing', 'ai_content', 'pets_wildlife', 'other'],
         default: [],
+    },
+    gender: {
+        type: String,
+        enum: ['male', 'female', 'other'],
     },
     languages: {
         type: [String],
@@ -103,6 +107,19 @@ const creatorSchema = new mongoose.Schema({
         default: 0, // 0 means no reviews yet — frontend should treat 0 as "not rated"
     },
     reviewCount: {
+        type: Number,
+        default: 0,
+    },
+
+    // a random value, refreshed once daily by a scheduled external job
+    // (see routes/cron.js) — used purely for gentle within-bracket rotation
+    // in the creator ranking pipeline, so the same top creators don't
+    // permanently dominate every brand's browse results. Deliberately NOT
+    // computed live per-request — that approach required either a MongoDB
+    // hash function (blocked on this Atlas tier) or a client-passed seed
+    // (which still needed real hashing); reading a pre-stored value avoids
+    // both problems entirely, at effectively zero query-time cost.
+    rotationValue: {
         type: Number,
         default: 0,
     },

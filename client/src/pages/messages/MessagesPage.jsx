@@ -21,6 +21,19 @@ const formatTime = (date) => {
   return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 };
 
+// same display-label logic used across the app's category pickers
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
 const MessagesPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -94,7 +107,7 @@ const MessagesPage = () => {
     return {
       name: conv.brandId?.brandName || 'Brand',
       photo: conv.brandId?.logo,
-      sub: conv.brandId?.category || '',
+      sub: conv.brandId?.category ? getCategoryLabel(conv.brandId.category) : '',
     };
   };
 

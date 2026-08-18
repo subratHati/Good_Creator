@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, RefreshCw, X, Link2, Landmark, ImagePlay, Tag, Pencil, AlertCircle, Sparkles, TrendingUp } from 'lucide-react';
+import { Camera, RefreshCw, X, Link2, Landmark, ImagePlay, Tag, Pencil, AlertCircle, Sparkles, TrendingUp, HelpCircle } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import BankDetailsForm from '../../components/BankDetailsForm';
 import CategoryPolicyDialog from '../../components/CategoryPolicyDialog';
@@ -19,7 +19,23 @@ import {
 import toast from 'react-hot-toast';
 import InstagramConnectChoiceModal from '../../components/InstagramConnectChoiceModal';
 
-const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'finance', 'other'];
+const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'finance', 'entertainment', 'parenting_family', 'vlogging', 'dance', 'religious', 'news_politics', 'video_editing', 'ai_content', 'pets_wildlife', 'other'];
+// custom display labels for categories whose slug doesn't read well with
+// simple underscore-to-space + capitalize (slashed compound names, and
+// "AI" needing both letters capitalized, which generic capitalize() can't do)
+const categoryLabels = {
+  parenting_family: 'Parenting/Family',
+  news_politics: 'News/Politics',
+  pets_wildlife: 'Pets/Wildlife',
+  ai_content: 'AI Content',
+};
+const getCategoryLabel = (cat) => {
+  if (categoryLabels[cat]) return categoryLabels[cat];
+  const spaced = cat.replace(/_/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
+
 const LANGUAGES = ['Hindi', 'English', 'Odia', 'Bengali', 'Tamil', 'Telugu', 'Marathi', 'Gujarati', 'Kannada', 'Punjabi'];
 
 const formatNumber = (num) => {
@@ -42,6 +58,15 @@ const categoryColors = {
   gaming: { bg: '#DDD6FE', color: '#4C1D95' },
   education: { bg: '#FDE68A', color: '#78350F' },
   finance: { bg: '#BBF7D0', color: '#166534' },
+  entertainment: { bg: '#FCE7F3', color: '#9D174D' },
+  parenting_family: { bg: '#FEF3C7', color: '#92400E' },
+  vlogging: { bg: '#E0E7FF', color: '#3730A3' },
+  dance: { bg: '#FBCFE8', color: '#9D174D' },
+  religious: { bg: '#FEF9C3', color: '#713F12' },
+  news_politics: { bg: '#E5E7EB', color: '#1F2937' },
+  video_editing: { bg: '#CFFAFE', color: '#155E75' },
+  ai_content: { bg: '#EDE9FE', color: '#5B21B6' },
+  pets_wildlife: { bg: '#D1FAE5', color: '#065F46' },
   other: { bg: '#F3F4F6', color: '#374151' },
 };
 
@@ -387,13 +412,13 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
                   const isDisabled = !isSelected && form.categories.length >= 3;
                   return (
                     <button key={cat} type="button" onClick={() => toggleCategory(cat)} disabled={isDisabled}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold border capitalize transition-all ${isSelected
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${isSelected
                         ? 'bg-blue-600 text-white border-blue-600'
                         : isDisabled
                           ? 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
                           : 'border-gray-200 text-gray-600 hover:border-blue-300'
                         }`}>
-                      {cat}
+                      {getCategoryLabel(cat)}
                     </button>
                   );
                 })}
@@ -715,7 +740,7 @@ const CreatorProfile = () => {
       {profile?.categories?.length
         ? profile.categories.map(cat => {
           const cs = categoryColors[cat] || categoryColors.other;
-          return <span key={cat} style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', backgroundColor: cs.bg, color: cs.color, textTransform: 'capitalize' }}>{cat}</span>;
+          return <span key={cat} style={{ fontSize: '11px', fontWeight: 700, padding: '4px 10px', borderRadius: '20px', backgroundColor: cs.bg, color: cs.color }}>{getCategoryLabel(cat)}</span>;
         })
         : <span style={{ fontSize: '12px', color: '#9CA3AF' }}>No categories set</span>
       }
@@ -1027,12 +1052,13 @@ const CreatorProfile = () => {
             </div>
 
             {/* bank details — gray bg like Stitch */}
-            <SectionCard title="Bank Details" onEdit={hasProfile ? () => navigate('/creator/bank-details') : undefined} locked={!hasProfile}>
+            {/* payments — gray bg like Stitch */}
+            <SectionCard title="Payments" onEdit={hasProfile ? () => navigate('/creator/payments') : undefined} locked={!hasProfile}>
               <button
-                onClick={() => navigate('/creator/bank-details')}
+                onClick={() => navigate('/creator/payments')}
                 disabled={!hasProfile}
                 style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: hasProfile ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                <Landmark size={16} style={{ marginRight: '8px' }} /> Manage Bank Account
+                <Landmark size={16} style={{ marginRight: '8px' }} /> Payment Dashboard
               </button>
             </SectionCard>
 
@@ -1050,6 +1076,16 @@ const CreatorProfile = () => {
             <div style={{ marginTop: '16px' }}>
               <SectionCard title="Sample Content" onEdit={hasProfile ? () => setModal('rates') : undefined} locked={!hasProfile}>
                 {hasProfile && <SampleContentSection />}
+              </SectionCard>
+            </div>
+            {/* contact us / help */}
+            <div style={{ marginTop: '16px' }}>
+              <SectionCard title="Contact Us & Help">
+                <button
+                  onClick={() => navigate('/contact-help')}
+                  style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <HelpCircle size={16} /> Get Help & Raise an Issue
+                </button>
               </SectionCard>
             </div>
 
@@ -1130,18 +1166,25 @@ const CreatorProfile = () => {
                 {hasProfile && <RateChartSection />}
               </SectionCard>
 
-              <SectionCard title="Bank Details" locked={!hasProfile}>
+              <SectionCard title="Payments" locked={!hasProfile}>
                 {hasProfile && (
                   <button
-                    onClick={() => navigate('/creator/bank-details')}
+                    onClick={() => navigate('/creator/payments')}
                     style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                    🏦 Manage Bank Account
+                    <Landmark size={16} /> Payment Dashboard
                   </button>
                 )}
               </SectionCard>
 
               <SectionCard title="Sample Content" onEdit={hasProfile ? () => setModal('rates') : undefined} locked={!hasProfile}>
                 {hasProfile && <SampleContentSection />}
+              </SectionCard>
+              <SectionCard title="Contact Us & Help">
+                <button
+                  onClick={() => navigate('/contact-help')}
+                  style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <HelpCircle size={16} /> Get Help & Raise an Issue
+                </button>
               </SectionCard>
 
             </div>
