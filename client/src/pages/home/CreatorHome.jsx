@@ -14,6 +14,7 @@ import CreatorHomeSkeleton from '../../components/CreatorHomeSkeleton';
 import { usePostHog } from '@posthog/react'
 import PaymentAnnouncementBanner from '../../components/PaymentAnnouncementBanner';
 import GenderMigrationModal from '../../components/GenderMigrationModal';
+import PushPermissionBanner from '../../components/PushPermissionBanner';
 
 const formatNumber = (num) => {
   if (!num) return '—';

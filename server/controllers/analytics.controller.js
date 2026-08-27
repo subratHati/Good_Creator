@@ -3,6 +3,7 @@ const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
 const Opening = require('../models/Opening');
 const Collaboration = require('../models/Collaboration');
+const Application = require('../models/Application');
 const User = require('../models/User');
 
 const getDateRangeStart = (range) => {
@@ -94,7 +95,35 @@ const getCampaignAnalytics = async (req, res) => {
 
     const campaigns = await Opening.find(query)
       .populate('brandId', 'brandName category')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // applicant counts per campaign, grouped by status, in one aggregation
+    // rather than N queries — matched against just the campaigns we're
+    // actually returning, not every application in the database
+    const campaignIds = campaigns.map(c => c._id);
+    const counts = await Application.aggregate([
+      { $match: { openingId: { $in: campaignIds } } },
+      { $group: { _id: { openingId: '$openingId', status: '$status' }, count: { $sum: 1 } } },
+    ]);
+
+    const countsByOpening = {};
+    counts.forEach(({ _id, count }) => {
+      const key = String(_id.openingId);
+      if (!countsByOpening[key]) {
+        countsByOpening[key] = { applied: 0, shortlisted: 0, rejected: 0 };
+      }
+      // "applied" is the total across every status — pending/viewed/etc.
+      // all still count as a genuine application received
+      countsByOpening[key].applied += count;
+      if (_id.status === 'shortlisted') countsByOpening[key].shortlisted += count;
+      if (_id.status === 'rejected') countsByOpening[key].rejected += count;
+    });
+
+    const campaignsWithCounts = campaigns.map(c => ({
+      ...c,
+      applicantCounts: countsByOpening[String(c._id)] || { applied: 0, shortlisted: 0, rejected: 0 },
+    }));
 
     const summary = {
       total: campaigns.length,
@@ -103,7 +132,7 @@ const getCampaignAnalytics = async (req, res) => {
       draft: campaigns.filter(c => c.status === 'draft').length,
     };
 
-    res.json({ campaigns, summary });
+    res.json({ campaigns: campaignsWithCounts, summary });
   } catch (error) {
     console.error('getCampaignAnalytics error:', error.message);
     res.status(500).json({ message: 'Server error' });

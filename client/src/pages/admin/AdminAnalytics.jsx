@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3 } from 'lucide-react';
-import { getUserAnalytics, getCampaignAnalytics, getCollabAnalytics } from '../../api/analytics';
+import { ArrowLeft, BarChart3, Copy, MessageSquare, Check } from 'lucide-react';
+import { getUserAnalytics, getCampaignAnalytics, getCollabAnalytics, getBrandsWithConversations, exportBrandConversations } from '../../api/analytics';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
 
@@ -199,6 +199,17 @@ const CampaignsTab = () => {
                   <div className="font-bold text-sm truncate" style={{ color: '#101828' }}>{c.title || 'Campaign'}</div>
                   <div className="text-xs truncate" style={{ color: '#9CA3AF' }}>By {c.brandId?.brandName || 'Brand'}</div>
                 </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: '#EFF6FF', color: '#1E3A8A' }}>
+                    {c.applicantCounts?.applied || 0} applied
+                  </span>
+                  <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: '#F0FDF4', color: '#166534' }}>
+                    {c.applicantCounts?.shortlisted || 0} shortlisted
+                  </span>
+                  <span className="text-xs font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: '#FEF2F2', color: '#991B1B' }}>
+                    {c.applicantCounts?.rejected || 0} rejected
+                  </span>
+                </div>
                 <div className="text-xs flex-shrink-0" style={{ color: '#9CA3AF' }}>{formatDate(c.createdAt)}</div>
               </div>
             ))}
@@ -291,6 +302,168 @@ const CollabsTab = () => {
   );
 };
 
+const ConversationsTab = () => {
+  const [brands, setBrands] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedBrand, setSelectedBrand] = useState(null);
+  const [exportText, setExportText] = useState('');
+  const [exportLoading, setExportLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [category, setCategory] = useState('');
+  const [range, setRange] = useState('');
+  const [sortBy, setSortBy] = useState('recent');
+
+  const fetchBrands = async (c = category, r = range, s = sortBy) => {
+    setLoading(true);
+    try {
+      const params = {};
+      if (c) params.category = c;
+      if (r) params.range = r;
+      if (s) params.sortBy = s;
+      const res = await getBrandsWithConversations(params);
+      setBrands(res.data.brands || []);
+    } catch {
+      toast.error('Failed to load brands');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchBrands(); }, []);
+
+  const handleSelectBrand = async (brand) => {
+    setSelectedBrand(brand);
+    setExportLoading(true);
+    setCopied(false);
+    try {
+      const res = await exportBrandConversations(brand.brandId);
+      setExportText(res.data.text);
+    } catch {
+      toast.error('Failed to load conversations');
+      setExportText('');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(exportText);
+      setCopied(true);
+      toast.success('Copied — paste it into Claude or ChatGPT');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Failed to copy');
+    }
+  };
+
+  if (selectedBrand) {
+    return (
+      <div>
+        <button
+          onClick={() => { setSelectedBrand(null); setExportText(''); }}
+          className="flex items-center gap-1.5 text-xs font-bold mb-4"
+          style={{ color: '#155DFC' }}
+        >
+          <ArrowLeft size={14} /> Back to brands
+        </button>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-lg font-black" style={{ color: '#101828' }}>{selectedBrand.brandName}</h3>
+            <p className="text-xs" style={{ color: '#9CA3AF' }}>{selectedBrand.conversationCount} conversation{selectedBrand.conversationCount !== 1 ? 's' : ''}</p>
+          </div>
+          <button
+            onClick={handleCopy}
+            disabled={exportLoading || !exportText}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-black text-white disabled:opacity-50"
+            style={{ backgroundColor: copied ? '#16A34A' : '#155DFC' }}
+          >
+            {copied ? <Check size={15} /> : <Copy size={15} />}
+            {copied ? 'Copied' : 'Copy all text'}
+          </button>
+        </div>
+        {exportLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="w-8 h-8 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
+          </div>
+        ) : (
+          <textarea
+            readOnly
+            value={exportText}
+            className="w-full font-mono text-xs p-4 rounded-2xl border resize-none"
+            style={{ borderColor: '#E5E7EB', height: '60vh', backgroundColor: '#FAFAFA', color: '#374151' }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <p className="text-sm mb-4" style={{ color: '#9CA3AF' }}>
+        Brands with at least one conversation. Click a brand to view and copy their full conversation history — paste it into Claude or ChatGPT to get a summary.
+      </p>
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <span className="text-xs font-bold uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Sort</span>
+        {[
+          { v: 'recent', l: 'Most recent' },
+          { v: 'oldest', l: 'Oldest first' },
+          { v: 'most', l: 'Most conversations' },
+          { v: 'least', l: 'Fewest conversations' },
+        ].map(opt => (
+          <FilterPill key={opt.v} active={sortBy === opt.v} onClick={() => { setSortBy(opt.v); fetchBrands(category, range, opt.v); }}>{opt.l}</FilterPill>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 mb-5">
+        <span className="text-xs font-bold uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Activity</span>
+        {[{ v: '', l: 'All time' }, { v: 'today', l: 'Today' }, { v: 'this_week', l: 'This week' }, { v: 'this_month', l: 'This month' }].map(opt => (
+          <FilterPill key={opt.v} active={range === opt.v} onClick={() => { setRange(opt.v); fetchBrands(category, opt.v, sortBy); }}>{opt.l}</FilterPill>
+        ))}
+        <span className="text-xs font-bold uppercase tracking-wider ml-3 mr-1" style={{ color: '#9CA3AF' }}>Category</span>
+        <select
+          value={category}
+          onChange={e => { setCategory(e.target.value); fetchBrands(e.target.value, range, sortBy); }}
+          className="px-3 py-1.5 rounded-full text-xs font-semibold border bg-white focus:outline-none"
+          style={{ borderColor: '#E5E7EB', color: '#6B7280' }}
+        >
+          <option value="">All categories</option>
+          {CATEGORIES.map(c => <option key={c} value={c}>{getCategoryLabel(c)}</option>)}
+        </select>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="w-8 h-8 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
+        </div>
+      ) : brands.length === 0 ? (
+        <div className="bg-white rounded-2xl border p-12 text-center text-sm" style={{ borderColor: '#E5E7EB', color: '#9CA3AF' }}>No brand conversations yet.</div>
+      ) : (
+        <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
+          <div className="divide-y" style={{ borderColor: '#F0F0F0' }}>
+            {brands.map(b => (
+              <button
+                key={b.brandId}
+                onClick={() => handleSelectBrand(b)}
+                className="w-full text-left flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors"
+              >
+                <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: '#F8FAFC' }}>
+                  {b.logo ? <img src={b.logo} alt="" className="w-full h-full object-cover" /> : <MessageSquare size={16} color="#9CA3AF" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm truncate" style={{ color: '#101828' }}>{b.brandName}</div>
+                  <div className="text-xs" style={{ color: '#9CA3AF' }}>{b.conversationCount} conversation{b.conversationCount !== 1 ? 's' : ''} · Last active {formatDate(b.lastActivityAt)}</div>
+                </div>
+                <ArrowLeft size={14} color="#D1D5DB" style={{ transform: 'rotate(180deg)' }} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AdminAnalytics = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -315,11 +488,12 @@ const AdminAnalytics = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
-        <div className="flex items-center gap-2 mb-6">
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
           {[
             { key: 'users', label: 'User Analytics' },
             { key: 'campaigns', label: 'Campaign Analytics' },
             { key: 'collabs', label: 'Collab Analytics' },
+            { key: 'conversations', label: 'Brand Conversation Analytics' },
           ].map(t => (
             <button
               key={t.key}
@@ -335,6 +509,7 @@ const AdminAnalytics = () => {
         {tab === 'users' && <UsersTab />}
         {tab === 'campaigns' && <CampaignsTab />}
         {tab === 'collabs' && <CollabsTab />}
+        {tab === 'conversations' && <ConversationsTab />}
       </div>
     </div>
   );

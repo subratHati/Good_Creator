@@ -40,6 +40,15 @@ const userSchema = new mongoose.Schema({
     enum: ['instagram', 'friend_referral', 'google_search', 'whatsapp', 'other', ''],
     default: '',
   },
+    lastActiveAt: {
+    type: Date,
+    default: Date.now,
+  },
+  inactivityNotifiedAt: {
+    type: Date,
+    default: null,
+  },
+  
 }, { timestamps: true });
 
 // hash password before saving

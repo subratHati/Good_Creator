@@ -2,6 +2,7 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
+const sendPushNotification = require('../utils/sendPushNotification');
 
 // ─── GET /api/chat/conversations ─────────────────────────────────────────────
 const getConversations = async (req, res) => {
@@ -198,18 +199,31 @@ const sendMessage = async (req, res) => {
 
     // emit via socket if available
     const io = req.app.get('io');
+    const otherUserId = req.user.role === 'brand'
+      ? conversation.creatorUserId.toString()
+      : conversation.brandUserId.toString();
     if (io) {
       io.to(`conversation_${id}`).emit('new_message', message);
       // notify the other user
-      const otherUserId = req.user.role === 'brand'
-        ? conversation.creatorUserId.toString()
-        : conversation.brandUserId.toString();
       io.to(`user_${otherUserId}`).emit('conversation_updated', {
         conversationId: id,
         lastMessage: lastMessageText,
         lastMessageAt: new Date(),
       });
     }
+
+    // fire the push notification for the recipient — deliberately not
+    // awaited, so a slow/failed push send never delays the message
+    // response itself; sendPushNotification already catches its own
+    // errors internally, so this can't throw and crash the request
+    const senderName = req.user.role === 'brand'
+      ? (await Brand.findOne({ userId: req.user.id }).select('brandName')).brandName
+      : (await Creator.findOne({ userId: req.user.id }).select('name')).name;
+    sendPushNotification(otherUserId, {
+      title: `New message from ${senderName || 'GoodCreator'}`,
+      body: lastMessageText.length > 100 ? lastMessageText.slice(0, 100) + '…' : lastMessageText,
+      url: `/messages/${id}`,
+    });
 
     res.status(201).json({ message });
   } catch (error) {

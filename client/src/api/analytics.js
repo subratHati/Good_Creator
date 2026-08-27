@@ -8,3 +8,9 @@ export const getCampaignAnalytics = (params) =>
 
 export const getCollabAnalytics = (params) =>
   axiosInstance.get('/analytics/collabs', { params });
+
+export const getBrandsWithConversations = (params) =>
+  axiosInstance.get('/analytics/conversation-brands', { params });
+
+export const exportBrandConversations = (brandId) =>
+  axiosInstance.get(`/analytics/conversation-brands/${brandId}/export`);

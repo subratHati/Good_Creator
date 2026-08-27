@@ -13,6 +13,7 @@ import CreatorCardSmall from '../../components/CreatorCardSmall';
 import ReferralSourceModal from '../../components/ReferralSourceModal';
 import BrandHomeSkeleton from '../../components/BrandHomeSkeleton';
 import PaymentAnnouncementBanner from '../../components/PaymentAnnouncementBanner';
+import PushPermissionBanner from '../../components/PushPermissionBanner';
 
 const formatNumber = (num) => {
   if (!num) return '—';

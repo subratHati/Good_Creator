@@ -2,6 +2,7 @@ const Application = require('../models/Application');
 const Opening = require('../models/Opening');
 const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
+const sendPushNotification = require('../utils/sendPushNotification');
 
 // POST /api/applications/apply
 const applyToOpening = async (req, res) => {
@@ -36,10 +37,22 @@ const applyToOpening = async (req, res) => {
       coverNote: coverNote || '',
     });
 
+    // notify the brand — not awaited, so a slow/failed push never
+    // delays the application response itself
+    Brand.findById(opening.brandId).select('userId').then((brand) => {
+      if (!brand) return;
+      sendPushNotification(brand.userId.toString(), {
+        title: 'New application received',
+        body: `${creator.name || 'A creator'} applied to "${opening.title || 'your campaign'}"`,
+        url: `/brand/openings/${openingId}/applicants`,
+      });
+    });
+
     res.status(201).json({
       message: 'Application submitted successfully',
       application,
     });
+
   } catch (error) {
     console.error('applyToOpening error:', error.message);
     res.status(500).json({ message: 'Server error' });

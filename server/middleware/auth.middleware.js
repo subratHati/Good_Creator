@@ -1,31 +1,41 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+// only re-touch lastActiveAt if it's been at least this long since the
+// last update — avoids a database write on every single request when a
+// user is actively browsing (dozens of requests per minute otherwise)
+const ACTIVITY_UPDATE_THRESHOLD_MS = 60 * 60 * 1000; // 1 hour
+
 const protect = async (req, res, next) => {
     let token;
-
     if (
         req.headers.authorization &&
         req.headers.authorization.startsWith('Bearer')
     ) {
         token = req.headers.authorization.split(' ')[1];
     }
-
     if (!token) {
         return res.status(401).json({ message: 'Not authorized, no token' });
     }
-
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            req.user = await User.findById(decoded.id).select('-password');
-
-            if(!req.user){
-                return res.status(401).json({ message: 'User not found'});
-            }
-
-            next();
+        req.user = await User.findById(decoded.id).select('-password');
+        if (!req.user) {
+            return res.status(401).json({ message: 'User not found' });
+        }
+        // fire-and-forget — never block or slow down the actual
+        // request waiting on this write
+        const isStale = !req.user.lastActiveAt ||
+            (Date.now() - new Date(req.user.lastActiveAt).getTime()) > ACTIVITY_UPDATE_THRESHOLD_MS;
+        if (isStale) {
+            User.findByIdAndUpdate(req.user._id, {
+                lastActiveAt: new Date(),
+                inactivityNotifiedAt: null, // they're back — clear so a future inactive stretch can notify again
+            }).catch(() => { });
+        }
+        next();
     } catch (error) {
-        return res.status(401).json({ message: 'Not authorized, token failed'});
+        return res.status(401).json({ message: 'Not authorized, token failed' });
     }
 };
 

@@ -33,6 +33,7 @@ const analyticsRoutes = require('./routes/analytics.routes');
 
 
 
+
 connectDB();
 
 const app = express();
@@ -110,8 +111,10 @@ app.use('/api/issues', issueRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
 
+
 // health check 
 app.get('/api/health', (req, res) => {
+  console.log('[HEALTH CHECK] Ping received at', new Date().toISOString());
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 

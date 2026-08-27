@@ -1,5 +1,37 @@
 const Opening = require('../models/Opening');
 const Brand = require('../models/Brand');
+const Creator = require('../models/Creator');
+const sendPushNotification = require('../utils/sendPushNotification');
+const { sendPushNotificationBatch } = require('../utils/sendPushNotification');
+
+// Pushes a "new campaign" notification to every creator whose
+// categories overlap with this campaign's preferred niches, or whose
+// city matches the brand's — no cap on who's notified, but sent in
+// small paced batches (via sendPushNotificationBatch) so a large
+// matching group never fires thousands of simultaneous requests at once.
+const notifyMatchingCreators = async (opening, brand) => {
+  const categoryList = opening.requirements?.categories || [];
+  const city = brand.location?.city;
+
+  const orConditions = [];
+  if (categoryList.length > 0) {
+    orConditions.push({ categories: { $in: categoryList } });
+  }
+  if (city) {
+    orConditions.push({ 'location.city': { $regex: `^${city}$`, $options: 'i' } });
+  }
+  if (orConditions.length === 0) return; // nothing to match on
+
+  const matchingCreators = await Creator.find({ $or: orConditions }).select('userId');
+  const userIds = matchingCreators.map((c) => c.userId.toString());
+  if (userIds.length === 0) return;
+
+  await sendPushNotificationBatch(userIds, {
+    title: 'New campaign for you',
+    body: `${brand.brandName || 'A brand'} posted "${opening.title || 'a new campaign'}"`,
+    url: `/openings/${opening._id}`,
+  });
+};
 
 // POST /api/openings
 const createOpening = async (req, res) => {
@@ -13,8 +45,17 @@ const createOpening = async (req, res) => {
       brandId: brand._id,
       ...req.body,
     });
-
     res.status(201).json({ message: 'Opening created successfully', opening });
+
+    // notify creators whose categories or city match this new campaign —
+    // not awaited, so this never delays the create-campaign response.
+    // Only active/live campaigns should trigger this, matching the same
+    // status the public search already filters on.
+    if (opening.status === 'active') {
+      notifyMatchingCreators(opening, brand).catch((err) =>
+        console.error('notifyMatchingCreators error:', err.message)
+      );
+    }
   } catch (error) {
     console.error('createOpening error:', error.message);
     res.status(500).json({ message: 'Server error' });
