@@ -71,35 +71,5 @@ const sendPushNotificationBatch = async (userIds, payload, { batchSize = 50, del
   return { totalSent, totalFailed };
 };
 
-// Sends push notifications to many users without overwhelming the
-// server or push providers with thousands of simultaneous requests —
-// processes userIds in small batches, with a short pause between each,
-// so concurrent load stays bounded regardless of whether 50 or 5,000
-// users are being notified.
-const sendPushNotificationBatch = async (userIds, payload, { batchSize = 50, delayMs = 200 } = {}) => {
-  let totalSent = 0;
-  let totalFailed = 0;
-
-  for (let i = 0; i < userIds.length; i += batchSize) {
-    const batch = userIds.slice(i, i + batchSize);
-
-    const results = await Promise.all(
-      batch.map((userId) => sendPushNotification(userId, payload))
-    );
-
-    results.forEach((r) => {
-      totalSent += r.sent;
-      totalFailed += r.failed;
-    });
-
-    // small pause between batches — not needed after the very last one
-    if (i + batchSize < userIds.length) {
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-  }
-
-  return { totalSent, totalFailed };
-};
-
 module.exports = sendPushNotification;
 module.exports.sendPushNotificationBatch = sendPushNotificationBatch;
