@@ -226,6 +226,7 @@ const CreatorHome = () => {
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F8FAFC' }}>
       <Navbar />
+      <PushPermissionBanner />
       <PaymentAnnouncementBanner />
       {/* ══ MOBILE ══ */}
       <div className="md:hidden" style={{ position: 'relative' }}>

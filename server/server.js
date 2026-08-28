@@ -27,6 +27,7 @@ const notificationRoutes = require('./routes/notification.routes');
 const collaborationRoutes = require('./routes/collaboration.routes');
 const issueRoutes = require('./routes/issue.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
+const pushRoutes = require('./routes/push.routes');
 
 
 
@@ -109,6 +110,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/collaborations', collaborationRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/push', pushRoutes);
 
 
 

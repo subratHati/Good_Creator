@@ -206,6 +206,7 @@ const BrandHome = () => {
   return (
     <div className="min-h-screen bg-white flex flex-col" style={{ height: '100vh', overflow: 'hidden' }}>
       <Navbar />
+      <PushPermissionBanner />
       <PaymentAnnouncementBanner />
       <div className="flex-1 overflow-y-auto">
 
