@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Bell, LogOut, CheckCircle, Circle, AlertTriangle, BarChart3 } from 'lucide-react';
+import { Mail, Bell, LogOut, CheckCircle, Circle, AlertTriangle, BarChart3, Search } from 'lucide-react';
 import { getAllCreators, getAllBrands, sendAdminMessage, getReferralStats } from '../../api/admin';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -139,6 +139,7 @@ const AdminDashboard = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showCompose, setShowCompose] = useState(false);
   const [referralStats, setReferralStats] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -176,13 +177,21 @@ const AdminDashboard = () => {
   }, [tab, instagramFilter]);
 
   const currentList = tab === 'creators' ? creators : brands;
+  const filteredList = searchQuery.trim()
+    ? currentList.filter(item => {
+      const name = (tab === 'creators' ? item.name : item.brandName) || '';
+      const email = item.userId?.email || '';
+      const q = searchQuery.toLowerCase();
+      return name.toLowerCase().includes(q) || email.toLowerCase().includes(q);
+    })
+    : currentList;
 
   const toggleSelect = (userId) => {
     setSelectedIds((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]));
   };
 
   const toggleSelectAll = () => {
-    const allUserIds = currentList.map((item) => item.userId?._id).filter(Boolean);
+    const allUserIds = filteredList.map((item) => item.userId?._id).filter(Boolean);
     setSelectedIds((prev) => (prev.length === allUserIds.length ? [] : allUserIds));
   };
 
@@ -323,11 +332,23 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        <div className="relative mb-4">
+          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search by name or username..."
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            style={{ borderColor: '#E5E7EB' }}
+          />
+        </div>
+
         {/* list */}
         <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
           <div className="flex items-center gap-3 px-5 py-3 border-b" style={{ borderColor: '#F0F0F0', backgroundColor: '#FAFAFA' }}>
             <button onClick={toggleSelectAll} className="flex items-center gap-2 text-xs font-bold" style={{ color: '#6B7280' }}>
-              {selectedIds.length > 0 && selectedIds.length === currentList.length ? (
+              {selectedIds.length > 0 && selectedIds.length === filteredList.length ? (
                 <CheckCircle size={16} color="#155DFC" />
               ) : (
                 <Circle size={16} />
@@ -341,11 +362,11 @@ const AdminDashboard = () => {
             <div className="flex items-center justify-center py-16">
               <div className="w-8 h-8 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
             </div>
-          ) : currentList.length === 0 ? (
+          ) : filteredList.length === 0 ? (
             <div className="py-16 text-center text-sm" style={{ color: '#9CA3AF' }}>No results.</div>
           ) : (
             <div className="divide-y" style={{ borderColor: '#F0F0F0' }}>
-              {currentList.map((item) => {
+              {filteredList.map((item) => {
                 const userIdStr = item.userId?._id;
                 const isSelected = selectedIds.includes(userIdStr);
                 return (

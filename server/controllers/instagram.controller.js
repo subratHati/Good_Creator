@@ -348,4 +348,4 @@ const disconnectInstagram = async (req, res) => {
   }
 };
 
-module.exports = { getAuthUrl, connectInstagram, addManualStats, syncInstagram, disconnectInstagram };
+module.exports = { getAuthUrl, connectInstagram, addManualStats, syncInstagram, disconnectInstagram, calculateReelMetrics, calculateEngagementRate };

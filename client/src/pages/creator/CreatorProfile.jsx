@@ -13,11 +13,9 @@ import {
   uploadCreatorPhoto,
   getInstagramAuthUrl,
   syncInstagram,
-  addManualInstagramStats,
   disconnectInstagram,
 } from '../../api/creator';
 import toast from 'react-hot-toast';
-import InstagramConnectChoiceModal from '../../components/InstagramConnectChoiceModal';
 
 const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'finance', 'entertainment', 'parenting_family', 'vlogging', 'dance', 'religious', 'news_politics', 'video_editing', 'ai_content', 'pets_wildlife', 'other'];
 // custom display labels for categories whose slug doesn't read well with
@@ -78,205 +76,6 @@ const Toggle = ({ value, onChange }) => (
   </button>
 );
 
-// ─── OAUTH TEMPORARILY UNAVAILABLE MODAL ──────────────────────────────────────
-const OAuthUnavailableModal = ({ onClose }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
-    <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
-      <div className="p-6 text-center">
-        <div className="text-3xl mb-3">🛠️</div>
-        <h3 className="font-black text-gray-900 text-lg mb-2">Temporarily unavailable</h3>
-        <p className="text-sm text-gray-500 mb-6">
-          Due to a technical issue, direct Instagram connection isn't available right now. Please use "Add stats manually" for the time being — we'll notify you as soon as this feature is back.
-        </p>
-        <button
-          onClick={onClose}
-          className="w-full py-3 rounded-xl text-sm font-black text-white"
-          style={{ backgroundColor: '#155DFC', boxShadow: '0 3px 0 0 #0c3eb5' }}
-        >
-          Got it
-        </button>
-      </div>
-    </div>
-  </div>
-);
-
-
-// ─── MANUAL INSTAGRAM STATS MODAL ─────────────────────────────────────────────
-const ManualStatsModal = ({ profile, onClose, onSave }) => {
-  const posthog = usePostHog();
-  const [handle, setHandle] = useState(profile?.instagram?.handle || '');
-  const [followersCount, setFollowersCount] = useState(
-    profile?.instagram?.followersCount ? String(profile.instagram.followersCount) : ''
-  );
-  const [reelViews, setReelViews] = useState(['', '', '', '', '']);
-  const [saving, setSaving] = useState(false);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [resetting, setResetting] = useState(false);
-
-  const hasExistingData = !!(profile?.instagram?.handle && profile?.instagram?.isManuallyAdded);
-
-  const updateReelView = (index, value) => {
-    const updated = [...reelViews];
-    updated[index] = value;
-    setReelViews(updated);
-  };
-
-  const handleSubmit = async () => {
-    if (!handle.trim()) {
-      return toast.error('Enter your Instagram username');
-    }
-    if (!followersCount || Number(followersCount) < 0) {
-      return toast.error('Enter a valid followers count');
-    }
-    if (reelViews.some(v => v === '' || Number(v) < 0)) {
-      return toast.error('Enter view counts for all 5 reels');
-    }
-    setSaving(true);
-    try {
-      await addManualInstagramStats({
-        handle: handle.trim(),
-        followersCount: Number(followersCount),
-        reelViews: reelViews.map(v => Number(v)),
-      });
-      toast.success('Instagram stats added!');
-      posthog.capture('instagram_connected', { method: 'manual' });
-      onSave();
-      onClose();
-    } catch (err) {
-      console.error('MANUAL STATS SUBMIT ERROR:', err);
-      toast.error(err.response?.data?.message || 'Failed to save stats');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleReset = async () => {
-    setResetting(true);
-    try {
-      await disconnectInstagram();
-      toast.success('Instagram stats removed');
-      onSave();
-      onClose();
-    } catch {
-      toast.error('Failed to reset stats');
-    } finally {
-      setResetting(false);
-      setShowResetConfirm(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4" onClick={onClose}>
-      <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-md overflow-y-auto manual-stats-modal-content" style={{ maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
-        <style>{`
-          @media (max-width: 767px) {
-            .manual-stats-modal-content { padding-bottom: calc(60px + env(safe-area-inset-bottom) + 16px); }
-          }
-        `}</style>
-        <div className="p-6">
-          <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden" />
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="font-black text-gray-900 text-lg">Add Instagram stats</h3>
-            {hasExistingData && (
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className="text-xs font-bold"
-                style={{ color: '#DC2626' }}
-              >
-                Reset
-              </button>
-            )}
-          </div>
-          <p className="text-sm text-gray-500 mb-5">These will show as self-reported until you connect Instagram directly.</p>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Instagram username</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">@</span>
-                <input
-                  type="text"
-                  value={handle}
-                  onChange={e => setHandle(e.target.value.replace(/^@/, ''))}
-                  placeholder="yourusername"
-                  className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Followers count</label>
-              <input
-                type="number"
-                min="0"
-                value={followersCount}
-                onChange={e => setFollowersCount(e.target.value)}
-                placeholder="e.g. 12500"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-2">
-                Views from your last 5 reels
-              </label>
-              <div className="space-y-2">
-                {reelViews.map((view, i) => (
-                  <input
-                    key={i}
-                    type="number"
-                    min="0"
-                    value={view}
-                    onChange={e => updateReelView(i, e.target.value)}
-                    placeholder={`Reel ${i + 1} views`}
-                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3 mt-6">
-            <button onClick={onClose} className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-bold text-gray-600">Cancel</button>
-            <button onClick={handleSubmit} disabled={saving} className="flex-1 py-3 rounded-xl text-sm font-black text-white disabled:opacity-60" style={{ backgroundColor: '#155DFC', boxShadow: '0 3px 0 0 #0c3eb5' }}>
-              {saving ? 'Saving...' : hasExistingData ? 'Update Stats' : 'Save Stats'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {showResetConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={() => setShowResetConfirm(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-6 text-center">
-              <div className="text-3xl mb-3">⚠️</div>
-              <h3 className="font-black text-gray-900 text-lg mb-2">Remove Instagram stats?</h3>
-              <p className="text-sm text-gray-500 mb-6">
-                This will permanently remove your username, followers count, and average views from your profile. You can add them again later.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowResetConfirm(false)}
-                  className="flex-1 py-3 border border-gray-200 rounded-xl text-sm font-bold text-gray-600"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleReset}
-                  disabled={resetting}
-                  className="flex-1 py-3 rounded-xl text-sm font-black text-white disabled:opacity-60"
-                  style={{ backgroundColor: '#DC2626' }}
-                >
-                  {resetting ? 'Removing...' : 'Yes, remove'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 // ─── PROFILE DETAILS MODAL ────────────────────────────────────────────────────
 const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
@@ -647,9 +446,6 @@ const CreatorProfile = () => {
   const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [connectingInstagram, setConnectingInstagram] = useState(false);
-  const [showInstagramChoice, setShowInstagramChoice] = useState(false);
-  const [showManualStatsModal, setShowManualStatsModal] = useState(false);
-  const [showOAuthUnavailable, setShowOAuthUnavailable] = useState(false);
 
   // TEMPORARY: nags creators who already have more than 3 categories from
   // before the new policy existed. Remove this whole block once migrated.
@@ -825,7 +621,7 @@ const CreatorProfile = () => {
             Connect Instagram to show verified followers, engagement and avg views to brands.
           </p>
           <button
-            onClick={() => setShowInstagramChoice(true)}
+            onClick={handleInstagramConnect}
             disabled={connectingInstagram}
             style={{ width: '100%', padding: '12px', background: connectingInstagram ? '#D1D5DB' : 'linear-gradient(90deg,#833AB4,#E1306C,#F77737)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: 900, cursor: connectingInstagram ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
           >
@@ -1015,7 +811,7 @@ const CreatorProfile = () => {
                 </div>
               ) : (
                 <button
-                  onClick={() => setShowInstagramChoice(true)}
+                  onClick={handleInstagramConnect}
                   disabled={connectingInstagram}
                   style={{ width: '100%', padding: '12px', background: connectingInstagram ? '#D1D5DB' : 'linear-gradient(90deg,#833AB4,#E1306C,#F77737)', color: 'white', border: 'none', borderRadius: '12px', fontSize: '13px', fontWeight: 900, cursor: connectingInstagram ? 'not-allowed' : 'pointer', marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >
@@ -1207,27 +1003,6 @@ const CreatorProfile = () => {
         />
       )}
 
-      {showInstagramChoice && (
-        <InstagramConnectChoiceModal
-          onClose={() => setShowInstagramChoice(false)}
-          onChooseOAuth={() => {
-            setShowInstagramChoice(false);
-            handleInstagramConnect();
-          }}
-          onChooseManual={() => {
-            setShowInstagramChoice(false);
-            setShowManualStatsModal(true);
-          }}
-        />
-      )}
-
-      {showManualStatsModal && (
-        <ManualStatsModal
-          profile={profile}
-          onClose={() => setShowManualStatsModal(false)}
-          onSave={fetchProfile}
-        />
-      )}
     </div>
   );
 };

@@ -3,12 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, TrendingUp, TrendingDown, Shirt, Sparkles, UtensilsCrossed, Laptop, Dumbbell, Sun, Plane, GraduationCap, Gamepad2, LayoutGrid, TrendingUp as TrendUp, ChevronRight, Clapperboard, Baby, Video, Music, HandHeart, Newspaper, Film, Bot, PawPrint } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { CreatorSetupModal } from '../../components/ProfileSetupModals';
-import { getMyCreatorProfile } from '../../api/creator';
+import { getMyCreatorProfile, getInstagramAuthUrl } from '../../api/creator';
 import { searchOpenings } from '../../api/openings';
 import useAuth from '../../hooks/useAuth';
 import ReferralSourceModal from '../../components/ReferralSourceModal';
 import InstagramReminderModal from '../../components/InstagramReminderModal';
-import InstagramConnectChoiceModal from '../../components/InstagramConnectChoiceModal';
 import toast from 'react-hot-toast';
 import CreatorHomeSkeleton from '../../components/CreatorHomeSkeleton';
 import { usePostHog } from '@posthog/react'
@@ -73,7 +72,7 @@ const Carousel = ({ height = 'h-full' }) => {
 };
 
 // ─── INSTAGRAM PANEL ──────────────────────────────────────────────────────────
-const InstagramPanel = ({ ig, onConnect }) => {
+const InstagramPanel = ({ ig, onConnect, connecting }) => {
   const engagementGood = ig?.engagementRate >= 3;
   return (
     <div style={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '20px', padding: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
@@ -102,9 +101,9 @@ const InstagramPanel = ({ ig, onConnect }) => {
           <span style={{ fontSize: '12px', fontWeight: 700, color: '#166534' }}>@{ig.handle} · Instagram Connected</span>
         </div>
       ) : (
-        <button onClick={onConnect}
-          style={{ width: '100%', padding: '13px', borderRadius: '14px', fontWeight: 900, color: 'white', fontSize: '14px', border: 'none', cursor: 'pointer', background: 'linear-gradient(90deg, #833AB4, #E1306C, #F77737)' }}>
-          Connect Instagram →
+        <button onClick={onConnect} disabled={connecting}
+          style={{ width: '100%', padding: '13px', borderRadius: '14px', fontWeight: 900, color: 'white', fontSize: '14px', border: 'none', cursor: connecting ? 'not-allowed' : 'pointer', background: connecting ? '#D1D5DB' : 'linear-gradient(90deg, #833AB4, #E1306C, #F77737)' }}>
+          {connecting ? 'Connecting...' : 'Connect Instagram →'}
         </button>
       )}
       <style>{`@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }`}</style>
@@ -165,8 +164,21 @@ const CreatorHome = () => {
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [showInstagramReminder, setShowInstagramReminder] = useState(false);
-  const [showInstagramChoiceFromHome, setShowInstagramChoiceFromHome] = useState(false);
   const [showGenderMigration, setShowGenderMigration] = useState(false);
+  const [connectingInstagram, setConnectingInstagram] = useState(false);
+
+  const handleInstagramConnect = async () => {
+    setConnectingInstagram(true);
+    try {
+      const res = await getInstagramAuthUrl();
+      // don't clear connectingInstagram — the browser is about to
+      // navigate away entirely
+      window.location.href = res.data.url;
+    } catch {
+      toast.error('Failed to get auth URL');
+      setConnectingInstagram(false);
+    }
+  };
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -255,7 +267,7 @@ const CreatorHome = () => {
 
           {/* instagram panel */}
           <div style={{ marginBottom: '24px' }}>
-            <InstagramPanel ig={ig} onConnect={() => navigate('/creator/profile')} />
+            <InstagramPanel ig={ig} onConnect={handleInstagramConnect} connecting={connectingInstagram} />
           </div>
 
           {/* ── CATEGORY SECTION (replaces Brands Hiring Now) ── */}
@@ -320,7 +332,7 @@ const CreatorHome = () => {
             </div>
             <div className="flex flex-col gap-4">
               <div className="flex-1">
-                <InstagramPanel ig={ig} onConnect={() => navigate('/creator/profile')} />
+                <InstagramPanel ig={ig} onConnect={handleInstagramConnect} connecting={connectingInstagram} />
               </div>
               <div className="flex gap-3">
                 <button onClick={() => navigate('/creator/browse-brands')}
@@ -456,23 +468,7 @@ const CreatorHome = () => {
           onClose={() => setShowInstagramReminder(false)}
           onOpenChoice={() => {
             setShowInstagramReminder(false);
-            setShowInstagramChoiceFromHome(true);
-          }}
-        />
-      )}
-
-      {showInstagramChoiceFromHome && (
-        <InstagramConnectChoiceModal
-          onClose={() => setShowInstagramChoiceFromHome(false)}
-          onChooseOAuth={() => {
-            setShowInstagramChoiceFromHome(false);
-            navigate('/creator/profile');
-            toast('Click "Connect Instagram" on your profile to complete the connection', { icon: '👉' });
-          }}
-          onChooseManual={() => {
-            setShowInstagramChoiceFromHome(false);
-            navigate('/creator/profile');
-            toast('Click "Connect Instagram" on your profile to add stats manually', { icon: '👉' });
+            handleInstagramConnect();
           }}
         />
       )}
