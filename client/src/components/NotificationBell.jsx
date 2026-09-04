@@ -104,9 +104,8 @@ const NotificationBell = () => {
                 <button
                   key={n.id}
                   onClick={() => handleNotificationClick(n)}
-                  className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
-                    n.unread ? 'bg-blue-50/40' : ''
-                  }`}
+                  className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${n.unread ? 'bg-blue-50/40' : ''
+                    }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${n.unread ? 'bg-blue-500' : 'bg-transparent'}`} />
@@ -124,7 +123,7 @@ const NotificationBell = () => {
           <div className="border-t border-gray-100 px-4 py-2.5">
             <button
               onClick={() => {
-                navigate(user.role === 'creator' ? '/creator/enquiries' : '/brand/openings');
+                navigate('/notifications');
                 setOpen(false);
               }}
               className="text-xs font-semibold text-blue-600 hover:underline w-full text-center"

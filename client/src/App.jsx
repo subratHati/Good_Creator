@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import MessagesPage from './pages/messages/MessagesPage';
 import ChatWindow from './pages/messages/ChatWindow';
 import ContactHelp from './pages/ContactHelp';
+import NotificationsPage from './pages/NotificationsPage';
 
 // auth
 import Login from './pages/auth/Login';
@@ -21,7 +22,6 @@ import CreatorDashboard from './pages/creator/CreatorDashboard';
 import CreatorProfile from './pages/creator/CreatorProfile';
 import BrowseBrands from './pages/creator/BrowseBrands';
 import MyApplications from './pages/creator/MyApplications';
-import CreatorEnquiries from './pages/creator/CreatorEnquiries';
 import BankDetails from './pages/creator/BankDetails';
 import CampaignDetails from './pages/creator/CampaignDetails';
 import PaymentDashboard from './pages/creator/PaymentDashboard';
@@ -81,9 +81,6 @@ const App = () => {
           <Route path="/creator/applications" element={
             <ProtectedRoute allowedRole="creator"><MyApplications /></ProtectedRoute>
           } />
-          <Route path="/creator/enquiries" element={
-            <ProtectedRoute allowedRole="creator"><CreatorEnquiries /></ProtectedRoute>
-          } />
           <Route path="/creator/bank-details" element={
             <ProtectedRoute allowedRole="creator" > <BankDetails /> </ProtectedRoute>
           } />
@@ -129,6 +126,10 @@ const App = () => {
 
           <Route path="/contact-help" element={
             <ProtectedRoute><ContactHelp /></ProtectedRoute>
+          } />
+
+          <Route path="/notifications" element={
+            <ProtectedRoute><NotificationsPage /></ProtectedRoute>
           } />
 
           {/* Admin  */}

@@ -8,6 +8,7 @@ const Review = require('../models/Review');
 const generateCollabId = require('../utils/generateCollabId');
 const calculateQualityScore = require('../utils/calculateQualityScore');
 const Collaboration = require('../models/Collaboration');
+const { createNotification } = require('./notification.controller');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -141,10 +142,22 @@ const verifyPayment = async (req, res) => {
     });
 
     // emit via socket
+    // emit via socket
     const io = req.app.get('io');
     if (io) {
       io.to(`conversation_${conversationId}`).emit('new_message', paymentMessage);
       io.to(`conversation_${conversationId}`).emit('payment_confirmed', { messageId });
+    }
+
+    // notify the creator — payment received, collab now active
+    if (conversation?.creatorUserId) {
+      createNotification({
+        userId: conversation.creatorUserId,
+        type: 'application',
+        title: 'Payment received 💰',
+        message: `A brand paid for your collab (${collabId}). Complete the deliverable to release payment.`,
+        actionPath: `/messages/${conversationId}`,
+      });
     }
 
     res.json({ success: true, paymentMessage });
@@ -207,7 +220,7 @@ const releasePayment = async (req, res) => {
     // get creator bank details
     const conversation = await Conversation.findById(conversationId);
     const creator = await Creator.findById(conversation.creatorId)
-      .select('name bankDetails instagram');
+      .select('name bankDetails instagram userId');
 
     // send payment released message
     const releaseMessage = await Message.create({
@@ -233,9 +246,20 @@ const releasePayment = async (req, res) => {
     }
 
     console.log('[PAYMENT] Payment release initiated for creator:', creator?.name, 'amount:', creatorAmount);
-
     // TODO: Integrate Razorpay Payouts API here when business account is ready
     // For now, admin manually processes the payout
+
+    // notify the creator — delivery approved, payout on its way
+   
+    if (creator?.userId) {
+      createNotification({
+        userId: creator.userId,
+        type: 'application',
+        title: 'Delivery approved 🎉',
+        message: `Your delivery was approved. ₹${creatorAmount.toLocaleString('en-IN')} will be credited within 48 hours.`,
+        actionPath: `/messages/${conversationId}`,
+      });
+    }
 
     res.json({ success: true, releaseMessage, creatorAmount, platformFee });
   } catch (error) {

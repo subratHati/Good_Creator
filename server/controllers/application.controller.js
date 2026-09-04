@@ -3,6 +3,7 @@ const Opening = require('../models/Opening');
 const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
 const sendPushNotification = require('../utils/sendPushNotification');
+const { createNotification } = require('./notification.controller');
 
 // POST /api/applications/apply
 const applyToOpening = async (req, res) => {
@@ -41,11 +42,11 @@ const applyToOpening = async (req, res) => {
     // delays the application response itself
     Brand.findById(opening.brandId).select('userId').then((brand) => {
       if (!brand) return;
-      sendPushNotification(brand.userId.toString(), {
-        title: 'New application received',
-        body: `${creator.name || 'A creator'} applied to "${opening.title || 'your campaign'}"`,
-        url: `/brand/openings/${openingId}/applicants`,
-      });
+      const title = 'New application received';
+      const body = `${creator.name || 'A creator'} applied to "${opening.title || 'your campaign'}"`;
+      const actionPath = `/brand/openings/${openingId}/applicants`;
+      sendPushNotification(brand.userId.toString(), { title, body, url: actionPath });
+      createNotification({ userId: brand.userId, type: 'application', title, message: body, actionPath });
     });
 
     res.status(201).json({

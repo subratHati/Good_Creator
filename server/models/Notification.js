@@ -11,6 +11,14 @@ const notificationSchema = new mongoose.Schema({
         ref: 'User',
         required: true,
     },
+    // 'admin' messages open a modal when clicked (since they're free-text,
+    // not tied to a specific record); 'application' notifications navigate
+    // directly to their actionPath
+    type: {
+        type: String,
+        enum: ['admin', 'application'],
+        default: 'admin',
+    },
     title: {
         type: String,
         required: [true, 'Notification title is required'],
