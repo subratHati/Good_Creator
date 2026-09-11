@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Bell, LogOut, CheckCircle, Circle, AlertTriangle, BarChart3, Search } from 'lucide-react';
+import { Mail, Bell, LogOut, CheckCircle, Circle, AlertTriangle, BarChart3, Search, Smartphone } from 'lucide-react';
 import { getAllCreators, getAllBrands, sendAdminMessage, getReferralStats } from '../../api/admin';
 import { sendAdminPush } from '../../api/push';
 import useAuth from '../../hooks/useAuth';
@@ -20,7 +20,7 @@ const formatDate = (date) =>
 const ComposeModal = ({ selectedCount, onClose, onSend }) => {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
-  const [channels, setChannels] = useState({ email: true, inApp: true });
+  const [channels, setChannels] = useState({ email: true, inApp: true, push: true });
   const [actionPath, setActionPath] = useState('/');
   const [sending, setSending] = useState(false);
 
@@ -68,6 +68,14 @@ const ComposeModal = ({ selectedCount, onClose, onSend }) => {
                   style={{ borderColor: channels.inApp ? '#155DFC' : '#E5E7EB', backgroundColor: channels.inApp ? '#EFF6FF' : 'white', color: channels.inApp ? '#155DFC' : '#6B7280' }}
                 >
                   <Bell size={15} /> In-app
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleChannel('push')}
+                  className="flex-1 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 text-sm font-semibold"
+                  style={{ borderColor: channels.push ? '#155DFC' : '#E5E7EB', backgroundColor: channels.push ? '#EFF6FF' : 'white', color: channels.push ? '#155DFC' : '#6B7280' }}
+                >
+                  <Smartphone size={15} /> Push
                 </button>
               </div>
             </div>
@@ -128,85 +136,7 @@ const ComposeModal = ({ selectedCount, onClose, onSend }) => {
   );
 };
 
-// ─── PUSH COMPOSE MODAL ───────────────────────────────────────────────────────
-const PushComposeModal = ({ selectedCount, onClose, onSend }) => {
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [actionPath, setActionPath] = useState('/');
-  const [sending, setSending] = useState(false);
 
-  const handleSend = async () => {
-    if (!title.trim()) return toast.error('Title is required');
-    if (!body.trim()) return toast.error('Message is required');
-    setSending(true);
-    try {
-      await onSend({ title: title.trim(), body: body.trim(), url: actionPath });
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0,0,0,0.6)' }} onClick={onClose}>
-      <div className="bg-white rounded-2xl w-full max-w-lg overflow-y-auto" style={{ maxHeight: '90vh' }} onClick={(e) => e.stopPropagation()}>
-        <div className="p-6">
-          <h3 className="font-black text-lg mb-1" style={{ color: '#101828' }}>Send push notification</h3>
-          <p className="text-sm mb-5" style={{ color: '#9CA3AF' }}>
-            Sending to <strong>{selectedCount}</strong> recipient{selectedCount !== 1 ? 's' : ''} — delivered as a real phone notification, even if they're not on the site.
-          </p>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold mb-1.5" style={{ color: '#374151' }}>Title</label>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Instagram connection is live!"
-                className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                style={{ borderColor: '#E5E7EB' }}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1.5" style={{ color: '#374151' }}>Body</label>
-              <textarea
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                rows={3}
-                placeholder="Keep it short — this shows as a phone notification"
-                className="w-full px-4 py-2.5 rounded-xl border text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                style={{ borderColor: '#E5E7EB' }}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-bold mb-1.5" style={{ color: '#374151' }}>
-                Tap destination <span className="font-normal" style={{ color: '#9CA3AF' }}>(where tapping the notification takes them)</span>
-              </label>
-              <input
-                value={actionPath}
-                onChange={(e) => setActionPath(e.target.value)}
-                placeholder="/creator/profile"
-                className="w-full px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                style={{ borderColor: '#E5E7EB' }}
-              />
-            </div>
-          </div>
-          <div className="flex gap-3 mt-6">
-            <button onClick={onClose} className="flex-1 py-3 border rounded-xl text-sm font-bold" style={{ borderColor: '#E5E7EB', color: '#6B7280' }}>
-              Cancel
-            </button>
-            <button
-              onClick={handleSend}
-              disabled={sending}
-              className="flex-1 py-3 rounded-xl text-sm font-black text-white disabled:opacity-60"
-              style={{ backgroundColor: '#155DFC', boxShadow: '0 3px 0 0 #0c3eb5' }}
-            >
-              {sending ? 'Sending...' : `Send to ${selectedCount}`}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ─── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 const AdminDashboard = () => {
@@ -219,7 +149,6 @@ const AdminDashboard = () => {
   const [instagramFilter, setInstagramFilter] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   const [showCompose, setShowCompose] = useState(false);
-  const [showPushCompose, setShowPushCompose] = useState(false);
   const [referralStats, setReferralStats] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -278,25 +207,36 @@ const AdminDashboard = () => {
   };
 
   const handleSend = async (payload) => {
+    const { channels, subject, message, actionPath } = payload;
+    const wantsPush = channels.includes('push');
+    // sendAdminMessage only knows about email/inApp — strip push out of
+    // what's sent there, and fire it as a separate call to the push endpoint
+    const nonPushChannels = channels.filter((c) => c !== 'push');
+
     try {
-      const res = await sendAdminMessage({ userIds: selectedIds, ...payload });
-      const { emailSent, emailFailed, inAppCreated } = res.data.results;
-      toast.success(`Sent: ${emailSent} email${emailFailed ? `, ${emailFailed} failed` : ''}${inAppCreated ? `, ${inAppCreated} notifications` : ''}`);
+      const results = { emailSent: 0, emailFailed: 0, inAppCreated: 0, pushSent: 0, pushFailed: 0 };
+
+      if (nonPushChannels.length > 0) {
+        const res = await sendAdminMessage({ userIds: selectedIds, subject, message, channels: nonPushChannels, actionPath });
+        Object.assign(results, res.data.results);
+      }
+
+      if (wantsPush) {
+        const pushRes = await sendAdminPush({ userIds: selectedIds, title: subject, body: message, url: actionPath });
+        results.pushSent = pushRes.data.totalSent;
+        results.pushFailed = pushRes.data.totalFailed;
+      }
+
+      const parts = [];
+      if (results.emailSent) parts.push(`${results.emailSent} email${results.emailFailed ? `, ${results.emailFailed} failed` : ''}`);
+      if (results.inAppCreated) parts.push(`${results.inAppCreated} in-app`);
+      if (wantsPush) parts.push(`${results.pushSent} push${results.pushFailed ? `, ${results.pushFailed} failed` : ''}`);
+      toast.success(`Sent: ${parts.join(', ') || 'nothing selected'}`);
+
       setShowCompose(false);
       setSelectedIds([]);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to send messages');
-    }
-  };
-
-  const handleSendPush = async (payload) => {
-    try {
-      const res = await sendAdminPush({ userIds: selectedIds, ...payload });
-      toast.success(`Push sent: ${res.data.totalSent} delivered${res.data.totalFailed ? `, ${res.data.totalFailed} failed` : ''}`);
-      setShowPushCompose(false);
-      setSelectedIds([]);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to send push');
     }
   };
 
@@ -506,20 +446,13 @@ const AdminDashboard = () => {
 
       {/* floating action bar */}
       {selectedIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-3">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30">
           <button
             onClick={() => setShowCompose(true)}
-            className="flex items-center gap-2 px-5 py-3.5 rounded-2xl font-black text-sm text-white"
+            className="flex items-center gap-2 px-6 py-3.5 rounded-2xl font-black text-sm text-white"
             style={{ backgroundColor: '#155DFC', boxShadow: '0 6px 0 0 #0c3eb5' }}
           >
-            <Mail size={16} /> Message
-          </button>
-          <button
-            onClick={() => setShowPushCompose(true)}
-            className="flex items-center gap-2 px-5 py-3.5 rounded-2xl font-black text-sm text-white"
-            style={{ backgroundColor: '#101828', boxShadow: '0 6px 0 0 #000000' }}
-          >
-            <Bell size={16} /> Push
+            <Mail size={16} /> Message {selectedIds.length} selected
           </button>
         </div>
       )}
@@ -528,9 +461,6 @@ const AdminDashboard = () => {
         <ComposeModal selectedCount={selectedIds.length} onClose={() => setShowCompose(false)} onSend={handleSend} />
       )}
 
-      {showPushCompose && (
-        <PushComposeModal selectedCount={selectedIds.length} onClose={() => setShowPushCompose(false)} onSend={handleSendPush} />
-      )}
     </div>
   );
 };

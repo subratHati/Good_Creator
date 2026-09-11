@@ -14,6 +14,7 @@ import { usePostHog } from '@posthog/react'
 import PaymentAnnouncementBanner from '../../components/PaymentAnnouncementBanner';
 import GenderMigrationModal from '../../components/GenderMigrationModal';
 import PushPermissionBanner from '../../components/PushPermissionBanner';
+import ActiveCollabCard from '../../components/ActiveCollabCard';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -49,6 +50,7 @@ const tips = [
   { src: 'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=400&q=80', emoji: '💬', title: 'Reply to Comments', desc: 'Engagement in the first hour boosts your reach on the feed.' },
   { src: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=400&q=80', emoji: '📊', title: 'Track Your Stats', desc: 'Creators who track analytics consistently grow 40% faster.' },
 ];
+
 
 // ─── CAROUSEL ─────────────────────────────────────────────────────────────────
 const Carousel = ({ height = 'h-full' }) => {
@@ -262,9 +264,12 @@ const CreatorHome = () => {
           </div>
         </div>
 
-        {/* white card slides up */}
+               {/* white card slides up */}
         <div style={{ backgroundColor: 'white', borderRadius: '28px 28px 0 0', padding: '24px 16px 100px', marginTop: '-28px', position: 'relative', zIndex: 2 }}>
-
+          {/* active collaboration — only renders if one exists */}
+          
+            <ActiveCollabCard />
+          
           {/* instagram panel */}
           <div style={{ marginBottom: '24px' }}>
             <InstagramPanel ig={ig} onConnect={handleInstagramConnect} connecting={connectingInstagram} />
@@ -281,7 +286,7 @@ const CreatorHome = () => {
             </div>
             <CategoryGrid onCategoryClick={handleCategoryClick} />
           </div>
-
+        
           {/* creator academy */}
           <div style={{ marginBottom: '24px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, color: '#155DFC', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>Creator Academy</div>
@@ -330,10 +335,11 @@ const CreatorHome = () => {
             <div style={{ minHeight: '400px' }}>
               <Carousel height="h-full" />
             </div>
-            <div className="flex flex-col gap-4">
+                       <div className="flex flex-col gap-4">
               <div className="flex-1">
                 <InstagramPanel ig={ig} onConnect={handleInstagramConnect} connecting={connectingInstagram} />
               </div>
+              <ActiveCollabCard />
               <div className="flex gap-3">
                 <button onClick={() => navigate('/creator/browse-brands')}
                   className="flex-1 flex items-center justify-center gap-2 transition-transform hover:scale-95"

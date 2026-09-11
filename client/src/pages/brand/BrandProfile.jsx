@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Camera, HelpCircle } from 'lucide-react';
+import { Camera, HelpCircle, Handshake } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -364,11 +364,18 @@ const BrandProfile = () => {
 
       {/* section cards on gray bg */}
       <div style={{ backgroundColor: '#F8FAFC', padding: '0 16px 100px' }}>
-        <SectionCard title="Transactions">
+       <SectionCard title="Transactions">
           <button
             onClick={() => navigate('/brand/transactions')}
             style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer' }}>
             🧾 View Transaction History
+          </button>
+        </SectionCard>
+        <SectionCard title="Collaborations">
+          <button
+            onClick={() => navigate('/collaborations')}
+            style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <Handshake size={16} /> Collaboration History
           </button>
         </SectionCard>
         <SectionCard title="About the Brand" onEdit={() => setShowModal(true)}><AboutSection /></SectionCard>
@@ -460,11 +467,18 @@ const BrandProfile = () => {
 
         {/* right — section cards */}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <SectionCard title="Transactions">
+                    <SectionCard title="Transactions">
             <button
               onClick={() => navigate('/brand/transactions')}
               style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer' }}>
               🧾 View Transaction History
+            </button>
+          </SectionCard>
+          <SectionCard title="Collaborations">
+            <button
+              onClick={() => navigate('/collaborations')}
+              style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <Handshake size={16} /> Collaboration History
             </button>
           </SectionCard>
           <SectionCard title="About the Brand" onEdit={() => setShowModal(true)}><AboutSection /></SectionCard>

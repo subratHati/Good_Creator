@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, RefreshCw, X, Link2, Landmark, ImagePlay, Tag, Pencil, AlertCircle, Sparkles, TrendingUp, HelpCircle } from 'lucide-react';
+import { Camera, RefreshCw, X, Link2, Landmark, ImagePlay, Tag, Pencil, AlertCircle, Sparkles, TrendingUp, HelpCircle, Handshake } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import BankDetailsForm from '../../components/BankDetailsForm';
 import CategoryPolicyDialog from '../../components/CategoryPolicyDialog';
@@ -847,7 +847,7 @@ const CreatorProfile = () => {
               {hasProfile ? <RateChartSection /> : <div style={{ fontSize: '12px', color: '#9CA3AF' }}>Complete your profile first</div>}
             </div>
 
-            {/* bank details — gray bg like Stitch */}
+                      {/* bank details — gray bg like Stitch */}
             {/* payments — gray bg like Stitch */}
             <SectionCard title="Payments" onEdit={hasProfile ? () => navigate('/creator/payments') : undefined} locked={!hasProfile}>
               <button
@@ -857,6 +857,17 @@ const CreatorProfile = () => {
                 <Landmark size={16} style={{ marginRight: '8px' }} /> Payment Dashboard
               </button>
             </SectionCard>
+            {/* collaboration history */}
+            <div style={{ marginTop: '16px' }}>
+              <SectionCard title="Collaborations" onEdit={hasProfile ? () => navigate('/collaborations') : undefined} locked={!hasProfile}>
+                <button
+                  onClick={() => navigate('/collaborations')}
+                  disabled={!hasProfile}
+                  style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: hasProfile ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  <Handshake size={16} /> Collaboration History
+                </button>
+              </SectionCard>
+            </div>
 
             {/* bio / the vibe — yellow like Stitch */}
             {hasProfile && profile?.bio && (
@@ -962,12 +973,21 @@ const CreatorProfile = () => {
                 {hasProfile && <RateChartSection />}
               </SectionCard>
 
-              <SectionCard title="Payments" locked={!hasProfile}>
+                           <SectionCard title="Payments" locked={!hasProfile}>
                 {hasProfile && (
                   <button
                     onClick={() => navigate('/creator/payments')}
                     style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                     <Landmark size={16} /> Payment Dashboard
+                  </button>
+                )}
+              </SectionCard>
+              <SectionCard title="Collaborations" locked={!hasProfile}>
+                {hasProfile && (
+                  <button
+                    onClick={() => navigate('/collaborations')}
+                    style={{ width: '100%', padding: '12px', backgroundColor: '#F8FAFC', border: '1.5px dashed #E5E7EB', borderRadius: '12px', fontSize: '13px', fontWeight: 700, color: '#155DFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <Handshake size={16} /> Collaboration History
                   </button>
                 )}
               </SectionCard>

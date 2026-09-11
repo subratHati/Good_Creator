@@ -1303,7 +1303,7 @@ const ChatWindow = () => {
                 style={{ backgroundColor: '#155DFC' }}
               >
                 <IndianRupee size={15} strokeWidth={2.5} />
-                Create Collab
+                Request Payment
                 <span
                   onClick={(e) => { e.stopPropagation(); setShowCollabInfo(v => !v); setShowDeliveryInfo(false); }}
                   className="flex items-center justify-center w-5 h-5 rounded-full ml-0.5"

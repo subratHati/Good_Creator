@@ -7,6 +7,7 @@ import MessagesPage from './pages/messages/MessagesPage';
 import ChatWindow from './pages/messages/ChatWindow';
 import ContactHelp from './pages/ContactHelp';
 import NotificationsPage from './pages/NotificationsPage';
+import CollaborationHistoryPage from './pages/CollaborationHistoryPage';
 
 // auth
 import Login from './pages/auth/Login';
@@ -131,6 +132,10 @@ const App = () => {
           <Route path="/notifications" element={
             <ProtectedRoute><NotificationsPage /></ProtectedRoute>
           } />
+
+          <Route path="/collaborations" element={
+  <ProtectedRoute><CollaborationHistoryPage /></ProtectedRoute>
+} />
 
           {/* Admin  */}
           <Route path="/admin/login" element={<AdminLogin />} />
