@@ -213,6 +213,18 @@ const releasePayment = async (req, res) => {
       'paymentRequest.deliveryStatus': 'approved',
     });
 
+       // move the Collaboration record itself to 'delivered' — matches
+    // Collaboration.js's intended 3-state lifecycle (pending → delivered
+    // → completed), which this function was never actually updating
+    // until now. markPayoutCompleted still owns the final transition
+    // to 'completed'.
+    if (deliveryMsg.collabId) {
+      await Collaboration.findOneAndUpdate(
+        { collabId: deliveryMsg.collabId },
+        { status: 'delivered', deliveredAt: new Date() }
+      );
+    }
+
     const amount = paymentMsg.paymentRequest?.amount || 0;
     const platformFee = Math.round(amount * 0.15);
     const creatorAmount = amount - platformFee;
