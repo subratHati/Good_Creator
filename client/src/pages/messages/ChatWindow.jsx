@@ -313,7 +313,11 @@ const RatingModal = ({ onClose, onSubmit }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4" onClick={onClose}>
-      <div className="bg-white rounded-t-2xl md:rounded-2xl p-6 w-full md:max-w-md" onClick={e => e.stopPropagation()}>
+      <div
+        className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-md overflow-y-auto"
+        style={{ maxHeight: '90vh', padding: '24px', paddingBottom: 'calc(60px + env(safe-area-inset-bottom) + 24px)' }}
+        onClick={e => e.stopPropagation()}
+      >
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 md:hidden" />
         <h3 className="font-bold text-gray-900 text-lg mb-1">Rate this creator</h3>
         <p className="text-xs text-gray-400 mb-5">Optional — helps other brands and improves the marketplace.</p>
@@ -680,7 +684,7 @@ const PaymentRequestModal = ({ onClose, onSend }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4" onClick={onClose}>
       <div
         className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-lg overflow-y-auto"
-        style={{ maxHeight: '90vh', paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}
+        style={{ maxHeight: '90vh', paddingBottom: 'calc(60px + env(safe-area-inset-bottom) + 24px)' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6">
@@ -858,7 +862,7 @@ const DeliveryModal = ({ conversationId, onClose, onSend }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 px-0 md:px-4" onClick={onClose}>
       <div
         className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-md overflow-y-auto"
-        style={{ maxHeight: '90vh', paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}
+        style={{ maxHeight: '90vh', paddingBottom: 'calc(60px + env(safe-area-inset-bottom) + 24px)' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6">

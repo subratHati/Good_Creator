@@ -402,6 +402,15 @@ const getAdminPaymentOverview = async (req, res) => {
       'paymentRequest.status': 'paid',
     }).select('conversationId senderId paymentRequest collabId createdAt');
 
+    // fetch conversations up front so we have brandId/creatorId for every
+    // paid request — needed to attach creator/brand names to all three
+    // sections below, not just payoutQueue/completedPayouts
+    const conversationIdsForLookup = paidRequests.map((r) => r.conversationId);
+    const conversations = await Conversation.find({ _id: { $in: conversationIdsForLookup } })
+      .select('creatorId brandId');
+    const conversationById = {};
+    conversations.forEach((c) => { conversationById[c._id.toString()] = c; });
+
     const conversationIds = paidRequests.map((r) => r.conversationId);
 
     // approved deliveries for those same conversations — one query instead
@@ -440,16 +449,21 @@ const getAdminPaymentOverview = async (req, res) => {
       totalCollected += amount;
 
       const delivery = paymentReq.collabId ? deliveryByCollabId[paymentReq.collabId] : undefined;
+      const conv = conversationById[paymentReq.conversationId.toString()];
 
       if (!delivery) {
         commissionUpcoming += commission;
         activeCollaborations.push({
           conversationId: paymentReq.conversationId,
           creatorUserId: paymentReq.senderId,
+          creatorId: conv?.creatorId || null,
+          brandId: conv?.brandId || null,
           amount,
           commission,
           creatorAmount,
           description: paymentReq.paymentRequest?.description || '',
+          deadline: paymentReq.paymentRequest?.deadline || null,
+          collabId: paymentReq.collabId || null,
           requestedAt: paymentReq.createdAt,
         });
         continue;
@@ -460,10 +474,14 @@ const getAdminPaymentOverview = async (req, res) => {
       const entry = {
         conversationId: paymentReq.conversationId,
         creatorUserId: paymentReq.senderId,
+        creatorId: conv?.creatorId || null,
+        brandId: conv?.brandId || null,
         amount,
         commission,
         creatorAmount,
         description: paymentReq.paymentRequest?.description || '',
+        deadline: paymentReq.paymentRequest?.deadline || null,
+        collabId: paymentReq.collabId || null,
         approvedAt: delivery.delivery?.approvedAt || null,
         payoutCompletedAt: delivery.payoutCompletedAt || null,
         deliveryMessageId: delivery._id,
@@ -476,20 +494,32 @@ const getAdminPaymentOverview = async (req, res) => {
       }
     }
 
-    // attach creator name/handle to payout queue + completed payouts, since
-    // the admin needs to know WHO to pay, not just a raw ObjectId
-    const allCreatorUserIds = [...payoutQueue, ...completedPayouts].map((e) => e.creatorUserId);
-    const creators = await Creator.find({ userId: { $in: allCreatorUserIds } })
-      .select('userId name profilePhoto bankDetails instagram.handle');
-    const creatorByUserId = {};
-    creators.forEach((c) => { creatorByUserId[c.userId.toString()] = c; });
+    // attach creator name/handle AND brand name to all three sections —
+    // the admin needs to know who's on both sides of every entry, not
+    // just a raw ObjectId, in every bucket including activeCollaborations
+    const allEntries = [...activeCollaborations, ...payoutQueue, ...completedPayouts];
+    const allCreatorIds = [...new Set(allEntries.map((e) => e.creatorId?.toString()).filter(Boolean))];
+    const allBrandIds = [...new Set(allEntries.map((e) => e.brandId?.toString()).filter(Boolean))];
 
-    const attachCreator = (entry) => {
-      const creator = creatorByUserId[entry.creatorUserId.toString()];
+    const [creators, brands] = await Promise.all([
+      Creator.find({ _id: { $in: allCreatorIds } })
+        .select('name profilePhoto bankDetails instagram.handle'),
+      Brand.find({ _id: { $in: allBrandIds } })
+        .select('brandName logo'),
+    ]);
+    const creatorById = {};
+    creators.forEach((c) => { creatorById[c._id.toString()] = c; });
+    const brandById = {};
+    brands.forEach((b) => { brandById[b._id.toString()] = b; });
+
+    const attachNames = (entry) => {
+      const creator = entry.creatorId ? creatorById[entry.creatorId.toString()] : null;
+      const brand = entry.brandId ? brandById[entry.brandId.toString()] : null;
       return {
         ...entry,
         creatorName: creator?.name || 'Unknown creator',
         creatorHandle: creator?.instagram?.handle || '',
+        brandName: brand?.brandName || 'Unknown brand',
         hasBankDetails: !!(creator?.bankDetails?.accountNumber),
         bankDetails: creator?.bankDetails || null,
       };
@@ -499,9 +529,9 @@ const getAdminPaymentOverview = async (req, res) => {
       totalCollected,
       commissionRealized,
       commissionUpcoming,
-      activeCollaborations: activeCollaborations.sort((a, b) => b.requestedAt - a.requestedAt),
-      payoutQueue: payoutQueue.map(attachCreator).sort((a, b) => a.approvedAt - b.approvedAt),
-      completedPayouts: completedPayouts.map(attachCreator).sort((a, b) => b.payoutCompletedAt - a.payoutCompletedAt),
+      activeCollaborations: activeCollaborations.map(attachNames).sort((a, b) => b.requestedAt - a.requestedAt),
+      payoutQueue: payoutQueue.map(attachNames).sort((a, b) => a.approvedAt - b.approvedAt),
+      completedPayouts: completedPayouts.map(attachNames).sort((a, b) => b.payoutCompletedAt - a.payoutCompletedAt),
     });
   } catch (error) {
     console.error('getAdminPaymentOverview error:', error.message);

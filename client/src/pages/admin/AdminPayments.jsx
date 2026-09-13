@@ -138,6 +138,10 @@ const AdminPayments = () => {
                       <div className="text-xs" style={{ color: '#9CA3AF' }}>
                         {p.creatorHandle ? `@${p.creatorHandle}` : ''} {p.description ? `· ${p.description}` : ''}
                       </div>
+                      <div className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
+                        Brand: <span className="font-semibold">{p.brandName}</span>
+                        {p.deadline && <> · Deadline: {formatDateTime(p.deadline)}</>}
+                      </div>
                       {!p.hasBankDetails && (
                         <div className="text-xs font-bold mt-1" style={{ color: '#DC2626' }}>⚠ No bank details on file</div>
                       )}
@@ -176,9 +180,16 @@ const AdminPayments = () => {
             ) : (
               <div className="divide-y" style={{ borderColor: '#F0F0F0' }}>
                 {activeCollaborations.map((a) => (
-                  <div key={a.conversationId} className="flex items-center gap-4 px-5 py-3.5">
+                  <div key={a.conversationId + (a.collabId || '')} className="flex items-center gap-4 px-5 py-3.5">
                     <div className="flex-1 min-w-0">
-                      <div className="text-xs" style={{ color: '#9CA3AF' }}>{a.description || 'No description'}</div>
+                      <div className="font-bold text-sm" style={{ color: '#101828' }}>{a.creatorName}</div>
+                      <div className="text-xs" style={{ color: '#9CA3AF' }}>
+                        {a.creatorHandle ? `@${a.creatorHandle}` : ''} {a.description ? `· ${a.description}` : ''}
+                      </div>
+                      <div className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
+                        Brand: <span className="font-semibold">{a.brandName}</span>
+                        {a.deadline && <> · Deadline: {formatDateTime(a.deadline)}</>}
+                      </div>
                       <div className="text-xs" style={{ color: '#D1D5DB' }}>Requested {formatDateTime(a.requestedAt)}</div>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -207,6 +218,10 @@ const AdminPayments = () => {
                     <div className="flex-1 min-w-0">
                       <div className="font-bold text-sm" style={{ color: '#101828' }}>{p.creatorName}</div>
                       <div className="text-xs" style={{ color: '#9CA3AF' }}>{p.creatorHandle ? `@${p.creatorHandle}` : ''}</div>
+                      <div className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
+                        Brand: <span className="font-semibold">{p.brandName}</span>
+                        {p.deadline && <> · Deadline: {formatDateTime(p.deadline)}</>}
+                      </div>
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="font-bold text-sm" style={{ color: '#166534' }}>{formatCurrency(p.creatorAmount)}</div>
