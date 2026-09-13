@@ -213,7 +213,7 @@ const releasePayment = async (req, res) => {
       'paymentRequest.deliveryStatus': 'approved',
     });
 
-       // move the Collaboration record itself to 'delivered' — matches
+    // move the Collaboration record itself to 'delivered' — matches
     // Collaboration.js's intended 3-state lifecycle (pending → delivered
     // → completed), which this function was never actually updating
     // until now. markPayoutCompleted still owns the final transition
@@ -262,7 +262,7 @@ const releasePayment = async (req, res) => {
     // For now, admin manually processes the payout
 
     // notify the creator — delivery approved, payout on its way
-   
+
     if (creator?.userId) {
       createNotification({
         userId: creator.userId,
@@ -400,7 +400,7 @@ const getAdminPaymentOverview = async (req, res) => {
     const paidRequests = await Message.find({
       type: 'payment_request',
       'paymentRequest.status': 'paid',
-    }).select('conversationId senderId paymentRequest createdAt');
+    }).select('conversationId senderId paymentRequest collabId createdAt');
 
     const conversationIds = paidRequests.map((r) => r.conversationId);
 
@@ -410,17 +410,17 @@ const getAdminPaymentOverview = async (req, res) => {
       type: 'delivery',
       'delivery.status': 'approved',
       conversationId: { $in: conversationIds },
-    }).select('conversationId delivery payoutStatus payoutCompletedAt createdAt');
+    }).select('conversationId collabId delivery payoutStatus payoutCompletedAt createdAt');
 
-    // map conversationId -> its approved delivery (if any), for quick lookup.
-    // if a conversation somehow has more than one approved delivery, this
-    // takes the most recently created one, which is the practically correct
-    // choice (e.g. a revision that was re-approved later)
-    const deliveryByConversation = {};
+    // keyed by collabId, not conversationId — a single conversation can have
+    // several collabs over time (each with its own payment_request/delivery
+    // pair), so matching by conversationId alone would incorrectly attach
+    // one collab's approved delivery to a DIFFERENT collab in the same chat
+    const deliveryByCollabId = {};
     approvedDeliveries.forEach((d) => {
-      const key = d.conversationId.toString();
-      if (!deliveryByConversation[key] || d.createdAt > deliveryByConversation[key].createdAt) {
-        deliveryByConversation[key] = d;
+      if (!d.collabId) return; // old deliveries predating collabId can't be safely matched
+      if (!deliveryByCollabId[d.collabId] || d.createdAt > deliveryByCollabId[d.collabId].createdAt) {
+        deliveryByCollabId[d.collabId] = d;
       }
     });
 
@@ -439,7 +439,7 @@ const getAdminPaymentOverview = async (req, res) => {
       const creatorAmount = amount - commission;
       totalCollected += amount;
 
-      const delivery = deliveryByConversation[paymentReq.conversationId.toString()];
+      const delivery = paymentReq.collabId ? deliveryByCollabId[paymentReq.collabId] : undefined;
 
       if (!delivery) {
         commissionUpcoming += commission;
