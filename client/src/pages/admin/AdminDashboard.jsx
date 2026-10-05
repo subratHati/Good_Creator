@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Bell, LogOut, CheckCircle, Circle, AlertTriangle, BarChart3, Search, Smartphone } from 'lucide-react';
+import { Mail, Bell, LogOut, CheckCircle, Circle, AlertTriangle, BarChart3, Search, Smartphone, MessageSquare } from 'lucide-react';
 import { getAllCreators, getAllBrands, sendAdminMessage, getReferralStats } from '../../api/admin';
 import { sendAdminPush } from '../../api/push';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
+
+const PAGE_SIZE = 25;
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -15,6 +17,21 @@ const formatNumber = (num) => {
 
 const formatDate = (date) =>
   date ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+// <helper:toggleAllLoaded>
+// "Select all" acts on the users currently loaded on screen, and leaves any
+// selections made elsewhere (earlier pages, other searches) untouched.
+const toggleAllLoaded = (selectedIds, loadedIds) => {
+  if (loadedIds.length === 0) return selectedIds;
+  const selected = new Set(selectedIds);
+  const allSelected = loadedIds.every((id) => selected.has(id));
+  if (allSelected) {
+    const loadedSet = new Set(loadedIds);
+    return selectedIds.filter((id) => !loadedSet.has(id));
+  }
+  return [...new Set([...selectedIds, ...loadedIds])];
+};
+// </helper:toggleAllLoaded>
 
 // ─── COMPOSE MODAL ────────────────────────────────────────────────────────────
 const ComposeModal = ({ selectedCount, onClose, onSend }) => {
@@ -136,21 +153,27 @@ const ComposeModal = ({ selectedCount, onClose, onSend }) => {
   );
 };
 
-
-
 // ─── MAIN DASHBOARD ───────────────────────────────────────────────────────────
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [tab, setTab] = useState('creators');
-  const [creators, setCreators] = useState([]);
-  const [brands, setBrands] = useState([]);
+  // one list for whichever tab is active — paged from the server, 25 at a time
+  const [list, setList] = useState([]);
+  const [total, setTotal] = useState(0); // true total matching the current filters
+  const [overall, setOverall] = useState({ creators: 0, brands: 0 }); // unfiltered totals, for the other tab's label
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [instagramFilter, setInstagramFilter] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   const [showCompose, setShowCompose] = useState(false);
   const [referralStats, setReferralStats] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  // stops a slow, older response from overwriting a newer one when the tab,
+  // filter or search changes quickly
+  const requestId = useRef(0);
 
   useEffect(() => {
     if (user && user.role !== 'admin') {
@@ -164,46 +187,74 @@ const AdminDashboard = () => {
       .catch(() => setReferralStats(null));
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchPage = async (pg) => {
+    const myRequest = ++requestId.current;
+    if (pg === 1) setLoading(true);
+    else setLoadingMore(true);
     try {
+      const params = { page: pg, limit: PAGE_SIZE };
+      if (searchQuery.trim()) params.search = searchQuery.trim();
+      let res;
       if (tab === 'creators') {
-        const res = await getAllCreators(instagramFilter ? { instagramStatus: instagramFilter } : {});
-        setCreators(res.data.creators || []);
+        if (instagramFilter) params.instagramStatus = instagramFilter;
+        res = await getAllCreators(params);
       } else {
-        const res = await getAllBrands();
-        setBrands(res.data.brands || []);
+        res = await getAllBrands(params);
       }
+      if (myRequest !== requestId.current) return;
+
+      const items = (tab === 'creators' ? res.data.creators : res.data.brands) || [];
+      setList((prev) => {
+        if (pg === 1) return items;
+        // de-dupe by _id: if someone registers while you're paging, rows can shift between pages
+        const seen = new Set(prev.map((i) => i._id));
+        return [...prev, ...items.filter((i) => !seen.has(i._id))];
+      });
+      setTotal(res.data.total ?? 0);
+      if (res.data.overall) setOverall(res.data.overall);
+      setHasMore(res.data.pagination?.hasMore ?? false);
+      setPage(pg);
     } catch {
-      toast.error('Failed to load data');
+      if (myRequest === requestId.current) toast.error('Failed to load data');
     } finally {
-      setLoading(false);
+      if (myRequest === requestId.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   };
 
+  // switching tab or the Instagram filter clears the selection (as before);
+  // changing the search or loading more does NOT, so you can pick people
+  // across several searches and pages and message them all at once
   useEffect(() => {
     setSelectedIds([]);
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab, instagramFilter]);
 
-  const currentList = tab === 'creators' ? creators : brands;
-  const filteredList = searchQuery.trim()
-    ? currentList.filter(item => {
-      const name = (tab === 'creators' ? item.name : item.brandName) || '';
-      const email = item.userId?.email || '';
-      const q = searchQuery.toLowerCase();
-      return name.toLowerCase().includes(q) || email.toLowerCase().includes(q);
-    })
-    : currentList;
+  // refetch page 1 whenever the tab, filter or search changes (search is debounced)
+  useEffect(() => {
+    const t = setTimeout(() => fetchPage(1), searchQuery.trim() ? 400 : 0);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, instagramFilter, searchQuery]);
+
+  const handleTabChange = (t) => {
+    if (t === tab) return;
+    // clear first so the previous tab's rows are never rendered with this tab's layout
+    setList([]);
+    setLoading(true);
+    setTab(t);
+  };
+
+  const loadedUserIds = list.map((item) => item.userId?._id).filter(Boolean);
+  const allLoadedSelected = loadedUserIds.length > 0 && loadedUserIds.every((id) => selectedIds.includes(id));
 
   const toggleSelect = (userId) => {
     setSelectedIds((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]));
   };
 
   const toggleSelectAll = () => {
-    const allUserIds = filteredList.map((item) => item.userId?._id).filter(Boolean);
-    setSelectedIds((prev) => (prev.length === allUserIds.length ? [] : allUserIds));
+    setSelectedIds((prev) => toggleAllLoaded(prev, loadedUserIds));
   };
 
   const handleSend = async (payload) => {
@@ -262,7 +313,7 @@ const AdminDashboard = () => {
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* payments + issues section links */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <button
             onClick={() => navigate('/admin/payments')}
             className="w-full flex items-center justify-between bg-white rounded-2xl border p-5 hover:bg-gray-50 transition-colors"
@@ -302,6 +353,20 @@ const AdminDashboard = () => {
             </div>
             <span style={{ color: '#155DFC', fontSize: '20px' }}>→</span>
           </button>
+          <button
+            onClick={() => navigate('/admin/chat')}
+            className="w-full flex items-center justify-between bg-white rounded-2xl border p-5 hover:bg-gray-50 transition-colors"
+            style={{ borderColor: '#E5E7EB' }}
+          >
+            <div className="text-left flex items-center gap-3">
+              <MessageSquare size={20} color="#155DFC" style={{ flexShrink: 0 }} />
+              <div>
+                <div className="text-sm font-black" style={{ color: '#101828' }}>Direct Messages</div>
+                <div className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>Message creators and brands directly</div>
+              </div>
+            </div>
+            <span style={{ color: '#155DFC', fontSize: '20px' }}>→</span>
+          </button>
         </div>
 
         {/* referral source stats */}
@@ -326,16 +391,17 @@ const AdminDashboard = () => {
           </div>
         )}
 
-        {/* tabs */}
+        {/* tabs — active tab shows the true total for the current filters,
+            the other tab shows its unfiltered total */}
         <div className="flex items-center gap-2 mb-6">
           {['creators', 'brands'].map((t) => (
             <button
               key={t}
-              onClick={() => setTab(t)}
+              onClick={() => handleTabChange(t)}
               className="px-4 py-2 rounded-xl text-sm font-black capitalize"
               style={{ backgroundColor: tab === t ? '#101828' : 'white', color: tab === t ? 'white' : '#6B7280', border: '1.5px solid #E5E7EB' }}
             >
-              {t} ({t === 'creators' ? creators.length : brands.length})
+              {t} ({t === tab ? total : overall[t]})
             </button>
           ))}
         </div>
@@ -371,7 +437,7 @@ const AdminDashboard = () => {
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search by name or username..."
+            placeholder="Search by name, username or email..."
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             style={{ borderColor: '#E5E7EB' }}
           />
@@ -381,25 +447,28 @@ const AdminDashboard = () => {
         <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
           <div className="flex items-center gap-3 px-5 py-3 border-b" style={{ borderColor: '#F0F0F0', backgroundColor: '#FAFAFA' }}>
             <button onClick={toggleSelectAll} className="flex items-center gap-2 text-xs font-bold" style={{ color: '#6B7280' }}>
-              {selectedIds.length > 0 && selectedIds.length === filteredList.length ? (
+              {allLoadedSelected ? (
                 <CheckCircle size={16} color="#155DFC" />
               ) : (
                 <Circle size={16} />
               )}
-              Select all
+              Select all shown
             </button>
             <span className="text-xs" style={{ color: '#9CA3AF' }}>{selectedIds.length} selected</span>
+            {!loading && (
+              <span className="text-xs ml-auto" style={{ color: '#9CA3AF' }}>Showing {list.length} of {total}</span>
+            )}
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <div className="w-8 h-8 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
             </div>
-          ) : filteredList.length === 0 ? (
+          ) : list.length === 0 ? (
             <div className="py-16 text-center text-sm" style={{ color: '#9CA3AF' }}>No results.</div>
           ) : (
             <div className="divide-y" style={{ borderColor: '#F0F0F0' }}>
-              {filteredList.map((item) => {
+              {list.map((item) => {
                 const userIdStr = item.userId?._id;
                 const isSelected = selectedIds.includes(userIdStr);
                 return (
@@ -442,6 +511,20 @@ const AdminDashboard = () => {
             </div>
           )}
         </div>
+
+        {/* load more */}
+        {!loading && hasMore && (
+          <div className="text-center mt-4">
+            <button
+              onClick={() => fetchPage(page + 1)}
+              disabled={loadingMore}
+              className="px-6 py-2.5 rounded-xl text-sm font-bold border disabled:opacity-60"
+              style={{ borderColor: '#155DFC', color: '#155DFC', backgroundColor: 'white' }}
+            >
+              {loadingMore ? 'Loading...' : 'Load more'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* floating action bar */}

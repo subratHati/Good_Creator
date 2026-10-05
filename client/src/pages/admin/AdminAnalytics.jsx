@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BarChart3, Copy, MessageSquare, Check } from 'lucide-react';
 import { getUserAnalytics, getCampaignAnalytics, getCollabAnalytics, getBrandsWithConversations, exportBrandConversations } from '../../api/analytics';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
+import RegistrationTrendCharts from '../../components/RegistrationTrendCharts';
+
+const PAGE_SIZE = 25;
 
 const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'finance', 'entertainment', 'parenting_family', 'vlogging', 'dance', 'religious', 'news_politics', 'video_editing', 'ai_content', 'pets_wildlife', 'other'];
 
@@ -47,92 +50,134 @@ const SummaryCard = ({ label, value }) => (
 );
 
 const UsersTab = () => {
-  const [data, setData] = useState({ creators: [], brands: [], summary: { totalCreators: 0, totalBrands: 0, total: 0 } });
+  // one flat list, paged from the server 25 at a time
+  const [list, setList] = useState([]);
+  const [summary, setSummary] = useState({ total: 0, totalCreators: 0, totalBrands: 0 }); // TRUE totals for the current filters
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [range, setRange] = useState('');
   const [role, setRole] = useState('');
   const [category, setCategory] = useState('');
+  // stops a slow, older response from overwriting a newer one when filters change quickly
+  const requestId = useRef(0);
 
-  const fetchData = async (r = range, rl = role, c = category) => {
-    setLoading(true);
+  const fetchPage = async (pg = 1, r = range, rl = role, c = category) => {
+    const myRequest = ++requestId.current;
+    if (pg === 1) setLoading(true);
+    else setLoadingMore(true);
     try {
-      const params = {};
+      const params = { page: pg, limit: PAGE_SIZE };
       if (r) params.range = r;
       if (rl) params.role = rl;
       if (c) params.category = c;
       const res = await getUserAnalytics(params);
-      setData(res.data);
+      if (myRequest !== requestId.current) return;
+
+      const items = res.data.users || [];
+      setList((prev) => {
+        if (pg === 1) return items;
+        // de-dupe by _id: if someone registers while you're paging, rows can shift between pages
+        const seen = new Set(prev.map((i) => i._id));
+        return [...prev, ...items.filter((i) => !seen.has(i._id))];
+      });
+      setSummary(res.data.summary || { total: 0, totalCreators: 0, totalBrands: 0 });
+      setHasMore(res.data.pagination?.hasMore ?? false);
+      setPage(pg);
     } catch {
-      toast.error('Failed to load user analytics');
+      if (myRequest === requestId.current) toast.error('Failed to load user analytics');
     } finally {
-      setLoading(false);
+      if (myRequest === requestId.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
-
-  const combined = [
-    ...data.creators.map(c => ({ ...c, __role: 'creator', __displayName: c.name, __category: c.categories?.[0] })),
-    ...data.brands.map(b => ({ ...b, __role: 'brand', __displayName: b.brandName, __category: b.category })),
-  ].sort((a, b) => new Date(b.userId?.createdAt || 0) - new Date(a.userId?.createdAt || 0));
+  useEffect(() => { fetchPage(1); }, []);
 
   return (
     <div>
+      <RegistrationTrendCharts />
+
       <div className="grid grid-cols-3 gap-3 mb-5">
-        <SummaryCard label="Total Users" value={data.summary.total} />
-        <SummaryCard label="Creators" value={data.summary.totalCreators} />
-        <SummaryCard label="Brands" value={data.summary.totalBrands} />
+        <SummaryCard label="Total Users" value={summary.total} />
+        <SummaryCard label="Creators" value={summary.totalCreators} />
+        <SummaryCard label="Brands" value={summary.totalBrands} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <span className="text-xs font-bold uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Registered</span>
         {[{ v: '', l: 'All time' }, { v: 'today', l: 'Today' }, { v: 'this_week', l: 'This week' }, { v: 'this_month', l: 'This month' }].map(opt => (
-          <FilterPill key={opt.v} active={range === opt.v} onClick={() => { setRange(opt.v); fetchData(opt.v, role, category); }}>{opt.l}</FilterPill>
+          <FilterPill key={opt.v} active={range === opt.v} onClick={() => { setRange(opt.v); fetchPage(1, opt.v, role, category); }}>{opt.l}</FilterPill>
         ))}
       </div>
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <span className="text-xs font-bold uppercase tracking-wider mr-1" style={{ color: '#9CA3AF' }}>Role</span>
         {[{ v: '', l: 'All' }, { v: 'creator', l: 'Creators' }, { v: 'brand', l: 'Brands' }].map(opt => (
-          <FilterPill key={opt.v} active={role === opt.v} onClick={() => { setRole(opt.v); fetchData(range, opt.v, category); }}>{opt.l}</FilterPill>
+          <FilterPill key={opt.v} active={role === opt.v} onClick={() => { setRole(opt.v); fetchPage(1, range, opt.v, category); }}>{opt.l}</FilterPill>
         ))}
         <span className="text-xs font-bold uppercase tracking-wider ml-3 mr-1" style={{ color: '#9CA3AF' }}>Category</span>
         <select
           value={category}
-          onChange={e => { setCategory(e.target.value); fetchData(range, role, e.target.value); }}
+          onChange={e => { setCategory(e.target.value); fetchPage(1, range, role, e.target.value); }}
           className="px-3 py-1.5 rounded-full text-xs font-semibold border bg-white focus:outline-none"
           style={{ borderColor: '#E5E7EB', color: '#6B7280' }}
         >
           <option value="">All categories</option>
           {CATEGORIES.map(c => <option key={c} value={c}>{getCategoryLabel(c)}</option>)}
         </select>
+        {!loading && (
+          <span className="text-xs font-semibold ml-auto" style={{ color: '#9CA3AF' }}>Showing {list.length} of {summary.total}</span>
+        )}
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
         </div>
-      ) : combined.length === 0 ? (
+      ) : list.length === 0 ? (
         <div className="bg-white rounded-2xl border p-12 text-center text-sm" style={{ borderColor: '#E5E7EB', color: '#9CA3AF' }}>No users match these filters.</div>
       ) : (
-        <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
-          <div className="divide-y" style={{ borderColor: '#F0F0F0' }}>
-            {combined.map(u => (
-              <div key={u._id} className="flex items-center gap-4 px-5 py-3.5">
-                <span className="text-xs font-bold px-2 py-1 rounded-full capitalize flex-shrink-0" style={{ backgroundColor: u.__role === 'creator' ? '#EFF6FF' : '#FEF3C7', color: u.__role === 'creator' ? '#1E3A8A' : '#92400E' }}>
-                  {u.__role}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm truncate" style={{ color: '#101828' }}>{u.__displayName || 'Unnamed'}</div>
-                  <div className="text-xs truncate" style={{ color: '#9CA3AF' }}>{u.userId?.email || '—'}</div>
+        <>
+          <div className="bg-white rounded-2xl border overflow-hidden" style={{ borderColor: '#E5E7EB' }}>
+            <div className="divide-y" style={{ borderColor: '#F0F0F0' }}>
+              {list.map(u => (
+                <div key={u._id} className="flex items-center gap-4 px-5 py-3.5">
+                  <span className="text-xs font-bold px-2 py-1 rounded-full capitalize flex-shrink-0" style={{ backgroundColor: u.role === 'creator' ? '#EFF6FF' : '#FEF3C7', color: u.role === 'creator' ? '#1E3A8A' : '#92400E' }}>
+                    {u.role}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    {u.hasProfile ? (
+                      <div className="font-bold text-sm truncate" style={{ color: '#101828' }}>{u.name || 'Unnamed'}</div>
+                    ) : (
+                      <div className="text-sm italic truncate" style={{ color: '#9CA3AF' }}>Profile not completed</div>
+                    )}
+                    <div className="text-xs truncate" style={{ color: '#9CA3AF' }}>{u.email || '—'}</div>
+                  </div>
+                  {u.category && (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>{getCategoryLabel(u.category)}</span>
+                  )}
+                  <div className="text-xs flex-shrink-0" style={{ color: '#9CA3AF' }}>{formatDate(u.createdAt)}</div>
                 </div>
-                {u.__category && (
-                  <span className="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#F3F4F6', color: '#6B7280' }}>{getCategoryLabel(u.__category)}</span>
-                )}
-                <div className="text-xs flex-shrink-0" style={{ color: '#9CA3AF' }}>{formatDate(u.userId?.createdAt)}</div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+
+          {hasMore && (
+            <div className="text-center mt-4">
+              <button
+                onClick={() => fetchPage(page + 1)}
+                disabled={loadingMore}
+                className="px-6 py-2.5 rounded-xl text-sm font-bold border disabled:opacity-60"
+                style={{ borderColor: '#155DFC', color: '#155DFC', backgroundColor: 'white' }}
+              >
+                {loadingMore ? 'Loading...' : 'Load more'}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

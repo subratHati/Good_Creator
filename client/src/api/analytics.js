@@ -14,3 +14,6 @@ export const getBrandsWithConversations = (params) =>
 
 export const exportBrandConversations = (brandId) =>
   axiosInstance.get(`/analytics/conversation-brands/${brandId}/export`);
+
+export const getRegistrationTrend = (params) =>
+  axiosInstance.get('/analytics/registration-trend', { params });

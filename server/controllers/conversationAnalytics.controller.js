@@ -1,24 +1,31 @@
 // controllers/conversationAnalytics.controller.js
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
+// single shared definition of "this conversation actually has messages" —
+// a conversation record also exists for anyone who merely clicked Message
+const { HAS_MESSAGES } = require('./chat.controller');
+
+// IST is UTC+5:30 (fixed offset, no DST). The server runs in UTC, so plain
+// setHours(0,0,0,0) would put "today" / "this week" / "this month" boundaries
+// 5.5 hours off from India's calendar. This works in the IST-shifted frame and
+// converts back to a real UTC Date — same logic as analytics.controller.js.
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
 const getDateRangeStart = (range) => {
-  const now = new Date();
+  const nowIST = new Date(Date.now() + IST_OFFSET_MS);
   switch (range) {
     case 'today': {
-      const d = new Date(now);
-      d.setHours(0, 0, 0, 0);
-      return d;
+      const d = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate()));
+      return new Date(d.getTime() - IST_OFFSET_MS);
     }
     case 'this_week': {
-      const d = new Date(now);
-      const day = d.getDay();
-      d.setDate(d.getDate() - day);
-      d.setHours(0, 0, 0, 0);
-      return d;
+      const day = nowIST.getUTCDay(); // 0 = Sunday
+      const d = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate() - day));
+      return new Date(d.getTime() - IST_OFFSET_MS);
     }
     case 'this_month': {
-      return new Date(now.getFullYear(), now.getMonth(), 1);
+      const d = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), 1));
+      return new Date(d.getTime() - IST_OFFSET_MS);
     }
     default:
       return null;
@@ -28,16 +35,17 @@ const getDateRangeStart = (range) => {
 // ─── GET /api/analytics/conversation-brands ──────────────────────────────────
 // Filters: category (brand's category), range (today/this_week/this_month —
 // filters by lastActivityAt), sortBy (recent/oldest/most/least)
+// Only conversations with at least one message are counted.
 const getBrandsWithConversations = async (req, res) => {
   try {
     const { category, range, sortBy } = req.query;
 
     const rangeStart = getDateRangeStart(range);
-    const matchStage = {};
+    const matchStage = { ...HAS_MESSAGES };
     if (rangeStart) matchStage.lastMessageAt = { $gte: rangeStart };
 
     const pipeline = [
-      ...(Object.keys(matchStage).length ? [{ $match: matchStage }] : []),
+      { $match: matchStage },
       {
         $group: {
           _id: '$brandId',
@@ -134,7 +142,7 @@ const exportBrandConversations = async (req, res) => {
   try {
     const { brandId } = req.params;
 
-    const conversations = await Conversation.find({ brandId })
+    const conversations = await Conversation.find({ brandId, ...HAS_MESSAGES })
       .populate('creatorId', 'name')
       .sort({ lastMessageAt: -1 });
 

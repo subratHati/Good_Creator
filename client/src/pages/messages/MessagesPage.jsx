@@ -5,6 +5,7 @@ import { getConversations } from '../../api/chat';
 import useAuth from '../../hooks/useAuth';
 import { io } from 'socket.io-client';
 import useCreatorProfileGuard from '../../hooks/useCreatorProfileGuard';
+import { getMyAdminConversation } from '../../api/adminChat';
 
 const formatTime = (date) => {
   if (!date) return '';
@@ -43,11 +44,17 @@ const MessagesPage = () => {
 
   const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
+  const [adminConversation, setAdminConversation] = useState(null);
+
   useEffect(() => {
     const fetch = async () => {
       try {
-        const res = await getConversations();
-        setConversations(res.data.conversations);
+        const [convRes, adminRes] = await Promise.allSettled([
+          getConversations(),
+          getMyAdminConversation(),
+        ]);
+        if (convRes.status === 'fulfilled') setConversations(convRes.value.data.conversations);
+        if (adminRes.status === 'fulfilled') setAdminConversation(adminRes.value.data.conversation);
       } catch {
         setConversations([]);
       } finally {
@@ -93,8 +100,33 @@ const MessagesPage = () => {
       });
     });
 
+    // same pattern, for the single admin conversation — there's only
+    // ever one per user, so this is simpler than the array update above
+    // the server is the source of truth for the single admin conversation.
+    // Re-fetching (instead of patching local state) also covers the very
+    // first admin message, when there's nothing in state to patch yet.
+    socket.on('admin_conversation_updated', () => {
+      getMyAdminConversation()
+        .then((res) => setAdminConversation(res.data.conversation))
+        .catch(() => { });
+    });
+
     return () => socket.disconnect();
   }, [user]);
+
+  // Normalize both conversation types into one shape so they can be
+  // sorted and rendered together. Admin conversations are flagged with
+  // __isAdmin so the render logic below branches correctly for avatar,
+  // name, and navigation target.
+  const mergedList = [
+    ...conversations.map((c) => ({ ...c, __isAdmin: false, __sortTime: c.lastMessageAt })),
+    ...(adminConversation ? [{
+      ...adminConversation,
+      __isAdmin: true,
+      __sortTime: adminConversation.lastMessageAt,
+      unreadCount: adminConversation.unreadByUser || 0,
+    }] : []),
+  ].sort((a, b) => new Date(b.__sortTime) - new Date(a.__sortTime));
 
   const getOtherParty = (conv) => {
     if (user.role === 'brand') {
@@ -134,10 +166,10 @@ const MessagesPage = () => {
       <div className="max-w-2xl mx-auto px-4 py-6 pb-24 md:pb-8">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
-          <p className="text-sm text-gray-500 mt-1">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
+          <p className="text-sm text-gray-500 mt-1">{mergedList.length} conversation{mergedList.length !== 1 ? 's' : ''}</p>
         </div>
 
-        {conversations.length === 0 ? (
+        {mergedList.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
             <div className="text-4xl mb-4">💬</div>
             <div className="font-semibold text-gray-900 mb-2">No messages yet</div>
@@ -157,22 +189,24 @@ const MessagesPage = () => {
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-            {conversations.map((conv, index) => {
-              const other = getOtherParty(conv);
+            {mergedList.map((conv, index) => {
+              const other = conv.__isAdmin
+                ? { name: 'GoodCreator Team', photo: null, sub: 'Official' }
+                : getOtherParty(conv);
               const unread = conv.unreadCount > 0;
               return (
                 <div
-                  key={conv._id}
-                  onClick={() => navigate(`/messages/${conv._id}`)}
-                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors ${index !== conversations.length - 1 ? 'border-b border-gray-100' : ''
+                  key={conv.__isAdmin ? `admin_${conv._id}` : conv._id}
+                  onClick={() => navigate(conv.__isAdmin ? `/messages/admin/${conv._id}` : `/messages/${conv._id}`)}
+                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors ${index !== mergedList.length - 1 ? 'border-b border-gray-100' : ''
                     }`}
                 >
                   {/* avatar */}
                   <div className="relative flex-shrink-0">
-                    <div className="w-12 h-12 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg">
+                    <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-lg" style={{ background: conv.__isAdmin ? 'linear-gradient(135deg, #155DFC, #0C3EB5)' : 'linear-gradient(135deg, #60A5FA, #2563EB)' }}>
                       {other.photo
                         ? <img src={other.photo} alt={other.name} className="w-full h-full object-cover" />
-                        : other.name?.[0]?.toUpperCase()
+                        : conv.__isAdmin ? '✓' : other.name?.[0]?.toUpperCase()
                       }
                     </div>
                     {unread && (

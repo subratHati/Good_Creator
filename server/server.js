@@ -28,6 +28,8 @@ const issueRoutes = require('./routes/issue.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
 const pushRoutes = require('./routes/push.routes');
 const collaborationHistoryRoutes = require('./routes/collaborationHistory.routes');
+const adminChatRoutes = require('./routes/adminChat.routes');
+
 
 
 
@@ -111,6 +113,7 @@ app.use('/api/issues', issueRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/collaboration-history', collaborationHistoryRoutes);
+app.use('/api/admin-chat', adminChatRoutes);
 
 
 
@@ -150,6 +153,19 @@ io.on('connection', (socket) => {
     socket.to(`conversation_${conversationId}`).emit('user_typing', { userId, isTyping });
   });
 
+  // admin chat rooms — mirrors the brand<->creator pattern above, kept
+  // as separate event names so there's no risk of colliding with the
+  // existing conversation rooms
+  socket.on('join_admin_room', () => {
+    socket.join('admin_room');
+  });
+  socket.on('join_admin_conversation', (conversationId) => {
+    socket.join(`admin_conversation_${conversationId}`);
+  });
+  socket.on('leave_admin_conversation', (conversationId) => {
+    socket.leave(`admin_conversation_${conversationId}`);
+  });
+  
   socket.on('disconnect', () => {
     console.log('[SOCKET] User disconnected:', socket.id);
   });

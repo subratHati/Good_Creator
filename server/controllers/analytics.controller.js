@@ -6,78 +6,107 @@ const Collaboration = require('../models/Collaboration');
 const Application = require('../models/Application');
 const User = require('../models/User');
 
+// IST is UTC+5:30 — a fixed offset, no DST to worry about. Rather than
+// relying on the server's local timezone (Render runs in UTC, which
+// would make "today" start 5.5 hours late relative to India), this
+// computes midnight IST explicitly by working in the IST-shifted frame
+// and converting back to a genuine UTC Date at the end.
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+
 const getDateRangeStart = (range) => {
-  const now = new Date();
+  const nowIST = new Date(Date.now() + IST_OFFSET_MS);
   switch (range) {
     case 'today': {
-      const d = new Date(now);
-      d.setHours(0, 0, 0, 0);
-      return d;
+      const d = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate()));
+      return new Date(d.getTime() - IST_OFFSET_MS);
     }
     case 'this_week': {
-      const d = new Date(now);
-      const day = d.getDay(); // 0 = Sunday
-      d.setDate(d.getDate() - day);
-      d.setHours(0, 0, 0, 0);
-      return d;
+      const day = nowIST.getUTCDay(); // 0 = Sunday
+      const d = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), nowIST.getUTCDate() - day));
+      return new Date(d.getTime() - IST_OFFSET_MS);
     }
     case 'this_month': {
-      return new Date(now.getFullYear(), now.getMonth(), 1);
+      const d = new Date(Date.UTC(nowIST.getUTCFullYear(), nowIST.getUTCMonth(), 1));
+      return new Date(d.getTime() - IST_OFFSET_MS);
     }
     default:
       return null;
   }
 };
 
-// ─── GET /api/analytics/users ────────────────────────────────────────────────
-// Filters: range (today/this_week/this_month), role (creator/brand),
-// category
+// ─── GET /api/analytics/users?page=1&limit=25&range=today&role=creator&category=food ─
+// Paged straight from the User collection: the date range and role both live
+// on User, and the list is ordered by registration time anyway. Category lives
+// on the Creator/Brand profile, so when it's set we first resolve the matching
+// userIds. Totals come from one grouped count over the SAME filter, so the
+// summary is the true total no matter how many rows have been loaded.
+// Sorted by createdAt with _id as a tiebreaker so skip/limit never repeats or
+// skips a row between pages.
+// Users who registered but never completed a profile are included (they have
+// no name/category) — consistent with the registration charts above this list.
 const getUserAnalytics = async (req, res) => {
   try {
     const { range, role, category } = req.query;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+    const skip = (page - 1) * limit;
+
+    const roles = role === 'creator' || role === 'brand' ? [role] : ['creator', 'brand'];
+    const match = { role: { $in: roles } };
+
     const rangeStart = getDateRangeStart(range);
+    if (rangeStart) match.createdAt = { $gte: rangeStart };
 
-    // find matching User ids first (for the date-range filter, which
-    // lives on User.createdAt, not on Creator/Brand documents)
-    const userQuery = {};
-    if (rangeStart) userQuery.createdAt = { $gte: rangeStart };
-    if (role) userQuery.role = role;
-
-    const matchingUsers = await User.find(userQuery).select('_id role createdAt email').lean();
-    const userIdsByRole = {
-      creator: matchingUsers.filter(u => u.role === 'creator').map(u => u._id),
-      brand: matchingUsers.filter(u => u.role === 'brand').map(u => u._id),
-    };
-
-    let creators = [];
-    let brands = [];
-
-    if (!role || role === 'creator') {
-      const creatorQuery = { userId: { $in: userIdsByRole.creator } };
-      if (category) creatorQuery.categories = { $in: [category] };
-      creators = await Creator.find(creatorQuery)
-        .select('name categories userId createdAt')
-        .populate('userId', 'email createdAt')
-        .sort({ createdAt: -1 });
+    if (category) {
+      const [creatorProfiles, brandProfiles] = await Promise.all([
+        roles.includes('creator') ? Creator.find({ categories: category }).select('userId').lean() : [],
+        roles.includes('brand') ? Brand.find({ category }).select('userId').lean() : [],
+      ]);
+      match._id = { $in: [...creatorProfiles, ...brandProfiles].map((p) => p.userId) };
     }
 
-    if (!role || role === 'brand') {
-      const brandQuery = { userId: { $in: userIdsByRole.brand } };
-      if (category) brandQuery.category = category;
-      brands = await Brand.find(brandQuery)
-        .select('brandName category userId createdAt')
-        .populate('userId', 'email createdAt')
-        .sort({ createdAt: -1 });
-    }
+    const [users, roleCounts] = await Promise.all([
+      User.find(match)
+        .select('_id role email createdAt')
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      User.aggregate([{ $match: match }, { $group: { _id: '$role', count: { $sum: 1 } } }]),
+    ]);
+
+    const counts = { creator: 0, brand: 0 };
+    roleCounts.forEach((r) => { counts[r._id] = r.count; });
+    const total = counts.creator + counts.brand;
+
+    // profile details for just this page's users (<= limit ids)
+    const userIds = users.map((u) => u._id);
+    const [creators, brands] = await Promise.all([
+      Creator.find({ userId: { $in: userIds } }).select('userId name categories').lean(),
+      Brand.find({ userId: { $in: userIds } }).select('userId brandName category').lean(),
+    ]);
+    const creatorByUserId = {};
+    creators.forEach((c) => { creatorByUserId[c.userId.toString()] = c; });
+    const brandByUserId = {};
+    brands.forEach((b) => { brandByUserId[b.userId.toString()] = b; });
+
+    const items = users.map((u) => {
+      const profile = u.role === 'creator' ? creatorByUserId[u._id.toString()] : brandByUserId[u._id.toString()];
+      return {
+        _id: u._id,
+        role: u.role,
+        email: u.email,
+        createdAt: u.createdAt,
+        name: u.role === 'creator' ? profile?.name : profile?.brandName,
+        category: u.role === 'creator' ? profile?.categories?.[0] : profile?.category,
+        hasProfile: !!profile,
+      };
+    });
 
     res.json({
-      creators,
-      brands,
-      summary: {
-        totalCreators: creators.length,
-        totalBrands: brands.length,
-        total: creators.length + brands.length,
-      },
+      users: items,
+      summary: { total, totalCreators: counts.creator, totalBrands: counts.brand },
+      pagination: { page, hasMore: skip + items.length < total },
     });
   } catch (error) {
     console.error('getUserAnalytics error:', error.message);
@@ -168,8 +197,85 @@ const getCollabAnalytics = async (req, res) => {
   }
 };
 
+const getTrendRangeStart = (range) => {
+  const now = new Date();
+  switch (range) {
+    case 'this_month':
+      return new Date(now.getFullYear(), now.getMonth(), 1);
+    case 'last_month':
+      return new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    case 'last_3_months':
+      return new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    case 'all':
+    default:
+      return null;
+  }
+};
+
+const getTrendRangeEnd = (range) => {
+  const now = new Date();
+  if (range === 'last_month') {
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  return null;
+};
+
+const GRANULARITY_UNIT = {
+  day: 'day',
+  week: 'week',
+  month: 'month',
+};
+
+// ─── GET /api/analytics/registration-trend?role=creator&range=last_3_months&granularity=day ─
+const getRegistrationTrend = async (req, res) => {
+  try {
+    const { role, range = 'all', granularity = 'day' } = req.query;
+
+    if (!['creator', 'brand'].includes(role)) {
+      return res.status(400).json({ message: 'role must be creator or brand' });
+    }
+    const unit = GRANULARITY_UNIT[granularity] || 'day';
+
+    const rangeStart = getTrendRangeStart(range);
+    const rangeEnd = getTrendRangeEnd(range);
+
+    const match = { role };
+    if (rangeStart || rangeEnd) {
+      match.createdAt = {};
+      if (rangeStart) match.createdAt.$gte = rangeStart;
+      if (rangeEnd) match.createdAt.$lt = rangeEnd;
+    }
+
+    const results = await User.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: {
+            $dateTrunc: { date: '$createdAt', unit, timezone: 'Asia/Kolkata' },
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+      {
+        $project: {
+          _id: 0,
+          date: '$_id',
+          count: 1,
+        },
+      },
+    ]);
+
+    res.json({ role, range, granularity, points: results });
+  } catch (error) {
+    console.error('getRegistrationTrend error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 module.exports = {
   getUserAnalytics,
   getCampaignAnalytics,
   getCollabAnalytics,
+  getRegistrationTrend
 };

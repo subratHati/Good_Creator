@@ -4,6 +4,22 @@ const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
 const sendPushNotification = require('../utils/sendPushNotification');
 
+// A Conversation document is created the moment someone opens a chat (so there
+// is a conversation id to open and send into) — but that alone is NOT a
+// conversation. It only counts once a message has actually been sent.
+// sendMessage (and the payment flow) set lastMessageBy / lastMessage on every
+// send, so either one being present means real messages exist. The lastMessage
+// check is there so older conversations keep showing even if they predate
+// lastMessageBy. ($nin with null also excludes documents where the field is
+// missing entirely.) Every inbox/list of conversations should spread this into
+// its query.
+const HAS_MESSAGES = {
+  $or: [
+    { lastMessageBy: { $in: ['brand', 'creator'] } },
+    { lastMessage: { $nin: ['', null] } },
+  ],
+};
+
 // ─── GET /api/chat/conversations ─────────────────────────────────────────────
 const getConversations = async (req, res) => {
   try {
@@ -13,7 +29,7 @@ const getConversations = async (req, res) => {
       const creator = await Creator.findOne({ userId: req.user.id });
       if (!creator) return res.json({ conversations: [] });
 
-      conversations = await Conversation.find({ creatorId: creator._id })
+      conversations = await Conversation.find({ creatorId: creator._id, ...HAS_MESSAGES })
         .populate('brandId', 'brandName logo category')
         .sort({ lastMessageAt: -1 });
 
@@ -25,7 +41,7 @@ const getConversations = async (req, res) => {
       const brand = await Brand.findOne({ userId: req.user.id });
       if (!brand) return res.json({ conversations: [] });
 
-      conversations = await Conversation.find({ brandId: brand._id })
+      conversations = await Conversation.find({ brandId: brand._id, ...HAS_MESSAGES })
         .populate('creatorId', 'name profilePhoto instagram categories')
         .sort({ lastMessageAt: -1 });
 
@@ -43,6 +59,8 @@ const getConversations = async (req, res) => {
 };
 
 // ─── POST /api/chat/conversations ────────────────────────────────────────────
+// Creates the conversation record if needed so the chat page has an id to open.
+// This does NOT make it show up in anyone's inbox — see HAS_MESSAGES above.
 const getOrCreateConversation = async (req, res) => {
   const { targetId } = req.body; // creatorId if brand, brandId if creator
 
@@ -277,6 +295,7 @@ const getConversationById = async (req, res) => {
 };
 
 module.exports = {
+  HAS_MESSAGES,
   getConversations,
   getOrCreateConversation,
   getMessages,

@@ -4,13 +4,24 @@ const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { sendAdminEmail } = require('../services/email.service');
 
-// GET /api/admin/creators
-// Returns all creators with their linked User account info (email, isActive,
-// isEmailVerified) merged in, since the admin needs both profile details
-// and account status in one view.
+const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const parsePaging = (req) => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 25));
+  return { page, limit, skip: (page - 1) * limit };
+};
+
+// GET /api/admin/creators?page=1&limit=25&instagramStatus=connected&search=abc
+// One page of creators, plus the TRUE total matching the current filters
+// (countDocuments, not the page length) and unfiltered totals for both tabs.
+// Sorted by createdAt with _id as a tiebreaker: createdAt alone isn't unique,
+// and skip/limit over a non-unique sort can repeat or skip rows between pages.
 const getAllCreators = async (req, res) => {
   try {
     const { instagramStatus } = req.query;
+    const search = (req.query.search || '').trim();
+    const { page, limit, skip } = parsePaging(req);
 
     const query = {};
     if (instagramStatus === 'connected') {
@@ -22,27 +33,78 @@ const getAllCreators = async (req, res) => {
       query['instagram.isManuallyAdded'] = false;
     }
 
-    const creators = await Creator.find(query)
-      .select('-instagram.accessToken')
-      .populate('userId', 'email isActive isEmailVerified createdAt')
-      .sort({ createdAt: -1 });
+    if (search) {
+      const rx = new RegExp(escapeRegex(search), 'i');
+      // email lives on User, not Creator — resolve matching users first
+      const emailMatches = await User.find({ role: 'creator', email: rx }).select('_id').lean();
+      query.$or = [
+        { name: rx },
+        { 'instagram.handle': rx },
+        { userId: { $in: emailMatches.map((u) => u._id) } },
+      ];
+    }
 
-    res.json({ creators, total: creators.length });
+    const [creators, total, overallCreators, overallBrands] = await Promise.all([
+      Creator.find(query)
+        .select('-instagram.accessToken')
+        .populate('userId', 'email isActive isEmailVerified createdAt')
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Creator.countDocuments(query),
+      Creator.countDocuments({}),
+      Brand.countDocuments({}),
+    ]);
+
+    res.json({
+      creators,
+      total,
+      pagination: { page, hasMore: skip + creators.length < total },
+      overall: { creators: overallCreators, brands: overallBrands },
+    });
   } catch (error) {
     console.error('getAllCreators error:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 };
 
-// GET /api/admin/brands
+// GET /api/admin/brands?page=1&limit=25&search=abc
 const getAllBrands = async (req, res) => {
   try {
-    const brands = await Brand.find()
-      .select('-instagram.accessToken')
-      .populate('userId', 'email isActive isEmailVerified createdAt')
-      .sort({ createdAt: -1 });
+    const search = (req.query.search || '').trim();
+    const { page, limit, skip } = parsePaging(req);
 
-    res.json({ brands, total: brands.length });
+    const query = {};
+    if (search) {
+      const rx = new RegExp(escapeRegex(search), 'i');
+      const emailMatches = await User.find({ role: 'brand', email: rx }).select('_id').lean();
+      query.$or = [
+        { brandName: rx },
+        { 'instagram.handle': rx },
+        { userId: { $in: emailMatches.map((u) => u._id) } },
+      ];
+    }
+
+    const [brands, total, overallCreators, overallBrands] = await Promise.all([
+      Brand.find(query)
+        .select('-instagram.accessToken')
+        .populate('userId', 'email isActive isEmailVerified createdAt')
+        .sort({ createdAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Brand.countDocuments(query),
+      Creator.countDocuments({}),
+      Brand.countDocuments({}),
+    ]);
+
+    res.json({
+      brands,
+      total,
+      pagination: { page, hasMore: skip + brands.length < total },
+      overall: { creators: overallCreators, brands: overallBrands },
+    });
   } catch (error) {
     console.error('getAllBrands error:', error.message);
     res.status(500).json({ message: 'Server error' });
