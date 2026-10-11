@@ -36,16 +36,16 @@ const getCategoryLabel = (cat) => {
 };
 
 const slides = [
-  { src: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&q=80' },
-  { src: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80' },
-  { src: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&q=80' },
+  { src: '/hero/brand-1.webp' },
+  { src: '/hero/brand-2.webp' },
+  { src: '/hero/brand-3.webp' },
 ];
 
 const tips = [
-  { src: 'https://images.unsplash.com/photo-1542744094-24638eff58bb?w=400&q=80', emoji: '📝', title: 'Write a Clear Brief', desc: 'Creators perform 2x better when they have detailed campaign briefs.' },
-  { src: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&q=80', emoji: '💰', title: 'Set Realistic Budgets', desc: 'Fair pay attracts quality creators who are invested in your brand.' },
-  { src: 'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=400&q=80', emoji: '📊', title: 'Check Engagement Rate', desc: 'A creator with 10K engaged followers beats 100K passive ones.' },
-  { src: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=400&q=80', emoji: '🤝', title: 'Build Long-term Ties', desc: 'Repeat collaborations drive 3x more trust with audiences.' },
+  { src: '/hero/brand-tip-1.webp', emoji: '📝', title: 'Write a Clear Brief', desc: 'Creators perform 2x better when they have detailed campaign briefs.' },
+  { src: '/hero/brand-tip-2.webp', emoji: '💰', title: 'Set Realistic Budgets', desc: 'Fair pay attracts quality creators who are invested in your brand.' },
+  { src: '/hero/brand-tip-3.webp', emoji: '📊', title: 'Check Engagement Rate', desc: 'A creator with 10K engaged followers beats 100K passive ones.' },
+  { src: '/hero/brand-tip-4.webp', emoji: '🤝', title: 'Build Long-term Ties', desc: 'Repeat collaborations drive 3x more trust with audiences.' },
 ];
 
 const Carousel = ({ height = 'h-full' }) => {
@@ -55,8 +55,12 @@ const Carousel = ({ height = 'h-full' }) => {
     return () => clearInterval(t);
   }, []);
   return (
-    <div className={`relative ${height} rounded-3xl overflow-hidden select-none`}>
-      <img src={slides[current].src} alt="slide" className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700" />
+    <div className={`relative ${height} rounded-3xl overflow-hidden select-none`} style={{ backgroundColor: '#101828' }}>
+      {slides.map((s, i) => (
+        <img key={s.src} src={s.src} alt="" width="1200" height="900" decoding="async"
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+          style={{ opacity: i === current ? 1 : 0 }} />
+      ))}
       <div className="absolute bottom-0 left-0 right-0 h-16" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 100%)' }} />
       <div className="absolute bottom-4 left-5 flex gap-2">
         {slides.map((_, i) => (
@@ -99,6 +103,11 @@ const BrandHome = () => {
   const [loading, setLoading] = useState(true);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
+
+  // start downloading the hero pictures right away, in parallel with the profile request
+  useEffect(() => {
+    slides.forEach((s) => { const img = new Image(); img.src = s.src; });
+  }, []);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -164,7 +173,7 @@ const BrandHome = () => {
             </div>
           </div>
 
-                    <div className="bg-white px-4 pt-4 pb-24 space-y-6">
+          <div className="bg-white px-4 pt-4 pb-24 space-y-6">
             {/* active collaboration — only takes space if one exists */}
             <ActiveCollabCard />
             {/* active campaigns row */}
@@ -196,7 +205,7 @@ const BrandHome = () => {
               <div className="flex gap-3 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
                 {tips.map((tip, i) => (
                   <div key={i} className="flex-shrink-0 w-44 rounded-2xl overflow-hidden" style={{ border: '1.5px solid #F0F0F0', boxShadow: '0 2px 0 0 #E5E5E5' }}>
-                    <div className="h-28 overflow-hidden"><img src={tip.src} alt={tip.title} className="w-full h-full object-cover" /></div>
+                    <div className="h-28 overflow-hidden"><img src={tip.src} alt={tip.title} loading="lazy" decoding="async" className="w-full h-full object-cover" /></div>
                     <div className="p-3 bg-white">
                       <div className="text-lg mb-1">{tip.emoji}</div>
                       <div className="font-black text-xs" style={{ color: '#101828' }}>{tip.title}</div>
@@ -209,7 +218,7 @@ const BrandHome = () => {
 
             {/* banner */}
             <div className="rounded-3xl overflow-hidden relative" style={{ backgroundColor: '#101828' }}>
-              <img src="https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&q=80" alt="brand collab" className="absolute inset-0 w-full h-full object-cover opacity-20" />
+              <img src="/hero/brand-banner.webp" loading="lazy" decoding="async" alt="brand collab" className="absolute inset-0 w-full h-full object-cover opacity-20" />
               <div className="relative z-10 p-6">
                 <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: 'rgba(255,255,255,0.5)' }}>Your brand deserves the best 🏆</div>
                 <h2 className="text-xl font-black text-white leading-tight mb-2">Launch your next viral campaign today 🚀</h2>
@@ -235,7 +244,7 @@ const BrandHome = () => {
               </div>
             </div>
 
-                     {/* Featured Creators (60%) + Active Collaboration (40%) — separate cards, matched height */}
+            {/* Featured Creators (60%) + Active Collaboration (40%) — separate cards, matched height */}
             <div className="mt-12 grid gap-5" style={{ gridTemplateColumns: '60% 40%' }}>
               {/* creators card */}
               <div className="rounded-3xl overflow-hidden p-6 min-w-0 flex flex-col" style={{ border: '1.5px solid #F0F0F0', boxShadow: '0 4px 0 0 #E5E5E5' }}>
@@ -247,18 +256,18 @@ const BrandHome = () => {
                 </div>
                 <CreatorCards size="md" />
               </div>
-            {/* active collaboration — permanently occupies this slot on desktop, even when empty */}
-<div className="min-w-0 flex flex-col">
-  <ActiveCollabCard
-    emptyState={
-      <div className="rounded-3xl flex-1 flex flex-col items-center justify-center text-center p-8" style={{ border: '1.5px dashed #E5E7EB', backgroundColor: '#FAFAFA' }}>
-        <div className="text-2xl mb-2">🤝</div>
-        <div className="text-sm font-black" style={{ color: '#101828' }}>No active collaboration</div>
-        <div className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Once a creator sends a payment request and you pay, it'll show up here.</div>
-      </div>
-    }
-  />
-</div>
+              {/* active collaboration — permanently occupies this slot on desktop, even when empty */}
+              <div className="min-w-0 flex flex-col">
+                <ActiveCollabCard
+                  emptyState={
+                    <div className="rounded-3xl flex-1 flex flex-col items-center justify-center text-center p-8" style={{ border: '1.5px dashed #E5E7EB', backgroundColor: '#FAFAFA' }}>
+                      <div className="text-2xl mb-2">🤝</div>
+                      <div className="text-sm font-black" style={{ color: '#101828' }}>No active collaboration</div>
+                      <div className="text-xs mt-1" style={{ color: '#9CA3AF' }}>Once a creator sends a payment request and you pay, it'll show up here.</div>
+                    </div>
+                  }
+                />
+              </div>
             </div>
 
             <div className="mt-12">
@@ -269,7 +278,7 @@ const BrandHome = () => {
               <div className="grid grid-cols-4 gap-4">
                 {tips.map((tip, i) => (
                   <div key={i} className="rounded-3xl overflow-hidden cursor-pointer transition-transform hover:scale-95" style={{ border: '1.5px solid #F0F0F0', boxShadow: '0 4px 0 0 #E5E5E5' }}>
-                    <div className="h-36 overflow-hidden"><img src={tip.src} alt={tip.title} className="w-full h-full object-cover" /></div>
+                    <div className="h-36 overflow-hidden"><img src={tip.src} alt={tip.title} loading="lazy" decoding="async" className="w-full h-full object-cover" /></div>
                     <div className="p-4 bg-white">
                       <div className="text-2xl mb-2">{tip.emoji}</div>
                       <div className="font-black text-sm mb-1" style={{ color: '#101828' }}>{tip.title}</div>
@@ -282,7 +291,7 @@ const BrandHome = () => {
             </div>
 
             <div className="mt-12 rounded-3xl overflow-hidden relative" style={{ backgroundColor: '#101828' }}>
-              <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&q=80" alt="brand campaign" className="absolute inset-0 w-full h-full object-cover opacity-25" />
+              <img src="/hero/brand-banner.webp" loading="lazy" decoding="async" alt="brand campaign" className="absolute inset-0 w-full h-full object-cover opacity-25" />
               <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(16,24,40,0.95) 40%, rgba(16,24,40,0.4) 100%)' }} />
               <div className="relative z-10 p-10">
                 <div className="text-xs font-black uppercase tracking-widest mb-3" style={{ color: 'rgba(255,255,255,0.5)' }}>Your brand deserves the best 🏆</div>

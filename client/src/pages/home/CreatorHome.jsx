@@ -39,17 +39,17 @@ const getCategoryLabel = (cat) => {
 
 
 const slides = [
-  { src: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=800&q=80' },
-  { src: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&q=80' },
-  { src: 'https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&q=80' },
+  { src: '/hero/creator-1.webp' },
+  { src: '/hero/creator-2.webp' },
+  { src: '/hero/creator-3.webp' },
 ];
 
 const tips = [
-  { src: 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?w=400&q=80', emoji: '⏰', title: 'Post at Peak Hours', desc: 'Reels posted between 7–9pm get 3x more reach on weekdays.' },
-  { src: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&q=80', emoji: '🎯', title: 'Niche = More Money', desc: 'Focused creators earn 2x more per post than general ones.' },
-  { src: 'https://images.unsplash.com/photo-1611926653458-09294b3142bf?w=400&q=80', emoji: '💬', title: 'Reply to Comments', desc: 'Engagement in the first hour boosts your reach on the feed.' },
-  { src: 'https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=400&q=80', emoji: '📊', title: 'Track Your Stats', desc: 'Creators who track analytics consistently grow 40% faster.' },
-];
+  { src: '/hero/tip-1.webp', emoji: '⏰', title: 'Post at Peak Hours', desc: 'Reels posted between 7–9pm get 3x more reach on weekdays.' },
+  { src: '/hero/tip-2.webp', emoji: '🎯', title: 'Niche = More Money', desc: 'Focused creators earn 2x more per post than general ones.' },
+  { src: '/hero/tip-3.webp', emoji: '💬', title: 'Reply to Comments', desc: 'Engagement in the first hour boosts your reach on the feed.' },
+  { src: '/hero/tip-4.webp', emoji: '📊', title: 'Track Your Stats', desc: 'Creators who track analytics consistently grow 40% faster.' },
+]
 
 
 // ─── CAROUSEL ─────────────────────────────────────────────────────────────────
@@ -60,8 +60,12 @@ const Carousel = ({ height = 'h-full' }) => {
     return () => clearInterval(t);
   }, []);
   return (
-    <div className={`relative ${height} overflow-hidden select-none`} style={{ borderRadius: '20px' }}>
-      <img src={slides[current].src} alt="slide" className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700" />
+    <div className={`relative ${height} overflow-hidden select-none`} style={{ borderRadius: '20px', backgroundColor: '#101828' }}>
+      {slides.map((s, i) => (
+        <img key={s.src} src={s.src} alt="" width="1200" height="900" decoding="async"
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
+          style={{ opacity: i === current ? 1 : 0 }} />
+      ))}
       <div className="absolute bottom-0 left-0 right-0 h-16" style={{ background: 'linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 100%)' }} />
       <div className="absolute bottom-4 left-4 flex gap-1.5">
         {slides.map((_, i) => (
@@ -169,6 +173,11 @@ const CreatorHome = () => {
   const [showGenderMigration, setShowGenderMigration] = useState(false);
   const [connectingInstagram, setConnectingInstagram] = useState(false);
 
+  // start downloading the hero pictures right away, in parallel with the profile request
+  useEffect(() => {
+    slides.forEach((s) => { const img = new Image(); img.src = s.src; });
+  }, []);
+
   const handleInstagramConnect = async () => {
     setConnectingInstagram(true);
     try {
@@ -264,12 +273,12 @@ const CreatorHome = () => {
           </div>
         </div>
 
-               {/* white card slides up */}
+        {/* white card slides up */}
         <div style={{ backgroundColor: 'white', borderRadius: '28px 28px 0 0', padding: '24px 16px 100px', marginTop: '-28px', position: 'relative', zIndex: 2 }}>
           {/* active collaboration — only renders if one exists */}
-          
-            <ActiveCollabCard />
-          
+
+          <ActiveCollabCard />
+
           {/* instagram panel */}
           <div style={{ marginBottom: '24px' }}>
             <InstagramPanel ig={ig} onConnect={handleInstagramConnect} connecting={connectingInstagram} />
@@ -286,7 +295,7 @@ const CreatorHome = () => {
             </div>
             <CategoryGrid onCategoryClick={handleCategoryClick} />
           </div>
-        
+
           {/* creator academy */}
           <div style={{ marginBottom: '24px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, color: '#155DFC', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '4px' }}>Creator Academy</div>
@@ -295,7 +304,7 @@ const CreatorHome = () => {
               {tips.map((tip, i) => (
                 <div key={i} className="flex-shrink-0" style={{ width: '150px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                   <div style={{ height: '90px', overflow: 'hidden' }}>
-                    <img src={tip.src} alt={tip.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={tip.src} alt={tip.title} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                   <div style={{ padding: '10px' }}>
                     <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
@@ -311,7 +320,7 @@ const CreatorHome = () => {
 
           {/* motivational banner */}
           <div style={{ backgroundColor: '#101828', borderRadius: '20px', overflow: 'hidden', position: 'relative', padding: '24px 20px' }}>
-            <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80" alt="creators"
+            <img src="/hero/creator-banner.webp" loading="lazy" decoding="async" alt="creators"
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.15 }} />
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>You've got this</div>
@@ -335,7 +344,7 @@ const CreatorHome = () => {
             <div style={{ minHeight: '400px' }}>
               <Carousel height="h-full" />
             </div>
-                       <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-4">
               <div className="flex-1">
                 <InstagramPanel ig={ig} onConnect={handleInstagramConnect} connecting={connectingInstagram} />
               </div>
@@ -411,7 +420,7 @@ const CreatorHome = () => {
                 <div key={i} className="cursor-pointer transition-transform hover:scale-95"
                   style={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                   <div style={{ height: '140px', overflow: 'hidden' }}>
-                    <img src={tip.src} alt={tip.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={tip.src} alt={tip.title} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                   <div style={{ padding: '16px' }}>
                     <div style={{ fontSize: '24px', marginBottom: '8px' }}>{tip.emoji}</div>
@@ -426,7 +435,7 @@ const CreatorHome = () => {
 
           {/* banner */}
           <div style={{ marginTop: '48px', backgroundColor: '#101828', borderRadius: '24px', overflow: 'hidden', position: 'relative' }}>
-            <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&q=80" alt="creators"
+            <img src="/hero/creator-banner.webp" loading="lazy" decoding="async" alt="creators"
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.2 }} />
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(90deg, rgba(16,24,40,0.95) 40%, rgba(16,24,40,0.4) 100%)' }} />
             <div style={{ position: 'relative', zIndex: 1, padding: '48px' }}>

@@ -5,12 +5,14 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminChatList from './pages/admin/AdminChatList';
 import AdminChatWindow from './pages/admin/AdminChatWindow';
+import PrivacyPolicy from './pages/PrivacyPolicy'; // use the path where you saved the file
 
 const MessagesPage = lazy(() => import('./pages/messages/MessagesPage'));
 const ChatWindow = lazy(() => import('./pages/messages/ChatWindow'));
 const ContactHelp = lazy(() => import('./pages/ContactHelp'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const CollaborationHistoryPage = lazy(() => import('./pages/CollaborationHistoryPage'));
+
 
 
 // auth
@@ -70,6 +72,7 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
 
             {/* instagram oauth callback */}
             <Route path="/auth/instagram/callback" element={<InstagramCallback />} />
@@ -168,7 +171,6 @@ const App = () => {
             <Route path="/admin/chat/:id" element={
               <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminChatWindow /></ProtectedRoute>
             } />
-
 
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
