@@ -99,7 +99,7 @@ const getOpeningApplicants = async (req, res) => {
     const applications = await Application.find({
       openingId: req.params.openingId,
     })
-      .populate('creatorId', 'name profilePhoto instagram categories pricing location barterEnabled isOpenForCollab isAdminVerified')
+      .populate('creatorId', 'name profilePhoto instagram.handle instagram.isConnected instagram.isManuallyAdded instagram.followersCount instagram.avgReach instagram.avgLikes instagram.avgViews instagram.avgComments instagram.avgSaved instagram.avgShares instagram.engagementRate instagram.lastSynced categories pricing location barterEnabled isOpenForCollab isAdminVerified')
       .sort({ createdAt: -1 });
 
     res.json({ applications, opening });

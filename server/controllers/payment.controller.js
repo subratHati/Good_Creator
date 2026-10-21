@@ -232,7 +232,7 @@ const releasePayment = async (req, res) => {
     // get creator bank details
     const conversation = await Conversation.findById(conversationId);
     const creator = await Creator.findById(conversation.creatorId)
-      .select('name bankDetails instagram userId');
+      .select('name userId');
 
     // send payment released message
     const releaseMessage = await Message.create({

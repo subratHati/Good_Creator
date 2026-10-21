@@ -77,7 +77,7 @@ const updateProfile = async (req, res) => {
 // GET /api/creators/:id  (public)
 const getPublicProfile = async (req, res) => {
   try {
-    const creator = await Creator.findById(req.params.id).select('-instagram.accessToken');
+    const creator = await Creator.findById(req.params.id).select('-instagram.accessToken -bankDetails');
     if (!creator) {
       return res.status(404).json({ message: 'Creator not found' });
     }
@@ -141,7 +141,7 @@ const searchCreators = async (req, res) => {
       };
       const [creators, total] = await Promise.all([
         Creator.find(query)
-          .select('-instagram.accessToken')
+          .select('-instagram.accessToken -bankDetails')
           .sort(sortOptions[sortBy])
           .skip(skip)
           .limit(Number(limit)),

@@ -113,7 +113,7 @@ const saveCreator = async (req, res) => {
 const getSavedCreators = async (req, res) => {
   try {
     const brand = await Brand.findOne({ userId: req.user.id })
-      .populate('savedCreators', 'name profilePhoto instagram categories pricing location isOpenForCollab barterEnabled isAdminVerified');
+      .populate('savedCreators', 'name profilePhoto instagram.handle instagram.isConnected instagram.isManuallyAdded instagram.followersCount instagram.avgReach instagram.avgLikes instagram.avgViews instagram.avgComments instagram.avgSaved instagram.avgShares instagram.engagementRate instagram.lastSynced categories pricing location isOpenForCollab barterEnabled isAdminVerified');
 
     if (!brand) {
       return res.status(404).json({ message: 'Brand profile not found' });

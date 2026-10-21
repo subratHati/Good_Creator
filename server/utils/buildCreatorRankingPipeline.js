@@ -69,17 +69,17 @@ const buildCreatorRankingPipeline = ({ matchQuery, brandCategory, brandCity, bra
           : 0,
         _locationMatch: (brandCity || brandState)
           ? {
-              $cond: [
-                {
-                  $or: [
-                    brandCity ? { $eq: ['$location.city', brandCity] } : false,
-                    brandState ? { $eq: ['$location.state', brandState] } : false,
-                  ],
-                },
-                1,
-                0,
-              ],
-            }
+            $cond: [
+              {
+                $or: [
+                  brandCity ? { $eq: ['$location.city', brandCity] } : false,
+                  brandState ? { $eq: ['$location.state', brandState] } : false,
+                ],
+              },
+              1,
+              0,
+            ],
+          }
           : 0,
       },
     },
@@ -173,6 +173,7 @@ const buildCreatorRankingPipeline = ({ matchQuery, brandCategory, brandCity, bra
     {
       $project: {
         'instagram.accessToken': 0,
+        bankDetails: 0,
         _categoryMatch: 0,
         _locationMatch: 0,
         _matchCount: 0,

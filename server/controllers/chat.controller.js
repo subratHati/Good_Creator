@@ -42,7 +42,7 @@ const getConversations = async (req, res) => {
       if (!brand) return res.json({ conversations: [] });
 
       conversations = await Conversation.find({ brandId: brand._id, ...HAS_MESSAGES })
-        .populate('creatorId', 'name profilePhoto instagram categories')
+        .populate('creatorId', 'name profilePhoto instagram.handle instagram.isConnected instagram.followersCount instagram.engagementRate categories')
         .sort({ lastMessageAt: -1 });
 
       conversations = conversations.map(c => ({
@@ -100,7 +100,7 @@ const getOrCreateConversation = async (req, res) => {
     // populate for response
     conversation = await Conversation.findById(conversation._id)
       .populate('brandId', 'brandName logo category')
-      .populate('creatorId', 'name profilePhoto instagram categories');
+      .populate('creatorId', 'name profilePhoto instagram.handle instagram.isConnected instagram.followersCount instagram.engagementRate categories');
 
     res.json({ conversation });
   } catch (error) {
