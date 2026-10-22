@@ -43,8 +43,22 @@ const useNotifications = ({ limit = 10, pollIntervalMs = 60000 } = {}) => {
   useEffect(() => {
     fetchNotifications();
     if (!pollIntervalMs) return;
-    const interval = setInterval(fetchNotifications, pollIntervalMs);
-    return () => clearInterval(interval);
+
+    // don't poll while the tab is in the background
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchNotifications();
+    }, pollIntervalMs);
+
+    // catch up as soon as the user returns to the tab
+    const onVisible = () => {
+      if (!document.hidden) fetchNotifications();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [fetchNotifications, pollIntervalMs]);
 
   return { notifications, loading, refetch: fetchNotifications };

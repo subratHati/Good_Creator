@@ -54,39 +54,41 @@ const CreatorShareCard = ({ share }) => (
   </a>
 );
 
-const CampaignShareCard = ({ share }) => (
-  <a
-    href={`/openings/${share.openingId}`}
-    target="_blank"
-    rel="noreferrer"
-    className="block w-[260px] rounded-2xl overflow-hidden bg-white border hover:bg-gray-50 transition-colors"
-    style={{ borderColor: '#E5E7EB' }}
-  >
-    <div className="flex items-center gap-3 p-3">
-      <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
-        {share.brandLogo ? <img src={share.brandLogo} alt="" className="w-full h-full object-cover" /> : <Briefcase size={18} color="#92400E" />}
+const CampaignShareCard = ({ share }) => {
+  const navigate = useNavigate();
+  return (
+    <a
+      href={`/openings/${share.openingId}`}
+      onClick={(e) => { e.preventDefault(); navigate(`/openings/${share.openingId}`); }}
+      className="block w-[260px] rounded-2xl overflow-hidden bg-white border hover:bg-gray-50 transition-colors"
+      style={{ borderColor: '#E5E7EB' }}
+    >
+      <div className="flex items-center gap-3 p-3">
+        <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: '#FEF3C7' }}>
+          {share.brandLogo ? <img src={share.brandLogo} alt="" className="w-full h-full object-cover" /> : <Briefcase size={18} color="#92400E" />}
+        </div>
+        <div className="min-w-0">
+          <div className="font-black text-sm truncate" style={{ color: '#101828' }}>{share.title}</div>
+          <div className="text-xs truncate" style={{ color: '#9CA3AF' }}>{share.brandName}</div>
+        </div>
       </div>
-      <div className="min-w-0">
-        <div className="font-black text-sm truncate" style={{ color: '#101828' }}>{share.title}</div>
-        <div className="text-xs truncate" style={{ color: '#9CA3AF' }}>{share.brandName}</div>
+      <div className="px-3 pb-3">
+        <div className="rounded-lg p-2.5 flex items-center justify-center gap-1" style={{ backgroundColor: '#F0FDF4' }}>
+          {share.isBarter ? (
+            <span className="text-xs font-black" style={{ color: '#166534' }}>Barter collab</span>
+          ) : (
+            <>
+              <IndianRupee size={12} color="#166534" />
+              <span className="text-xs font-black" style={{ color: '#166534' }}>
+                {share.budgetMin?.toLocaleString('en-IN')} – {share.budgetMax?.toLocaleString('en-IN')}
+              </span>
+            </>
+          )}
+        </div>
       </div>
-    </div>
-    <div className="px-3 pb-3">
-      <div className="rounded-lg p-2.5 flex items-center justify-center gap-1" style={{ backgroundColor: '#F0FDF4' }}>
-        {share.isBarter ? (
-          <span className="text-xs font-black" style={{ color: '#166534' }}>Barter collab</span>
-        ) : (
-          <>
-            <IndianRupee size={12} color="#166534" />
-            <span className="text-xs font-black" style={{ color: '#166534' }}>
-              {share.budgetMin?.toLocaleString('en-IN')} – {share.budgetMax?.toLocaleString('en-IN')}
-            </span>
-          </>
-        )}
-      </div>
-    </div>
-  </a>
-);
+    </a>
+  );
+}
 
 const CreatorPickerModal = ({ onClose, onPick }) => {
   const [query, setQuery] = useState('');
@@ -241,7 +243,7 @@ const CampaignPickerModal = ({ onClose, onPick }) => {
 };
 
 const AdminChatWindow = () => {
-  const { conversationId } = useParams();
+  const { id: conversationId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
@@ -320,21 +322,28 @@ const AdminChatWindow = () => {
   };
 
   return (
-    <div className="flex flex-col bg-gray-50" style={{ height: '100dvh' }}>
+    <div
+      className={`flex flex-col bg-gray-50 ${user?.role === 'admin' ? '' : 'pb-[calc(60px_+_env(safe-area-inset-bottom))] md:pb-0'}`}
+      style={{ height: '100dvh' }}
+    >
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 flex-shrink-0">
-        <button onClick={() => navigate('/admin/chat')} className="p-1 text-gray-500 hover:text-gray-700">
+        <button onClick={() => navigate(user?.role === 'admin' ? '/admin/chat' : '/messages')} className="p-1 text-gray-500 hover:text-gray-700">
           <ArrowLeft size={20} />
         </button>
         <div className="flex-1 min-w-0">
           <div className="font-bold text-sm" style={{ color: '#101828' }}>
-            {conversation?.userRole === 'creator' ? 'Creator' : 'Brand'} conversation
+            {user?.role === 'admin'
+              ? `${conversation?.userRole === 'creator' ? 'Creator' : 'Brand'} conversation`
+              : 'GoodCreator Team'}
           </div>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {messages.map((m) => {
-          const isAdmin = m.senderRole === 'admin';
+          // "isAdmin" here really means "is my own message": admin sees admin messages
+          // on the right, everyone else sees their own (non-admin) messages on the right
+          const isAdmin = user?.role === 'admin' ? m.senderRole === 'admin' : m.senderRole !== 'admin';
           return (
             <div key={m._id} className={`flex mb-3 ${isAdmin ? 'justify-end' : 'justify-start'}`}>
               {m.type === 'creator_share' && m.creatorShare ? (
@@ -355,24 +364,29 @@ const AdminChatWindow = () => {
 
       {user?.role === 'admin' && (
         <div className="bg-white border-t border-gray-100 px-4 py-2.5 flex gap-2 flex-shrink-0">
-          <button
-            onClick={() => setShowCreatorPicker(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ backgroundColor: '#F8FAFC', color: '#101828', border: '1.5px solid #E5E7EB' }}
-          >
-            <Users size={15} /> Share Creator
-          </button>
-          <button
-            onClick={() => setShowCampaignPicker(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
-            style={{ backgroundColor: '#F8FAFC', color: '#101828', border: '1.5px solid #E5E7EB' }}
-          >
-            <Briefcase size={15} /> Share Campaign
-          </button>
+          {/* brands get creator profiles; creators get campaigns. Never the other way round. */}
+          {conversation?.userRole === 'brand' && (
+            <button
+              onClick={() => setShowCreatorPicker(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{ backgroundColor: '#F8FAFC', color: '#101828', border: '1.5px solid #E5E7EB' }}
+            >
+              <Users size={15} /> Share Creator
+            </button>
+          )}
+          {conversation?.userRole === 'creator' && (
+            <button
+              onClick={() => setShowCampaignPicker(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+              style={{ backgroundColor: '#F8FAFC', color: '#101828', border: '1.5px solid #E5E7EB' }}
+            >
+              <Briefcase size={15} /> Share Campaign
+            </button>
+          )}
         </div>
       )}
 
-      <div className="bg-white border-t border-gray-200 px-4 py-3 flex items-end gap-3 flex-shrink-0" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
+      <div className="bg-white border-t border-gray-200 px-4 py-3 flex items-end gap-3 flex-shrink-0" style={{ paddingBottom: user?.role === 'admin' ? 'calc(env(safe-area-inset-bottom) + 16px)' : '12px' }}>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}

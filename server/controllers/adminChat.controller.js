@@ -238,6 +238,9 @@ const sendAdminMessage = async (req, res) => {
 
     if (type === 'creator_share') {
       if (!isAdmin) return res.status(403).json({ message: 'Only admin can share a creator profile' });
+      if (conversation.userRole !== 'brand') {
+        return res.status(400).json({ message: 'Creator profiles can only be shared with brands' });
+      }
       const creator = await Creator.findById(creatorIdToShare)
         .select('name profilePhoto instagram.followersCount instagram.engagementRate instagram.avgViews');
       if (!creator) return res.status(404).json({ message: 'Creator not found' });
@@ -252,6 +255,9 @@ const sendAdminMessage = async (req, res) => {
       lastMessageText = `👤 Shared creator: ${creator.name}`;
     } else if (type === 'campaign_share') {
       if (!isAdmin) return res.status(403).json({ message: 'Only admin can share a campaign' });
+      if (conversation.userRole !== 'creator') {
+        return res.status(400).json({ message: 'Campaigns can only be shared with creators' });
+      }
       const opening = await Opening.findById(openingIdToShare).populate('brandId', 'brandName logo');
       if (!opening) return res.status(404).json({ message: 'Campaign not found' });
       messageData.campaignShare = {

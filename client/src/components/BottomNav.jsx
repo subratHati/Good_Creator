@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
-import { getUnreadCount } from '../api/chat';
+import useUnreadMessages from '../hooks/useUnreadMessages';
 import { getMyCreatorProfile } from '../api/creator';
 import { getMyBrandProfile } from '../api/brand';
 
@@ -54,24 +54,11 @@ const BottomNav = () => {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useUnreadMessages(!!user && user.role !== 'admin');
   const [profileExists, setProfileExists] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
-    const fetchUnread = async () => {
-      try {
-        const res = await getUnreadCount();
-        setUnreadCount(res.data.unreadCount);
-      } catch { }
-    };
-    fetchUnread();
-    const interval = setInterval(fetchUnread, 5000);
-    return () => clearInterval(interval);
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
+    if (!user || user.role === 'admin') return;
     const check = async () => {
       try {
         if (user.role === 'creator') await getMyCreatorProfile();
@@ -90,7 +77,7 @@ const BottomNav = () => {
     return () => window.removeEventListener('profileCreated', handler);
   }, []);
 
-  if (!user) return null;
+  if (!user || user.role === 'admin') return null;
   if (!profileExists) return null;
 
   const creatorTabs = [

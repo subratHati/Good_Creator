@@ -6,6 +6,8 @@ import useAuth from '../../hooks/useAuth';
 import { io } from 'socket.io-client';
 import useCreatorProfileGuard from '../../hooks/useCreatorProfileGuard';
 import { getMyAdminConversation } from '../../api/adminChat';
+import { getMyAssistantConversation } from '../../api/assistant';
+import { AssistantLogo, AiTag, VerifiedTick } from '../../components/assistant/AssistantUI';
 
 const formatTime = (date) => {
   if (!date) return '';
@@ -45,17 +47,21 @@ const MessagesPage = () => {
   const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
   const [adminConversation, setAdminConversation] = useState(null);
+  const [assistantConversation, setAssistantConversation] = useState(null);
 
   useEffect(() => {
     const fetch = async () => {
       try {
-        const [convRes, adminRes] = await Promise.allSettled([
+        const [convRes, adminRes, aiRes] = await Promise.allSettled([
           getConversations(),
           getMyAdminConversation(),
+          getMyAssistantConversation(),
         ]);
         if (convRes.status === 'fulfilled') setConversations(convRes.value.data.conversations);
         if (adminRes.status === 'fulfilled') setAdminConversation(adminRes.value.data.conversation);
-      } catch {
+        if (aiRes.status === 'fulfilled') setAssistantConversation(aiRes.value.data.conversation);
+      } catch (e) {
+        console.error('Messages load error:', e);
         setConversations([]);
       } finally {
         setLoading(false);
@@ -126,7 +132,17 @@ const MessagesPage = () => {
       __sortTime: adminConversation.lastMessageAt,
       unreadCount: adminConversation.unreadByUser || 0,
     }] : []),
-  ].sort((a, b) => new Date(b.__sortTime) - new Date(a.__sortTime));
+    ...(assistantConversation ? [{
+      ...assistantConversation,
+      __isAssistant: true,
+      __sortTime: assistantConversation.lastMessageAt,
+      unreadCount: assistantConversation.unreadByUser || 0,
+    }] : []),
+  ].sort((a, b) => {
+    // the AI assistant is always pinned to the top
+    if (a.__isAssistant !== b.__isAssistant) return a.__isAssistant ? -1 : 1;
+    return new Date(b.__sortTime) - new Date(a.__sortTime);
+  });
 
   const getOtherParty = (conv) => {
     if (user.role === 'brand') {
@@ -190,35 +206,47 @@ const MessagesPage = () => {
         ) : (
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             {mergedList.map((conv, index) => {
-              const other = conv.__isAdmin
-                ? { name: 'GoodCreator Team', photo: null, sub: 'Official' }
-                : getOtherParty(conv);
+              const other = conv.__isAssistant
+                ? { name: 'GoodCreator Assistant', photo: null, sub: 'Official AI assistant' }
+                : conv.__isAdmin
+                  ? { name: 'GoodCreator Team', photo: null, sub: 'Official' }
+                  : getOtherParty(conv);
               const unread = conv.unreadCount > 0;
               return (
                 <div
-                  key={conv.__isAdmin ? `admin_${conv._id}` : conv._id}
-                  onClick={() => navigate(conv.__isAdmin ? `/messages/admin/${conv._id}` : `/messages/${conv._id}`)}
-                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-gray-50 transition-colors ${index !== mergedList.length - 1 ? 'border-b border-gray-100' : ''
+                  key={conv.__isAssistant ? `assistant_${conv._id}` : conv.__isAdmin ? `admin_${conv._id}` : conv._id}
+                  onClick={() => navigate(conv.__isAssistant ? '/messages/assistant' : conv.__isAdmin ? `/messages/admin/${conv._id}` : `/messages/${conv._id}`)}
+                  className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${conv.__isAssistant ? 'ai-row-tint hover:bg-violet-50' : 'hover:bg-gray-50'} ${index !== mergedList.length - 1 ? 'border-b border-gray-100' : ''
                     }`}
                 >
                   {/* avatar */}
                   <div className="relative flex-shrink-0">
-                    <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-lg" style={{ background: conv.__isAdmin ? 'linear-gradient(135deg, #155DFC, #0C3EB5)' : 'linear-gradient(135deg, #60A5FA, #2563EB)' }}>
-                      {other.photo
-                        ? <img src={other.photo} alt={other.name} className="w-full h-full object-cover" />
-                        : conv.__isAdmin ? '✓' : other.name?.[0]?.toUpperCase()
-                      }
-                    </div>
+                    {conv.__isAssistant ? (
+                      <AssistantLogo size={48} glow verified />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-lg" style={{ background: conv.__isAdmin ? 'linear-gradient(135deg, #155DFC, #0C3EB5)' : 'linear-gradient(135deg, #60A5FA, #2563EB)' }}>
+                        {other.photo
+                          ? <img src={other.photo} alt={other.name} className="w-full h-full object-cover" />
+                          : conv.__isAdmin ? '✓' : other.name?.[0]?.toUpperCase()
+                        }
+                      </div>
+                    )}
                     {unread && (
-                      <div className="absolute top-0 right-0 w-3 h-3 bg-blue-600 rounded-full border-2 border-white" />
+                      <div className={`absolute top-0 right-0 w-3 h-3 rounded-full border-2 border-white ${conv.__isAssistant ? 'bg-fuchsia-500' : 'bg-blue-600'}`} />
                     )}
                   </div>
 
                   {/* content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <span className={`text-sm ${unread ? 'font-bold text-gray-900' : 'font-semibold text-gray-900'}`}>
+                      <span className={`flex items-center gap-1.5 text-sm ${unread ? 'font-bold text-gray-900' : 'font-semibold text-gray-900'}`}>
                         {other.name}
+                        {conv.__isAssistant && (
+                          <>
+                            <VerifiedTick size={14} />
+                            <AiTag />
+                          </>
+                        )}
                       </span>
                       <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
                         {formatTime(conv.lastMessageAt)}

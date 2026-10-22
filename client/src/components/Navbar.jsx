@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronDown, User, LogOut, Settings, Bookmark } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import NotificationBell from './NotificationBell';
-import { getUnreadCount } from '../api/chat';
+import useUnreadMessages from '../hooks/useUnreadMessages';
 import toast from 'react-hot-toast';
 
 const LogoutConfirmModal = ({ onConfirm, onCancel }) => (
@@ -40,22 +40,8 @@ const Navbar = () => {
   const location = useLocation();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useUnreadMessages(!!user && user.role !== 'admin');
   const dropdownRef = useRef(null);
-
-  // fetch unread count
-  useEffect(() => {
-    if (!user) return;
-    const fetchUnread = async () => {
-      try {
-        const res = await getUnreadCount();
-        setUnreadCount(res.data.unreadCount);
-      } catch { }
-    };
-    fetchUnread(); 
-    const interval = setInterval(fetchUnread, 5000);
-    return () => clearInterval(interval);
-  }, [user]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {

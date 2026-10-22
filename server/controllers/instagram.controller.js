@@ -32,6 +32,8 @@ const calculateReelMetrics = async (igUserId, accessToken) => {
     console.log('[METRICS] Reels only:', reelsOnly.length);
     const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
     const eligibleReels = reelsOnly.filter(p => new Date(p.timestamp) < fortyEightHoursAgo);
+    // newest first, explicitly: never rely on the API's ordering
+    eligibleReels.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     const reelsToAnalyse = eligibleReels.slice(0, 20);
     console.log(`[METRICS] Eligible: ${eligibleReels.length}, Analysing: ${reelsToAnalyse.length}`);
     if (reelsToAnalyse.length === 0) {
@@ -48,20 +50,32 @@ const calculateReelMetrics = async (igUserId, accessToken) => {
           insights[item.name] = item.values?.[0]?.value || item.total_value?.value || 0;
         });
         console.log(`[METRICS] Reel ${post.id}:`, insights);
-        return { ...post, reach: insights.reach || 0, saved: insights.saved || 0, shares: insights.shares || 0, views: insights.views || 0 };
+        return { ...post, reach: insights.reach || 0, saved: insights.saved || 0, shares: insights.shares || 0, views: insights.views || 0, ok: true };
       } catch (err) {
         console.error(`[METRICS] Insight failed ${post.id}:`, err.response?.data || err.message);
-        return { ...post, reach: 0, saved: 0, shares: 0, views: 0 };
+        return { ...post, reach: 0, saved: 0, shares: 0, views: 0, ok: false };
       }
     });
-    const reelsWithInsights = await Promise.all(insightPromises);
-    let tL = 0, tC = 0, tR = 0, tV = 0, tS = 0, tSh = 0;
-    reelsWithInsights.forEach(p => { tL += p.like_count || 0; tC += p.comments_count || 0; tR += p.reach || 0; tV += p.views || 0; tS += p.saved || 0; tSh += p.shares || 0; });
+    const allWithInsights = await Promise.all(insightPromises);
+    // only reels whose insights loaded count; a failed lookup is "unknown", not zero
+    const reelsWithInsights = allWithInsights.filter((p) => p.ok);
+    if (reelsWithInsights.length === 0) {
+      return { avgLikes: 0, avgComments: 0, avgReach: 0, avgViews: 0, avgSaved: 0, avgShares: 0, reelsAnalysed: 0 };
+    }
+    // the MEDIAN reel, not the average: one viral reel can't inflate a creator's numbers
+    const median = (values) => {
+      const s = [...values].sort((a, b) => a - b);
+      const mid = Math.floor(s.length / 2);
+      return Math.round(s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2);
+    };
     const count = reelsWithInsights.length;
     const metrics = {
-      avgLikes: Math.round(tL / count), avgComments: Math.round(tC / count),
-      avgReach: Math.round(tR / count), avgViews: Math.round(tV / count),
-      avgSaved: Math.round(tS / count), avgShares: Math.round(tSh / count),
+      avgLikes: median(reelsWithInsights.map((p) => p.like_count || 0)),
+      avgComments: median(reelsWithInsights.map((p) => p.comments_count || 0)),
+      avgReach: median(reelsWithInsights.map((p) => p.reach || 0)),
+      avgViews: median(reelsWithInsights.map((p) => p.views || 0)),
+      avgSaved: median(reelsWithInsights.map((p) => p.saved || 0)),
+      avgShares: median(reelsWithInsights.map((p) => p.shares || 0)),
       reelsAnalysed: count,
     };
     console.log('[METRICS] Final:', metrics);

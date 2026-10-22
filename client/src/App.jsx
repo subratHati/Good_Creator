@@ -9,6 +9,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy'; // use the path where you sav
 
 const MessagesPage = lazy(() => import('./pages/messages/MessagesPage'));
 const ChatWindow = lazy(() => import('./pages/messages/ChatWindow'));
+const AssistantChatWindow = lazy(() => import('./pages/messages/AssistantChatWindow'));
 const ContactHelp = lazy(() => import('./pages/ContactHelp'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const CollaborationHistoryPage = lazy(() => import('./pages/CollaborationHistoryPage'));
@@ -135,6 +136,13 @@ const App = () => {
             } />
             <Route path="/messages/:id" element={
               <ProtectedRoute><ChatWindow /></ProtectedRoute>
+            } />
+            <Route path="/messages/admin/:id" element={
+              <ProtectedRoute><AdminChatWindow /></ProtectedRoute>
+            } />
+
+            <Route path="/messages/assistant" element={
+              <ProtectedRoute><AssistantChatWindow /></ProtectedRoute>
             } />
 
             <Route path="/contact-help" element={

@@ -4,6 +4,7 @@ dotenv.config();
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const compression = require("compression");
 const connectDB = require("./config/db");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -29,6 +30,7 @@ const analyticsRoutes = require('./routes/analytics.routes');
 const pushRoutes = require('./routes/push.routes');
 const collaborationHistoryRoutes = require('./routes/collaborationHistory.routes');
 const adminChatRoutes = require('./routes/adminChat.routes');
+const assistantRoutes = require('./routes/assistant.routes');
 
 
 
@@ -65,6 +67,7 @@ app.set('trust proxy', 1);
 
 //security
 app.use(helmet());
+app.use(compression());
 
 // rate limit auth routes - max 20 requests per 15 min per IP 
 const authLimiter = rateLimit({
@@ -114,6 +117,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/collaboration-history', collaborationHistoryRoutes);
 app.use('/api/admin-chat', adminChatRoutes);
+app.use('/api/assistant', assistantRoutes);
 
 
 
