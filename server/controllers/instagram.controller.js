@@ -4,7 +4,14 @@ const Brand = require('../models/Brand');
 const { encryptToken, decryptToken } = require('../services/instagram.service');
 const calculateQualityScore = require('../utils/calculateQualityScore');
 
-const calculateEngagementRate = (metrics, followersCount) => {
+const calcEngagementRate = require('../utils/calcEngagementRate');
+
+// reach-based formula (see utils/calcEngagementRate.js); connect and every sync use this
+const calculateEngagementRate = (metrics, followersCount) =>
+  calcEngagementRate({ ...metrics, followersCount });
+
+// old followers-based formula, no longer used (safe to delete)
+const _oldCalculateEngagementRate = (metrics, followersCount) => {
   if (!followersCount) return 0;
   return parseFloat((
     ((metrics.avgLikes + metrics.avgComments + metrics.avgSaved + metrics.avgShares) / followersCount) * 100
