@@ -74,6 +74,83 @@ const CreatorResultCard = ({ card }) => {
     );
 };
 
+const formatMoney = (n) => `₹${Number(n).toLocaleString('en-IN')}`;
+
+const CampaignResultCard = ({ card }) => {
+    const navigate = useNavigate();
+    const open = () => navigate(`/openings/${card.openingId}`);
+    const budget = card.barter
+        ? 'Barter collaboration'
+        : card.budgetMax
+            ? (card.budgetMin && card.budgetMin !== card.budgetMax
+                ? `${formatMoney(card.budgetMin)} – ${formatMoney(card.budgetMax)}`
+                : `Up to ${formatMoney(card.budgetMax)}`)
+            : 'Budget on request';
+    const d = card.deliverables || {};
+    const deliverables = [
+        d.reels > 0 && `${d.reels} Reel${d.reels > 1 ? 's' : ''}`,
+        d.posts > 0 && `${d.posts} Post${d.posts > 1 ? 's' : ''}`,
+        d.stories > 0 && `${d.stories} Stor${d.stories > 1 ? 'ies' : 'y'}`,
+        d.ugc > 0 && `${d.ugc} UGC`,
+    ].filter(Boolean).join(' · ');
+    const hours = card.postedAt ? Math.floor((Date.now() - new Date(card.postedAt).getTime()) / 3600000) : null;
+    const posted = hours === null || Number.isNaN(hours) ? '' : hours < 1 ? 'Posted just now' : hours < 24 ? `Posted ${hours}h ago` : `Posted ${Math.floor(hours / 24)}d ago`;
+    const deadline = card.deadline
+        ? new Date(card.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+        : '';
+    return (
+        <div
+            onClick={open}
+            className="w-[230px] flex-shrink-0 bg-white border rounded-2xl p-3 cursor-pointer hover:shadow-md transition-shadow"
+            style={{ borderColor: '#EAECF0' }}
+        >
+            <div className="flex items-center gap-2 mb-2">
+                <div
+                    className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-white text-xs font-bold"
+                    style={{ backgroundColor: '#155DFC' }}
+                >
+                    {card.brandLogo
+                        ? <img src={card.brandLogo} alt={card.brandName} className="w-full h-full object-cover" />
+                        : card.brandName?.[0]?.toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                    <div className="text-xs font-semibold truncate" style={{ color: '#6B7280' }}>{card.brandName}</div>
+                    {card.place && <div className="text-[10px] truncate" style={{ color: '#9CA3AF' }}>📍 {card.place}</div>}
+                </div>
+            </div>
+            <div
+                className="text-sm font-bold mb-2"
+                style={{ color: '#101828', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}
+            >
+                {card.title}
+            </div>
+            <div className="text-sm font-black mb-1" style={{ color: '#155DFC' }}>{budget}</div>
+            {posted && <div className="text-[11px] mb-1" style={{ color: '#9CA3AF' }}>{posted}</div>}
+            <div className="text-xs mb-2 truncate" style={{ color: '#6B7280' }}>
+                {[deliverables, deadline && `Apply by ${deadline}`].filter(Boolean).join(' · ') || 'Details on the campaign page'}
+            </div>
+            <div className="mb-3">
+                {card.matches ? (
+                    <span className="inline-block rounded-full px-2 py-0.5 text-[11px] font-bold" style={{ backgroundColor: '#DCFCE7', color: '#15803D' }}>
+                        ✓ You match
+                    </span>
+                ) : (
+                    <span className="inline-block rounded-full px-2 py-0.5 text-[11px] font-bold" style={{ backgroundColor: '#FEF3C7', color: '#B45309' }}>
+                        {card.unmet?.[0] || 'Check requirements'}
+                    </span>
+                )}
+            </div>
+            <button
+                onClick={(e) => { e.stopPropagation(); open(); }}
+                className="w-full py-2 rounded-xl text-xs font-bold border cursor-pointer hover:bg-blue-50"
+                style={{ borderColor: '#155DFC', color: '#155DFC', backgroundColor: 'white' }}
+            >
+                View Campaign
+            </button>
+        </div>
+    );
+};
+
 const AssistantChatWindow = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -160,7 +237,9 @@ const AssistantChatWindow = () => {
                                 )}
                                 {!mine && m.cards?.length > 0 && (
                                     <div className="flex gap-3 overflow-x-auto mt-2 pb-1 pl-9 w-full">
-                                        {m.cards.map((c) => <CreatorResultCard key={c.creatorId} card={c} />)}
+                                        {m.cards.map((c) => (c.openingId
+                                            ? <CampaignResultCard key={c.openingId} card={c} />
+                                            : <CreatorResultCard key={c.creatorId} card={c} />))}
                                     </div>
                                 )}
                             </div>

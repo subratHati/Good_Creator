@@ -129,7 +129,7 @@ export function AssistantTyping() {
 export const chipsForRole = (role) =>
     role === 'brand'
         ? ['Find creators for my campaign', 'Show my campaigns', 'How do payouts work?']
-        : ['How do payouts work?', 'How do I get more brand deals?', 'How does GoodCreator work?'];
+        : ['Find campaigns for me', 'Show my applications', 'How do payouts work?'];
 
 export function SuggestionChips({ chips, onPick }) {
     return (

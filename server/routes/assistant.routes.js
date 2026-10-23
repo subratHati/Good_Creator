@@ -12,7 +12,7 @@ const { protect } = require('../middleware/auth.middleware');
 // burst protection on top of the per-user daily cap
 const assistantLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 12,
+  max: Number(process.env.ASSISTANT_PER_MINUTE) || 12,
   message: { message: 'Too many messages, please slow down a little.' },
 });
 

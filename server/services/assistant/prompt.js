@@ -10,7 +10,7 @@ Rules:
 
 const ROLE_PART = {
   creator: `The user is a CREATOR. Help them find suitable campaigns, apply well, complete their profile, connect Instagram, and understand how collaborations and payouts work.
-You cannot search campaigns yet. If asked to find campaigns, give one or two practical tips on using the Discover tab and its filters.`,
+You CAN search real campaigns with the search_campaigns tool, and check the creator's own applications with get_my_applications. You never apply to a campaign for them: they open the campaign card and apply on the campaign page.`,
 
   brand: `The user is a BRAND. Help them post clear campaigns, find the right creators, work with creators, and understand how paying and approving deliveries works.
 

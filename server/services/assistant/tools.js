@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Creator = require('../../models/Creator');
 const Opening = require('../../models/Opening');
 const buildCreatorRankingPipeline = require('../../utils/buildCreatorRankingPipeline');
+const { CREATOR_TOOLS, runCreatorTool } = require('./creatorTools');
 
 const CREATOR_CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'finance', 'entertainment', 'parenting_family', 'vlogging', 'dance', 'religious', 'news_politics', 'video_editing', 'ai_content', 'pets_wildlife', 'other'];
 const GENDERS = ['male', 'female', 'other'];
@@ -73,7 +74,8 @@ const GET_MY_CAMPAIGNS_TOOL = {
   input_schema: { type: 'object', properties: {} },
 };
 
-const toolsForRole = (role) => (role === 'brand' ? [SEARCH_CREATORS_TOOL, GET_MY_CAMPAIGNS_TOOL] : []);
+const toolsForRole = (role) =>
+  role === 'brand' ? [SEARCH_CREATORS_TOOL, GET_MY_CAMPAIGNS_TOOL] : role === 'creator' ? CREATOR_TOOLS : [];
 
 // Only these fields ever leave the server — never bank details, tokens, email or phone.
 const toCard = (c) => ({
@@ -271,6 +273,8 @@ const runGetMyCampaigns = async (ctx) => {
 const runTool = async (name, input, ctx) => {
   if (name === 'search_creators' && ctx.role === 'brand') return runSearchCreators(input || {}, ctx);
   if (name === 'get_my_campaigns' && ctx.role === 'brand') return runGetMyCampaigns(ctx);
+  const creatorResult = await runCreatorTool(name, input || {}, ctx);
+  if (creatorResult) return creatorResult;
   return { content: JSON.stringify({ error: 'Unknown tool' }), isError: true };
 };
 
