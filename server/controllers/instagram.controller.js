@@ -3,6 +3,7 @@ const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
 const { encryptToken, decryptToken } = require('../services/instagram.service');
 const calculateQualityScore = require('../utils/calculateQualityScore');
+const { photoForConnect, isInstagramPhoto } = require('../utils/profilePhoto');
 
 const calcEngagementRate = require('../utils/calcEngagementRate');
 
@@ -164,7 +165,7 @@ const connectInstagram = async (req, res) => {
           'instagram.isConnected': true,
           'instagram.lastSynced': new Date(),
           'instagram.tokenRefreshedAt': new Date(),
-          ...(profile.profile_picture_url ? { profilePhoto: profile.profile_picture_url } : {}),
+          ...(await photoForConnect(req.user.id, profile.profile_picture_url)),
         },
         { new: true }
       );
@@ -352,8 +353,11 @@ const disconnectInstagram = async (req, res) => {
         'instagram.avgComments': 0,
         'instagram.avgShares': 0,
         'instagram.avgReach': 0,
-        'profilePhoto': '',
       });
+      const after = await Creator.findOne({ userId: req.user.id }).select('_id profilePhoto').lean();
+      if (after && isInstagramPhoto(after.profilePhoto)) {
+        await Creator.updateOne({ _id: after._id }, { profilePhoto: '' });
+      }
     } else if (req.user.role === 'brand') {
       await Brand.findOneAndUpdate({ userId: req.user.id }, {
         'instagram.accessToken': '',

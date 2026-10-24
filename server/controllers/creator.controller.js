@@ -49,8 +49,11 @@ const createProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const updateData = { ...req.body };
+    delete updateData.removePhoto;
     if (req.file) {
       updateData.profilePhoto = req.file.path;
+    } else if (req.body.removePhoto === true || req.body.removePhoto === 'true') {
+      updateData.profilePhoto = ''; // creator removed their photo
     }
     let creator = await Creator.findOneAndUpdate(
       { userId: req.user.id },

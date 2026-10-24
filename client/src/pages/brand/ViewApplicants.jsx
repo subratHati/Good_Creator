@@ -128,7 +128,7 @@ const ViewApplicants = () => {
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 overflow-hidden">
                     {app.creatorId?.profilePhoto
-                      ? <img src={app.creatorId.profilePhoto} alt="creator" className="w-full h-full object-cover" />
+                      ? <img src={app.creatorId.profilePhoto} alt={app.creatorId?.name || ''} className="w-full h-full object-cover" />
                       : app.creatorId?.name?.[0]?.toUpperCase() || '?'
                     }
                   </div>

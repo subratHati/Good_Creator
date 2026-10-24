@@ -44,7 +44,7 @@ const TransactionCard = ({ collab }) => {
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: '#F8FAFC' }}>
             {collab.creatorId?.profilePhoto ? (
-              <img src={collab.creatorId.profilePhoto} alt="" className="w-full h-full object-cover" />
+              <img src={collab.creatorId.profilePhoto} alt={collab.creatorId?.name || ''} className="w-full h-full object-cover" />
             ) : (
               <span className="text-lg">👤</span>
             )}

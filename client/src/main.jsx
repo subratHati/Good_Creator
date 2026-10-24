@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 import { PostHogProvider } from '@posthog/react'
+import './utils/imageFallback';
 
 const options = {
   api_host: import.meta.env.VITE_POSTHOG_HOST,
