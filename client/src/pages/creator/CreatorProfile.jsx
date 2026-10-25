@@ -109,12 +109,28 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
+
     if (!file) return;
     // don't upload the raw picked file — open the crop modal first, so the
     // creator can position/zoom into a square before anything gets sent
     setRawImageForCrop(URL.createObjectURL(file));
     // reset the input so picking the same file again still fires onChange
     e.target.value = '';
+  };
+
+  const handleRemovePhoto = async () => {
+    setPhotoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('removePhoto', 'true');
+      await uploadCreatorPhoto(formData);
+      setPhotoPreview(null);
+      toast.success('Photo removed');
+    } catch {
+      toast.error('Could not remove photo');
+    } finally {
+      setPhotoUploading(false);
+    }
   };
 
   const handleCropDone = async (croppedBlob) => {
@@ -179,7 +195,14 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
                 <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
               </label>
             </div>
-            <div className="text-xs text-gray-400">{photoUploading ? 'Uploading...' : 'Tap camera to change photo'}</div>
+            <div>
+              <div className="text-xs text-gray-400">{photoUploading ? 'Please wait...' : 'Tap camera to change photo'}</div>
+              {photoPreview && !photoUploading && (
+                <button type="button" onClick={handleRemovePhoto} className="mt-1 text-xs font-bold text-red-500 hover:text-red-600 cursor-pointer">
+                  Remove photo
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-4">
@@ -847,7 +870,7 @@ const CreatorProfile = () => {
               {hasProfile ? <RateChartSection /> : <div style={{ fontSize: '12px', color: '#9CA3AF' }}>Complete your profile first</div>}
             </div>
 
-                      {/* bank details — gray bg like Stitch */}
+            {/* bank details — gray bg like Stitch */}
             {/* payments — gray bg like Stitch */}
             <SectionCard title="Payments" onEdit={hasProfile ? () => navigate('/creator/payments') : undefined} locked={!hasProfile}>
               <button
@@ -973,7 +996,7 @@ const CreatorProfile = () => {
                 {hasProfile && <RateChartSection />}
               </SectionCard>
 
-                           <SectionCard title="Payments" locked={!hasProfile}>
+              <SectionCard title="Payments" locked={!hasProfile}>
                 {hasProfile && (
                   <button
                     onClick={() => navigate('/creator/payments')}

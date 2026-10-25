@@ -10,9 +10,9 @@ webpush.setVapidDetails(
 
 const sendPushNotification = async (userId, { title, body, url = '/' }) => {
   try {
-    console.log('[PUSH DEBUG] Attempting send to userId:', userId);
+
     const subscriptions = await PushSubscription.find({ userId });
-    console.log('[PUSH DEBUG] Found subscriptions:', subscriptions.length);
+
     if (subscriptions.length === 0) return { sent: 0, failed: 0 };
 
     const payload = JSON.stringify({ title, body, url });
@@ -31,10 +31,10 @@ const sendPushNotification = async (userId, { title, body, url = '/' }) => {
             payload
           );
           sent += 1;
-          console.log('[PUSH DEBUG] Successfully sent to endpoint:', sub.endpoint.slice(0, 50));
+
         } catch (err) {
           failed += 1;
-          console.log('[PUSH DEBUG] Send FAILED, full error:', err.statusCode, err.body || err.message);
+          console.error('[PUSH] Send failed:', err.statusCode, err.body || err.message);
           if (err.statusCode === 410 || err.statusCode === 404) {
             await PushSubscription.deleteOne({ _id: sub._id }).catch(() => { });
           } else {

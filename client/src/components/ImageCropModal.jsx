@@ -37,6 +37,7 @@ const ImageCropModal = ({ imageSrc, onCancel, onCropDone }) => {
   return (
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center px-4"
+      onClick={(e) => e.stopPropagation()}
       style={{ backgroundColor: 'rgba(0,0,0,0.85)' }}
     >
       <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden">

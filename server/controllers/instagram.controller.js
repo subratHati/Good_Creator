@@ -11,14 +11,6 @@ const calcEngagementRate = require('../utils/calcEngagementRate');
 const calculateEngagementRate = (metrics, followersCount) =>
   calcEngagementRate({ ...metrics, followersCount });
 
-// old followers-based formula, no longer used (safe to delete)
-const _oldCalculateEngagementRate = (metrics, followersCount) => {
-  if (!followersCount) return 0;
-  return parseFloat((
-    ((metrics.avgLikes + metrics.avgComments + metrics.avgSaved + metrics.avgShares) / followersCount) * 100
-  ).toFixed(2));
-};
-
 const calculateReelMetrics = async (igUserId, accessToken) => {
   try {
     console.log('[METRICS] Fetching media for igUserId:', igUserId);

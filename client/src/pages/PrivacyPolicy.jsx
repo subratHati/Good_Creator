@@ -49,6 +49,8 @@ const SECTIONS = [
           'Technical logs: server logs that record requests, errors and security events.',
         ],
       },
+      { h: 'GoodCreator Assistant (AI chat)' },
+      { p: 'If you use GoodCreator Assistant, we collect the messages you send to it and the replies it gives, and we store them in your account so you can continue the conversation later. We also keep basic technical details of each request, such as its time and size, to monitor usage and cost. Please do not share passwords, card or bank details or other sensitive information in the chat.' },
       { h: 'Payment information' },
       { p: 'Brands pay through Razorpay. Your card, UPI or net-banking details are entered on Razorpay\'s checkout and are handled by Razorpay. We do not receive or store them. We keep only the transaction records we need, such as the order and payment reference, the amount, and the payment status.' },
     ],
@@ -112,6 +114,7 @@ const SECTIONS = [
           'Cloudinary for storing and delivering images.',
           'MongoDB Atlas, Render, Vercel and similar providers for databases, servers and hosting.',
           'PostHog for product analytics.',
+          'Anthropic, the provider of the Claude AI model that powers GoodCreator Assistant. The messages you send to the assistant, and limited account information needed to answer them, are sent to Anthropic to generate replies.',
           'Your browser vendor\'s push service (for example Google, Apple or Mozilla) for delivering push notifications.',
         ],
       },
@@ -208,8 +211,28 @@ const SECTIONS = [
     ],
   },
   {
+    id: 'assistant',
+    title: '13. GoodCreator Assistant (AI)',
+    body: [
+      { p: 'GoodCreator Assistant is an optional AI chat inside GoodCreator for creators and brands. It can answer questions about how the platform works and help you search for creators or campaigns. It is powered by Claude, an AI model provided by Anthropic.' },
+      { h: 'What is shared with the AI provider' },
+      {
+        ul: [
+          'The messages you type in the chat, and recent earlier messages of the same conversation, so that it can follow the discussion.',
+          'Limited information from your account that is needed to answer, such as the titles of your campaigns or the status of your campaign applications, when you ask about them.',
+          'The assistant is not given your password, payment details, bank details or Instagram access token.',
+        ],
+      },
+      { h: 'How the answers are produced' },
+      { p: 'Creator and campaign suggestions come from our own search of the information on GoodCreator; the assistant helps you phrase and filter your request. The assistant can make mistakes, so please check campaign and creator details yourself before you decide. It does not apply to campaigns, send messages or make payments on your behalf, and it does not make decisions that have a legal or financial effect on you.' },
+      { h: 'Storage and your choices' },
+      { p: `Your conversation with the assistant is stored in your account so you can come back to it. Authorised GoodCreator team members may review assistant conversations to investigate problems, abuse or complaints, and to improve the feature. To limit use and cost, we may cap how many assistant messages each account can send per day. You can ask us to delete your assistant conversation by writing to ${CONTACT_EMAIL}.` },
+      { p: 'Using the assistant is optional: every feature of GoodCreator can be used without it. Anthropic processes this information as our service provider and may do so on servers outside India (see "Storage, security and where data is processed").' },
+    ],
+  },
+  {
     id: 'changes',
-    title: '13. Changes to this policy',
+    title: '14. Changes to this policy',
     body: [
       { p: 'We may update this policy from time to time, for example when we add features or when the law changes. We will change the "Last updated" date at the top and, for significant changes, tell you through the platform or by email. Continuing to use GoodCreator after an update means you accept the updated policy.' },
     ],
@@ -267,7 +290,7 @@ const PrivacyPolicy = () => {
           <p className="mb-8 mt-2 text-[13px] text-[#667085]">Last updated: {LAST_UPDATED}</p>
 
           <div className="mb-10 rounded-xl border border-[#d1e0ff] bg-[#f5f8ff] p-4 text-[14px] leading-[1.6] text-[#344054]">
-            <strong className="text-[#101828]">In short:</strong> we collect only what we need to run GoodCreator. We never sell your personal data. Payments are processed by Razorpay and your card or UPI details never reach us. Instagram statistics are used only to show your profile to brands, and you can disconnect Instagram or delete your account whenever you want.
+            <strong className="text-[#101828]">In short:</strong> we collect only what we need to run GoodCreator. We never sell your personal data. Payments are processed by Razorpay and your card or UPI details never reach us. Instagram statistics are used only to show your profile to brands, and you can disconnect Instagram or delete your account whenever you want. If you use the optional GoodCreator Assistant, your messages to it are processed by our AI provider, Anthropic.
           </div>
 
           {SECTIONS.map((s) => (
