@@ -55,6 +55,7 @@ const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminPayments = lazy(() => import('./pages/admin/AdminPayments'));
 const AdminIssues = lazy(() => import('./pages/admin/AdminIssues'));
+const AdminDeletedAccounts = lazy(() => import('./pages/admin/AdminDeletedAccounts'));
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'));
 
 
@@ -165,6 +166,10 @@ const App = () => {
             <Route path="/admin/payments" element={
               <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminPayments /></ProtectedRoute>
             } />
+            <Route
+              path="/admin/deleted-accounts"
+              element={<ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminDeletedAccounts /></ProtectedRoute>}
+            />
             <Route path="/admin/issues" element={
               <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminIssues /></ProtectedRoute>
             } />

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, MessageCircle, ChevronDown, Send, CheckCircle2 } from 'lucide-react';
 import { submitIssue } from '../api/issue';
 import toast from 'react-hot-toast';
+import DeleteAccountSection from '../components/DeleteAccountSection';
 
 // TODO: replace with real, official contact details once finalized
 const SUPPORT_EMAIL = 'support@goodcreator.in';
@@ -214,6 +215,7 @@ const ContactHelp = () => {
             </div>
           )}
         </div>
+        <DeleteAccountSection />
       </div>
     </div>
   );

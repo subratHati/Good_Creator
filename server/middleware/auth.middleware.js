@@ -23,6 +23,10 @@ const protect = async (req, res, next) => {
         if (!req.user) {
             return res.status(401).json({ message: 'User not found' });
         }
+        // deleted accounts keep a placeholder user record, but must never get in
+        if (req.user.email && req.user.email.endsWith('@deleted.invalid')) {
+            return res.status(401).json({ message: 'This account has been deleted' });
+        }
         // fire-and-forget — never block or slow down the actual
         // request waiting on this write
         const isStale = !req.user.lastActiveAt ||

@@ -313,7 +313,18 @@ const AdminDashboard = () => {
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* payments + issues section links */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <button
+            onClick={() => navigate('/admin/deleted-accounts')}
+            className="order-last w-full flex items-center justify-between bg-white rounded-2xl border p-5 hover:bg-gray-50 transition-colors"
+            style={{ borderColor: '#E5E7EB' }}
+          >
+            <div className="text-left">
+              <div className="text-sm font-black" style={{ color: '#101828' }}>Deleted Accounts</div>
+              <div className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>See who deleted their account and why</div>
+            </div>
+            <span style={{ color: '#155DFC', fontSize: '20px' }}>→</span>
+          </button>
           <button
             onClick={() => navigate('/admin/payments')}
             className="w-full flex items-center justify-between bg-white rounded-2xl border p-5 hover:bg-gray-50 transition-colors"
