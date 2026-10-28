@@ -10,6 +10,9 @@ const assistantMessageSchema = new mongoose.Schema({
     outputTokens: Number,
     // structured result cards (e.g. creator suggestions), built by the server from real database rows
     cards: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    // true for messages the AI started itself (daily check-ins)
+    proactive: { type: Boolean, default: false },
+    checkinTopic: { type: String, default: '' },
 }, { timestamps: true });
 
 assistantMessageSchema.index({ conversationId: 1, createdAt: 1 });

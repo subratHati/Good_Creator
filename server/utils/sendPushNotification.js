@@ -8,14 +8,14 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY
 );
 
-const sendPushNotification = async (userId, { title, body, url = '/' }) => {
+const sendPushNotification = async (userId, { title, body, url = '/', skipIfVisible = false }) => {
   try {
 
     const subscriptions = await PushSubscription.find({ userId });
 
     if (subscriptions.length === 0) return { sent: 0, failed: 0 };
 
-    const payload = JSON.stringify({ title, body, url });
+    const payload = JSON.stringify({ title, body, url, skipIfVisible });
 
     let sent = 0;
     let failed = 0;

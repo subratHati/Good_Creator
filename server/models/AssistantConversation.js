@@ -10,6 +10,12 @@ const assistantConversationSchema = new mongoose.Schema({
     lastMessage: { type: String, default: '' },
     lastMessageAt: { type: Date, default: Date.now },
     unreadByUser: { type: Number, default: 0 },
+    // daily check-ins (messages the AI starts)
+    checkinsEnabled: { type: Boolean, default: true },
+    lastCheckinAt: { type: Date, default: null },
+    lastCheckinSlot: { type: String, default: '' },
+    lastCheckinTopic: { type: String, default: '' },
+    ignoredCheckins: { type: Number, default: 0 },
 }, { timestamps: true });
 
 module.exports = mongoose.model('AssistantConversation', assistantConversationSchema);

@@ -112,6 +112,57 @@ router.get('/notify-inactive', async (req, res) => {
 });
 
 
+// GET /api/cron/assistant-checkin?key=...&slot=am|pm
+// Optional, for testing: &dry=1 (preview only, nothing is sent), &limit=50,
+// &userId=<id> (only that user), &force=1 (ignore the once-per-slot and quiet-time rules)
+router.get('/assistant-checkin', async (req, res) => {
+  if (req.query.key !== process.env.CRON_SECRET_KEY) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+  try {
+    const { runCheckins, checkinsEnabled } = require('../services/assistant/checkins');
+    if (!checkinsEnabled()) {
+      return res.json({ message: 'Check-ins are switched off', skipped: true });
+    }
+    const slot = req.query.slot === 'pm' ? 'pm' : 'am';
+    const dry = req.query.dry === '1';
+    const onlyUserId = req.query.userId || null;
+    const force = req.query.force === '1' && !!onlyUserId;
+    const limit = Number(req.query.limit) || null;
+
+    // previews and single-user tests run now and return the result
+    if (dry || onlyUserId) {
+      const summary = await runCheckins({ slot, dry, onlyUserId, force, limit });
+      return res.json(summary);
+    }
+
+    // the real run can take a while, so answer the scheduler straight away
+    res.json({ message: 'Check-in run started', slot });
+    runCheckins({ slot, limit })
+      .then((s) => console.log('[CHECKIN] done', JSON.stringify(s)))
+      .catch((e) => console.error('[CHECKIN] run failed:', e.message));
+  } catch (error) {
+    console.error('assistant-checkin error:', error.message);
+    if (!res.headersSent) res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// GET /api/cron/close-expired-campaigns?key=...  (add &dry=1 to only count, nothing changes)
+router.get('/close-expired-campaigns', async (req, res) => {
+  if (req.query.key !== process.env.CRON_SECRET_KEY) {
+    return res.status(403).json({ message: 'Forbidden' });
+  }
+  try {
+    const { closeExpiredOpenings } = require('../services/closeExpiredOpenings');
+    const result = await closeExpiredOpenings({ dry: req.query.dry === '1' });
+    if (!result.dry) console.log(`[CRON] Closed ${result.closed} expired campaign(s).`);
+    res.json(result);
+  } catch (error) {
+    console.error('close-expired-campaigns error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.get('/refresh-rotation', refreshRotationValues);
 
 module.exports = router;

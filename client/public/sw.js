@@ -22,15 +22,26 @@ self.addEventListener('push', (event) => {
     payload = { title: 'GoodCreator', body: event.data.text() };
   }
 
-  const { title = 'GoodCreator', body = '', url = '/' } = payload;
+  const { title = 'GoodCreator', body = '', url = '/', skipIfVisible = false } = payload;
 
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      icon: '/android-chrome-192x192.png',
-      badge: '/android-chrome-192x192.png',
-      data: { url },
-    })
+    (async () => {
+      if (skipIfVisible) {
+        // iPhones require every push to be shown (otherwise the subscription is cancelled),
+        // so only skip on other devices
+        const isApple = /iPhone|iPad|iPod/i.test(self.navigator.userAgent || '');
+        if (!isApple) {
+          const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+          if (windows.some((w) => w.visibilityState === 'visible')) return;
+        }
+      }
+      await self.registration.showNotification(title, {
+        body,
+        icon: '/android-chrome-192x192.png',
+        badge: '/android-chrome-192x192.png',
+        data: { url },
+      });
+    })()
   );
 });
 

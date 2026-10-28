@@ -21,4 +21,27 @@ router.get('/messages', protect, getAssistantMessages);
 router.get('/support-unread', protect, getSupportUnreadCount);
 router.post('/messages', protect, assistantLimiter, sendAssistantMessage);
 
+// turn the daily check-ins on or off
+router.put('/settings', protect, async (req, res) => {
+  try {
+    if (!['creator', 'brand'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Not available for this account' });
+    }
+    const AssistantConversation = require('../models/AssistantConversation');
+    const enabled = !(req.body.checkinsEnabled === false || req.body.checkinsEnabled === 'false');
+    const conversation = await AssistantConversation.findOneAndUpdate(
+      { userId: req.user.id },
+      {
+        $set: { checkinsEnabled: enabled, ...(enabled ? { ignoredCheckins: 0 } : {}) },
+        $setOnInsert: { userRole: req.user.role },
+      },
+      { upsert: true, returnDocument: 'after' }
+    );
+    res.json({ checkinsEnabled: conversation.checkinsEnabled });
+  } catch (error) {
+    console.error('assistant settings error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;
