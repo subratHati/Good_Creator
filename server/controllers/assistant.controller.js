@@ -4,7 +4,7 @@ const AdminConversation = require('../models/AdminConversation');
 const { isEnabled } = require('../services/assistant/llm');
 const { runAssistant } = require('../services/assistant/engine');
 const { buildSystemPrompt } = require('../services/assistant/prompt');
-const { pushAssistantMessage } = require('../services/assistant/notify');
+const { scheduleMissedReplyCheck } = require('../services/assistant/notify');
 
 const MAX_INPUT_CHARS = 1000;
 const HISTORY_LIMIT = 12; // how many recent messages the AI sees
@@ -114,9 +114,7 @@ const sendAssistantMessage = async (req, res) => {
     if (!isEnabled()) return res.status(503).json({ message: 'The assistant is not available right now.' });
     if (!allowedRole(req.user)) return res.status(403).json({ message: 'Not available for this account' });
 
-    // remember if the person leaves (closes the app) while the AI is still working
-    let clientGone = false;
-    res.on('close', () => { if (!res.writableFinished) clientGone = true; });
+
 
     const text = String(req.body.text || '').trim();
     if (!text) return res.status(400).json({ message: 'Message is empty' });
@@ -171,14 +169,19 @@ const sendAssistantMessage = async (req, res) => {
       cards: reply.cards,
     });
 
-    // if the person left while the AI was working, keep the reply as unread and push it
     await AssistantConversation.findByIdAndUpdate(conversation._id, {
       lastMessage: replyText.slice(0, 200),
       lastMessageAt: new Date(),
-      ...(clientGone ? { $inc: { unreadByUser: 1 } } : {}),
     });
 
-    if (clientGone) pushAssistantMessage(req.user.id, replyText);
+    // if the app does not confirm within 15 seconds that it showed this reply,
+    // the person has left: keep it as unread and send a push
+    scheduleMissedReplyCheck({
+      messageId: assistantMessage._id,
+      conversationId: conversation._id,
+      userId: req.user.id,
+      text: replyText,
+    });
 
     res.status(201).json({ userMessage, assistantMessage });
 

@@ -21,6 +21,25 @@ router.get('/messages', protect, getAssistantMessages);
 router.get('/support-unread', protect, getSupportUnreadCount);
 router.post('/messages', protect, assistantLimiter, sendAssistantMessage);
 
+// the app confirms it has shown an assistant reply (so no push is needed)
+router.post('/messages/:id/ack', protect, async (req, res) => {
+  try {
+    const AssistantMessage = require('../models/AssistantMessage');
+    const AssistantConversation = require('../models/AssistantConversation');
+    const conversation = await AssistantConversation.findOne({ userId: req.user.id }).select('_id');
+    if (!conversation) return res.json({ ok: true });
+    await AssistantMessage.updateOne(
+      { _id: req.params.id, conversationId: conversation._id },
+      { $set: { ackedAt: new Date() } }
+    );
+    await AssistantConversation.updateOne({ _id: conversation._id }, { $set: { unreadByUser: 0 } });
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('assistant ack error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // turn the daily check-ins on or off
 router.put('/settings', protect, async (req, res) => {
   try {

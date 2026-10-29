@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getAssistantMessages, sendAssistantMessage } from '../../api/assistant';
+import { getAssistantMessages, sendAssistantMessage, ackAssistantMessage } from '../../api/assistant';
 import useAuth from '../../hooks/useAuth';
 import { AssistantHeader, AssistantBubble, AssistantTyping, SuggestionChips, chipsForRole } from '../../components/assistant/AssistantUI';
 
@@ -190,6 +190,10 @@ const AssistantChatWindow = () => {
         setSending(true);
         try {
             const res = await sendAssistantMessage(content);
+            // tell the server the reply is on screen, so it does not send a push for it
+            if (document.visibilityState === 'visible') {
+                ackAssistantMessage(res.data.assistantMessage._id).catch(() => { });
+            }
             setMessages((prev) => [
                 ...prev.filter((m) => m._id !== tempId),
                 res.data.userMessage,

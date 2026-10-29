@@ -13,6 +13,8 @@ const assistantMessageSchema = new mongoose.Schema({
     // true for messages the AI started itself (daily check-ins)
     proactive: { type: Boolean, default: false },
     checkinTopic: { type: String, default: '' },
+    // set when the app confirms it showed this reply on screen
+    ackedAt: { type: Date, default: null },
 }, { timestamps: true });
 
 assistantMessageSchema.index({ conversationId: 1, createdAt: 1 });
