@@ -68,7 +68,7 @@ const creatorSituation = async (userId) => {
         });
     }
     if (!recentApps.length) {
-        const cats = (creator.categories || []).slice(0, 3).join(', ');
+        const cats = (creator.categories || []).slice(0, 3).map((c) => String(c).replace(/_/g, ' ')).join(', ');
         topics.push({
             key: 'no_applications',
             brief: `This creator has not applied to any campaign in the last 14 days. Ask whether they have found their next collaboration yet, and offer to search campaigns that match their profile${cats ? ` (categories: ${cats})` : ''}.`,
@@ -79,7 +79,10 @@ const creatorSituation = async (userId) => {
         brief: 'Ask how things are going, whether they found a collaboration, and whether they need any help or suggestions.',
     });
 
-    return { name: String(creator.name || '').split(' ')[0] || 'there', topics };
+    const firstName = String(creator.name || '').split(' ')[0];
+    // a name like "sukoon._.18__" is an Instagram handle, not a real name
+    const looksLikeHandle = /[_.\d@]/.test(firstName);
+    return { name: firstName && !looksLikeHandle ? firstName : 'there', topics };
 };
 
 const brandSituation = async (userId) => {
