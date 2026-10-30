@@ -8,6 +8,7 @@ import { getCreatorReviews } from '../../api/creator';
 import { formatDisplayRating, getRatingColorBand } from '../../utils/ratingDisplay';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
+import { VerifiedBadge, VerifiedPill } from '../../components/VerifiedBadge';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -208,7 +209,7 @@ const CreatorPublicProfile = () => {
               <div className="flex items-center justify-center gap-1.5 mb-1">
                 <h1 className="text-xl font-bold text-[#101828]">{creator.name}</h1>
                 {creator.isAdminVerified && (
-                  <CheckCircle size={18} className="text-[#155DFC]" fill="#155DFC" stroke="white" />
+                  <VerifiedBadge size={20} />
                 )}
               </div>
 
@@ -325,10 +326,7 @@ const CreatorPublicProfile = () => {
                     Instagram stats
                   </div>
                   {ig.isConnected && (
-                    <span className="flex items-center gap-1 text-xs font-semibold text-[#155DFC] bg-blue-50 px-2 py-0.5 rounded-full">
-                      <CheckCircle size={12} />
-                      Verified
-                    </span>
+                    <VerifiedPill tone="blue" label="Instagram verified" />
                   )}
                 </div>
 

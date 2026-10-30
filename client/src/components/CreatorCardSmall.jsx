@@ -2,6 +2,7 @@
 // Compact vertical card for BrandHome featured creators section
 
 import { useNavigate } from 'react-router-dom';
+import { InstagramVerifiedBadge } from './VerifiedBadge';
 
 const avatarBgs = ['#FF6B35', '#155DFC', '#E1306C', '#16A34A', '#8B5CF6', '#F59E0B'];
 
@@ -32,8 +33,9 @@ const CreatorCardSmall = ({ creator, onViewProfile }) => {
       </div>
 
       {/* name */}
-      <div style={{ fontSize: '13px', fontWeight: 700, color: '#101828', textAlign: 'center', marginBottom: '4px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%' }}>
-        {name}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginBottom: '4px', width: '100%', minWidth: 0 }}>
+        <span style={{ fontSize: '13px', fontWeight: 700, color: '#101828', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+        {ig.isConnected && <InstagramVerifiedBadge size={15} />}
       </div>
 
       {/* instagram handle */}

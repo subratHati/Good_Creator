@@ -4,6 +4,7 @@ import { MapPin, Bookmark, ExternalLink } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { getSavedCreators, saveCreator } from '../../api/brand';
 import toast from 'react-hot-toast';
+import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -110,11 +111,9 @@ const SavedCreators = () => {
                       }
                     </div>
                     {creator.isAdminVerified && (
-                      <div className="absolute bottom-0 right-0 w-5 h-5 bg-blue-600 rounded-full border-2 border-white flex items-center justify-center">
-                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                          <path d="M2 5l2 2 4-4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </div>
+                      <span className="absolute -bottom-1 -right-1 rounded-full bg-white p-px shadow-sm">
+                        <VerifiedBadge size={20} />
+                      </span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

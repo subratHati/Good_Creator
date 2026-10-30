@@ -4,6 +4,7 @@ import { Users, User, TrendingUp, Eye, Star, ArrowRight, CheckCircle, AlertCircl
 import Navbar from '../../components/Navbar';
 import { getMyCreatorProfile } from '../../api/creator';
 import useAuth from '../../hooks/useAuth';
+import { VerifiedPill } from '../../components/VerifiedBadge';
 
 const StatCard = ({ icon: Icon, label, value, color }) => (
   <div className="bg-white rounded-xl border border-gray-200 p-5">
@@ -235,12 +236,7 @@ const CreatorDashboard = () => {
                     Barter available
                   </span>
                 )}
-                {profile.isAdminVerified && (
-                  <span className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-purple-100 text-purple-700">
-                    <CheckCircle size={12} />
-                    Verified
-                  </span>
-                )}
+                {profile.isAdminVerified && <VerifiedPill size="md" />}
               </div>
             </div>
           </div>

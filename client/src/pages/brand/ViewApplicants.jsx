@@ -5,6 +5,7 @@ import Navbar from '../../components/Navbar';
 import { getOpeningApplicants, updateApplicationStatus } from '../../api/applications';
 import { getOrCreateConversation } from '../../api/chat';
 import toast from 'react-hot-toast';
+import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 const statusColors = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -138,11 +139,7 @@ const ViewApplicants = () => {
                       <div>
                         <div className="font-semibold text-gray-900 flex items-center gap-1.5">
                           {app.creatorId?.name}
-                          {app.creatorId?.isAdminVerified && (
-                            <span className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                              <span className="text-white text-xs">✓</span>
-                            </span>
-                          )}
+                          {app.creatorId?.isAdminVerified && <VerifiedBadge size={18} />}
                         </div>
                         <div className="text-sm text-gray-500">
                           {app.creatorId?.instagram?.handle
