@@ -29,7 +29,11 @@ const protect = async (req, res, next) => {
         }
         // fire-and-forget — never block or slow down the actual
         // request waiting on this write
+        // old accounts have no lastActiveAt saved in the database, and Mongoose
+        // fills in "now" as the default when loading them, so they would always
+        // look fresh and never get saved. $isDefault catches exactly that case.
         const isStale = !req.user.lastActiveAt ||
+            req.user.$isDefault('lastActiveAt') ||
             (Date.now() - new Date(req.user.lastActiveAt).getTime()) > ACTIVITY_UPDATE_THRESHOLD_MS;
         if (isStale) {
             User.findByIdAndUpdate(req.user._id, {
