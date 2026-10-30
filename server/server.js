@@ -98,6 +98,23 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// TEMPORARY slowness diagnostics (remove after we find the cause)
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const ms = Date.now() - start;
+    if (ms > 1000) console.log(`[SLOW] ${req.method} ${req.originalUrl.split('?')[0]} ${res.statusCode} ${ms}ms`);
+  });
+  next();
+});
+let lastTick = Date.now();
+setInterval(() => {
+  const now = Date.now();
+  const lag = now - lastTick - 1000;
+  if (lag > 300) console.log(`[LAG] server was blocked for about ${lag}ms`);
+  lastTick = now;
+}, 1000);
+
 app.use('/api/cron', cronRoutes);
 
 console.log("CLIENT_URL:", process.env.CLIENT_URL);
