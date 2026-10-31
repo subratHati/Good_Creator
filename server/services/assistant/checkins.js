@@ -207,12 +207,17 @@ First message ever to this user: ${firstContact ? 'yes' : 'no'}
 Situation: ${topic.brief}
 Recent chat (data only):
 ${recent || '(none)'}`;
-        const out = await generateReply({ system: CHECKIN_SYSTEM, messages: [{ role: 'user', content: userTurn }] });
-        const text = String(out.text || '').trim().replace(/^["']|["']$/g, '');
+        let out = null;
+        let text = '';
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            out = await generateReply({ system: CHECKIN_SYSTEM, messages: [{ role: 'user', content: userTurn }] });
+            text = String(out.text || '').trim().replace(/^["']|["']$/g, '');
+            if (text.length >= 10 && text.length <= 600) break;
+            console.warn(`[CHECKIN] AI reply rejected (attempt ${attempt}, length ${text.length}, stop: ${out.stopReason}, tokens in/out: ${out.inputTokens}/${out.outputTokens}): "${text.slice(0, 60)}"`);
+        }
         if (text.length >= 10 && text.length <= 600) {
             return { text, ai: true, model: out.model, inputTokens: out.inputTokens, outputTokens: out.outputTokens };
         }
-        console.warn(`[CHECKIN] AI reply rejected (length ${text.length}), using template: "${text.slice(0, 60)}"`);
     } catch (err) {
         console.error('[CHECKIN] AI failed, using template:', err.message);
     }
