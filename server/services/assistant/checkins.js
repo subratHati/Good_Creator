@@ -212,6 +212,7 @@ ${recent || '(none)'}`;
         if (text.length >= 10 && text.length <= 600) {
             return { text, ai: true, model: out.model, inputTokens: out.inputTokens, outputTokens: out.outputTokens };
         }
+        console.warn(`[CHECKIN] AI reply rejected (length ${text.length}), using template: "${text.slice(0, 60)}"`);
     } catch (err) {
         console.error('[CHECKIN] AI failed, using template:', err.message);
     }

@@ -3,6 +3,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ChevronDown, User, LogOut, Settings, Bookmark } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 import NotificationBell from './NotificationBell';
+import AIAssistantButton from './AIAssistantButton';
+import AIWelcomeModal from './AIWelcomeModal';
 import useUnreadMessages from '../hooks/useUnreadMessages';
 import toast from 'react-hot-toast';
 
@@ -147,6 +149,8 @@ const Navbar = () => {
                   {user.role}
                 </span>
 
+                <AIWelcomeModal />
+                <AIAssistantButton />
                 <NotificationBell />
 
                 <div className="relative" ref={dropdownRef}>
