@@ -105,21 +105,49 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true }));
 
 // TEMPORARY slowness diagnostics (remove after we find the cause)
+const inFlight = new Map();      // requests currently running
+const justFinished = [];         // requests that finished in the last few seconds
+let nextReqId = 0;
 app.use((req, res, next) => {
   const start = Date.now();
+  const id = ++nextReqId;
+  const label = `${req.method} ${req.originalUrl.split('?')[0]}`;
+  inFlight.set(id, { start, label });
   res.on('finish', () => {
     const ms = Date.now() - start;
-    if (ms > 1000) console.log(`[SLOW] ${req.method} ${req.originalUrl.split('?')[0]} ${res.statusCode} ${ms}ms`);
+    justFinished.push({ end: Date.now(), label, ms });
+    if (justFinished.length > 200) justFinished.shift();
+    if (ms > 1000) console.log(`[SLOW] ${label} ${res.statusCode} ${ms}ms`);
   });
+  res.on('close', () => inFlight.delete(id));
   next();
 });
+
+// Every 250ms: if the timer fires late, the server was frozen. We also note
+//  - cpu used vs time passed: close together = our own code was busy computing;
+//    far apart = the server was starved of CPU by the host (not our code)
+//  - which requests were running, or had just finished, during the freeze
+const LAG_TICK = 250;
 let lastTick = Date.now();
+let lastCpu = process.cpuUsage();
 setInterval(() => {
   const now = Date.now();
-  const lag = now - lastTick - 1000;
-  if (lag > 300) console.log(`[LAG] server was blocked for about ${lag}ms`);
+  const wall = now - lastTick;
+  const lag = wall - LAG_TICK;
+  const cpu = process.cpuUsage(lastCpu);
+  lastCpu = process.cpuUsage();
+  if (lag > 300) {
+    const cpuMs = Math.round((cpu.user + cpu.system) / 1000);
+    const running = [...inFlight.values()].sort((a, b) => a.start - b.start).slice(0, 4)
+      .map((r) => `${r.label} (${now - r.start}ms)`);
+    const finished = justFinished.filter((r) => r.end >= lastTick).slice(-4)
+      .map((r) => `${r.label} (${r.ms}ms)`);
+    const mb = Math.round(process.memoryUsage().rss / 1048576);
+    console.log(`[LAG] blocked ~${lag}ms | cpu used ${cpuMs}ms of ${wall}ms | running: ${running.join(', ') || 'none'} | finished meanwhile: ${finished.join(', ') || 'none'} | mem ${mb}MB`);
+  }
+  while (justFinished.length && justFinished[0].end < now - 5000) justFinished.shift();
   lastTick = now;
-}, 1000);
+}, LAG_TICK);
 
 app.use('/api/cron', cronRoutes);
 
