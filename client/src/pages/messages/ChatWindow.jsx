@@ -1204,7 +1204,10 @@ const ChatWindow = () => {
   };
 
   const handlePay = async (message) => {
-    if (payingRef.current) return;
+    if (payingRef.current) {
+      toast('Please wait a moment - your payment is still being processed.');
+      return;
+    }
     payingRef.current = true;
     try {
       if (!window.Razorpay) {
@@ -1230,6 +1233,7 @@ const ChatWindow = () => {
         description,
         order_id: orderId,
         handler: async (response) => {
+          let keepLocked = false;
           try {
             await verifyPayment({
               razorpay_order_id: response.razorpay_order_id,
@@ -1244,9 +1248,18 @@ const ChatWindow = () => {
             const res = await getMessages(id);
             setMessages(res.data.messages);
           } catch {
-            toast.error('Payment verification failed. Contact support.');
+            // Our server may still be recording this payment (Razorpay tells it
+            // directly too), so do not alarm the brand, keep Pay locked for a
+            // short while so nobody pays twice, and look again in a few seconds.
+            keepLocked = true;
+            toast('We could not confirm your payment yet. If money was deducted it will show here within a minute - please do not pay again.', { duration: 8000 });
+            const lookAgain = async () => {
+              try { const res = await getMessages(id); setMessages(res.data.messages); } catch { /* ignore */ }
+            };
+            setTimeout(lookAgain, 5000);
+            setTimeout(async () => { await lookAgain(); payingRef.current = false; }, 15000);
           } finally {
-            payingRef.current = false;
+            if (!keepLocked) payingRef.current = false;
           }
         },
         theme: { color: '#111827' },
