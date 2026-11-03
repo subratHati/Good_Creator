@@ -2,6 +2,7 @@ const Opening = require('../models/Opening');
 const Brand = require('../models/Brand');
 const Creator = require('../models/Creator');
 const sendPushNotification = require('../utils/sendPushNotification');
+const { cleanOpeningInput, flatten } = require('../utils/profileInput');
 const { sendPushNotificationBatch } = require('../utils/sendPushNotification');
 
 // Pushes a "new campaign" notification to every creator whose
@@ -41,9 +42,13 @@ const createOpening = async (req, res) => {
       return res.status(404).json({ message: 'Brand profile not found. Create your brand profile first.' });
     }
 
+    // only the allowed fields are read from the request
+    const { data, error } = cleanOpeningInput(req.body, { isCreate: true });
+    if (error) return res.status(400).json({ message: error });
+
     const opening = await Opening.create({
+      ...data,
       brandId: brand._id,
-      ...req.body,
     });
     res.status(201).json({ message: 'Opening created successfully', opening });
 
@@ -93,9 +98,13 @@ const updateOpening = async (req, res) => {
       return res.status(404).json({ message: 'Opening not found' });
     }
 
+    // only the allowed fields are read from the request
+    const { data, error } = cleanOpeningInput(req.body);
+    if (error) return res.status(400).json({ message: error });
+
     const updated = await Opening.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },
+      { $set: flatten(data) },
       { new: true, runValidators: true }
     );
 

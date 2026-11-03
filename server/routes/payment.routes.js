@@ -13,7 +13,11 @@ const {
   submitCreatorReview,
   getAvailableCollabs,
   rejectDelivery,
+  razorpayWebhook,
 } = require('../controllers/payment.controller');
+
+// called by Razorpay's own servers - no login; the signature is the proof (see razorpayWebhook)
+router.post('/webhook', razorpayWebhook);
 
 router.post('/create-order', protect, isBrand, createOrder);
 router.post('/verify', protect, isBrand, verifyPayment);

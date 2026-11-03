@@ -1,5 +1,6 @@
 const Brand = require('../models/Brand');
 const Creator = require('../models/Creator');
+const { cleanBrandInput, flatten } = require('../utils/profileInput');
 
 // GET /api/brands/me
 const getMyProfile = async (req, res) => {
@@ -23,9 +24,13 @@ const createProfile = async (req, res) => {
       return res.status(400).json({ message: 'Profile already exists, use PUT to update' });
     }
 
+    // only the allowed fields are read from the request
+    const { data, error } = cleanBrandInput(req.body, { isCreate: true });
+    if (error) return res.status(400).json({ message: error });
+
     const profileData = {
+      ...data,
       userId: req.user.id,
-      ...req.body,
     };
 
     if (req.file) {
@@ -43,7 +48,11 @@ const createProfile = async (req, res) => {
 // PUT /api/brands/profile
 const updateProfile = async (req, res) => {
   try {
-    const updateData = { ...req.body };
+    // only the allowed fields are read from the request
+    const { data, error } = cleanBrandInput(req.body);
+    if (error) return res.status(400).json({ message: error });
+
+    const updateData = flatten(data);
 
     if (req.file) {
       updateData.logo = req.file.path;
@@ -52,8 +61,11 @@ const updateProfile = async (req, res) => {
     const brand = await Brand.findOneAndUpdate(
       { userId: req.user.id },
       { $set: updateData },
-      { new: true, runValidators: true, upsert: true }
+      { new: true, runValidators: true }
     );
+    if (!brand) {
+      return res.status(404).json({ message: 'Brand profile not found' });
+    }
 
     res.json({ message: 'Profile updated successfully', brand });
   } catch (error) {

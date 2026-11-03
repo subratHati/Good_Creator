@@ -95,7 +95,13 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
+app.use(express.json({
+  // the Razorpay webhook signature is checked against the exact bytes received,
+  // so keep a copy of them for that one route
+  verify: (req, res, buf) => {
+    if (req.originalUrl.startsWith('/api/payment/webhook')) req.rawBody = buf;
+  },
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // TEMPORARY slowness diagnostics (remove after we find the cause)
@@ -157,42 +163,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something went wrong' });
 });
 
-io.on('connection', (socket) => {
-  console.log('[SOCKET] User connected:', socket.id);
-
-  socket.on('join_user', (userId) => {
-    socket.join(`user_${userId}`);
-  });
-
-  socket.on('join_conversation', (conversationId) => {
-    socket.join(`conversation_${conversationId}`);
-  });
-
-  socket.on('leave_conversation', (conversationId) => {
-    socket.leave(`conversation_${conversationId}`);
-  });
-
-  socket.on('typing', ({ conversationId, userId, isTyping }) => {
-    socket.to(`conversation_${conversationId}`).emit('user_typing', { userId, isTyping });
-  });
-
-  // admin chat rooms — mirrors the brand<->creator pattern above, kept
-  // as separate event names so there's no risk of colliding with the
-  // existing conversation rooms
-  socket.on('join_admin_room', () => {
-    socket.join('admin_room');
-  });
-  socket.on('join_admin_conversation', (conversationId) => {
-    socket.join(`admin_conversation_${conversationId}`);
-  });
-  socket.on('leave_admin_conversation', (conversationId) => {
-    socket.leave(`admin_conversation_${conversationId}`);
-  });
-  
-  socket.on('disconnect', () => {
-    console.log('[SOCKET] User disconnected:', socket.id);
-  });
-});
+require('./utils/socketHandlers')(io);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

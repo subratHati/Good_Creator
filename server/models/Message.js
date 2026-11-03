@@ -46,6 +46,8 @@ const messageSchema = new mongoose.Schema({
       ugc: { type: Number, default: 0 },
     },
     deadline: Date,
+    // the time after which this request can no longer be paid (set by the server)
+    expiresAt: Date,
     agreedToTerms: { type: Boolean, default: false },
     status: {
       type: String,

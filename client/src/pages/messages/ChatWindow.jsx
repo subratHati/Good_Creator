@@ -68,6 +68,26 @@ const EnquiryMessage = ({ message, isOwn }) => (
 const PaymentRequestMessage = ({ message, isOwn, onPay }) => {
   const status = message.paymentRequest?.status;
   const pr = message.paymentRequest;
+
+  // a payment request can only be paid for 10 minutes (the server enforces this too)
+  const expiresAtMs = pr?.expiresAt
+    ? new Date(pr.expiresAt).getTime()
+    : new Date(message.createdAt).getTime() + 10 * 60 * 1000;
+  const [now, setNow] = useState(Date.now());
+  const msLeft = expiresAtMs - now;
+  const expired = status === 'pending' && msLeft <= 0;
+  const minsLeft = Math.floor(Math.max(msLeft, 0) / 60000);
+  const secsLeft = Math.floor((Math.max(msLeft, 0) % 60000) / 1000);
+  const timeLeft = `${minsLeft}:${String(secsLeft).padStart(2, '0')}`;
+  useEffect(() => {
+    if (status !== 'pending' || expiresAtMs <= Date.now()) return;
+    const timer = setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      if (t >= expiresAtMs) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [status, expiresAtMs]);
   const deliverables = [
     { label: "Reel", count: pr?.deliverables?.reels, icon: Clapperboard },
     { label: "Post", count: pr?.deliverables?.posts, icon: Image },
@@ -145,14 +165,29 @@ const PaymentRequestMessage = ({ message, isOwn, onPay }) => {
         </div>
 
         {/* Action */}
-        {status === "pending" && !isOwn && (
-          <button
-            onClick={() => onPay(message)}
-            className="mt-5 w-full h-11 rounded-xl bg-[#155DFC] hover:bg-[#0F4FCC] transition-all duration-200 text-white font-semibold flex items-center justify-center gap-2 shadow-sm"
-          >
-            <CreditCard className="w-4 h-4" />
-            Pay Securely
-          </button>
+        {status === "pending" && !isOwn && !expired && (
+          <>
+            <button
+              onClick={() => onPay(message)}
+              className="mt-5 w-full h-11 rounded-xl bg-[#155DFC] hover:bg-[#0F4FCC] transition-all duration-200 text-white font-semibold flex items-center justify-center gap-2 shadow-sm"
+            >
+              <CreditCard className="w-4 h-4" />
+              Pay Securely
+            </button>
+            <p className="mt-2 text-center text-xs font-medium text-amber-600">Expires in {timeLeft}</p>
+          </>
+        )}
+        {expired && !isOwn && (
+          <>
+            <button
+              disabled
+              className="mt-5 w-full h-11 rounded-xl bg-gray-200 text-gray-500 font-semibold flex items-center justify-center gap-2 cursor-not-allowed"
+            >
+              <Clock3 className="w-4 h-4" />
+              Request expired
+            </button>
+            <p className="mt-2 text-center text-xs text-gray-500">Ask the creator to send a new payment request.</p>
+          </>
         )}
 
         {/* Status */}
@@ -164,12 +199,21 @@ const PaymentRequestMessage = ({ message, isOwn, onPay }) => {
             </div>
           </div>
         )}
-        {status === "pending" && isOwn && (
+        {status === "pending" && isOwn && !expired && (
           <div className="mt-5 flex justify-center">
             <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2">
               <Clock3 className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-600">Awaiting Payment</span>
+              <span className="text-sm font-medium text-gray-600">Awaiting Payment · {timeLeft}</span>
             </div>
+          </div>
+        )}
+        {expired && isOwn && (
+          <div className="mt-5 flex flex-col items-center gap-1">
+            <div className="flex items-center gap-2 rounded-full bg-gray-100 px-4 py-2">
+              <Clock3 className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-600">Request expired</span>
+            </div>
+            <p className="text-xs text-gray-500">Send a new payment request to continue.</p>
           </div>
         )}
 
@@ -186,6 +230,12 @@ const DeliveryMessage = ({ message, isOwn, onApprove, onReject }) => {
   const status = message.delivery?.status;
   const [showRejectBox, setShowRejectBox] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
+  const [busy, setBusy] = useState(false); // locks the buttons while a decision is being saved
+  const decide = async (action) => {
+    if (busy) return;
+    setBusy(true);
+    try { await action(); } finally { setBusy(false); }
+  };
 
   const mediums = [
     message.delivery?.instagramLink && { label: 'Instagram', value: message.delivery.instagramLink, link: message.delivery.instagramLink },
@@ -243,11 +293,11 @@ const DeliveryMessage = ({ message, isOwn, onApprove, onReject }) => {
 
         {status === 'pending' && !isOwn && !showRejectBox && (
           <div className="mt-5 flex gap-2">
-            <button onClick={() => setShowRejectBox(true)} className="flex-1 h-10 rounded-xl border-2 border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors">
+            <button disabled={busy} onClick={() => setShowRejectBox(true)} className="flex-1 h-10 rounded-xl border-2 border-gray-200 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               Request Revision
             </button>
-            <button onClick={() => onApprove(message)} className="flex-1 h-10 rounded-xl bg-[#155DFC] hover:bg-[#0F4FCC] text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition-all">
-              <CheckCircle className="w-4 h-4" /> Approve
+            <button disabled={busy} onClick={() => decide(() => onApprove(message))} className="flex-1 h-10 rounded-xl bg-[#155DFC] hover:bg-[#0F4FCC] text-white text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+              <CheckCircle className="w-4 h-4" /> {busy ? 'Approving...' : 'Approve'}
             </button>
           </div>
         )}
@@ -262,8 +312,8 @@ const DeliveryMessage = ({ message, isOwn, onApprove, onReject }) => {
               className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <div className="flex gap-2 mt-2">
-              <button onClick={() => setShowRejectBox(false)} className="flex-1 h-9 rounded-xl border border-gray-200 text-gray-600 text-xs font-semibold">Cancel</button>
-              <button onClick={() => onReject(message, rejectReason)} className="flex-1 h-9 rounded-xl bg-red-600 text-white text-xs font-semibold">Send</button>
+              <button disabled={busy} onClick={() => setShowRejectBox(false)} className="flex-1 h-9 rounded-xl border border-gray-200 text-gray-600 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed">Cancel</button>
+              <button disabled={busy} onClick={() => decide(() => onReject(message, rejectReason))} className="flex-1 h-9 rounded-xl bg-red-600 text-white text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed">{busy ? 'Sending...' : 'Send'}</button>
             </div>
           </div>
         )}
@@ -993,6 +1043,7 @@ const ChatWindow = () => {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const payingRef = useRef(false); // stops a double click from opening two checkouts
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [showCollabInfo, setShowCollabInfo] = useState(false);
   const [showDeliveryInfo, setShowDeliveryInfo] = useState(false);
@@ -1018,6 +1069,7 @@ const ChatWindow = () => {
     load();
 
     socketRef.current = io(SOCKET_URL, {
+      auth: (cb) => cb({ token: localStorage.getItem('token') }),
       withCredentials: true,
       transports: ['websocket', 'polling'],
       reconnection: true,
@@ -1152,6 +1204,8 @@ const ChatWindow = () => {
   };
 
   const handlePay = async (message) => {
+    if (payingRef.current) return;
+    payingRef.current = true;
     try {
       if (!window.Razorpay) {
         await new Promise((resolve, reject) => {
@@ -1191,16 +1245,22 @@ const ChatWindow = () => {
             setMessages(res.data.messages);
           } catch {
             toast.error('Payment verification failed. Contact support.');
+          } finally {
+            payingRef.current = false;
           }
         },
         theme: { color: '#111827' },
-        modal: { ondismiss: () => { toast('Payment cancelled'); } },
+        modal: { ondismiss: () => { payingRef.current = false; toast('Payment cancelled'); } },
       };
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (error) {
-      toast.error('Failed to initiate payment');
+      payingRef.current = false;
+      toast.error(error.response?.data?.message || 'Failed to initiate payment');
       console.error('[PAY] error:', error);
+      if (error.response?.data?.expired) {
+        try { const res = await getMessages(id); setMessages(res.data.messages); } catch { /* ignore */ }
+      }
     }
   };
 
@@ -1210,8 +1270,9 @@ const ChatWindow = () => {
       toast.success('Delivery approved! Payment will be released within 24 hours. 🎉');
       const res = await getMessages(id);
       setMessages(res.data.messages);
-    } catch {
-      toast.error('Failed to approve delivery');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to approve delivery');
+      try { const res = await getMessages(id); setMessages(res.data.messages); } catch { /* ignore */ }
     }
   };
 
@@ -1221,8 +1282,9 @@ const ChatWindow = () => {
       toast.success('Revision requested');
       const res = await getMessages(id);
       setMessages(res.data.messages);
-    } catch {
-      toast.error('Failed to request revision');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to request revision');
+      try { const res = await getMessages(id); setMessages(res.data.messages); } catch { /* ignore */ }
     }
   };
 

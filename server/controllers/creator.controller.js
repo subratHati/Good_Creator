@@ -3,6 +3,7 @@ const Review = require('../models/Review');
 const Brand = require('../models/Brand');
 const buildCreatorRankingPipeline = require('../utils/buildCreatorRankingPipeline');
 const calculateQualityScore = require('../utils/calculateQualityScore');
+const { cleanCreatorInput, flatten } = require('../utils/profileInput');
 
 // GET /api/creators/me
 const getMyProfile = async (req, res) => {
@@ -26,9 +27,13 @@ const createProfile = async (req, res) => {
       return res.status(400).json({ message: 'Profile already exists, use PUT to update' });
     }
 
+    // only the allowed fields are read from the request
+    const { data, error } = cleanCreatorInput(req.body, { isCreate: true });
+    if (error) return res.status(400).json({ message: error });
+
     const profileData = {
+      ...data,
       userId: req.user.id,
-      ...req.body,
     };
 
     // if photo was uploaded via cloudinary
@@ -48,8 +53,11 @@ const createProfile = async (req, res) => {
 // PUT /api/creators/profile
 const updateProfile = async (req, res) => {
   try {
-    const updateData = { ...req.body };
-    delete updateData.removePhoto;
+    // only the allowed fields are read from the request
+    const { data, error } = cleanCreatorInput(req.body);
+    if (error) return res.status(400).json({ message: error });
+
+    const updateData = flatten(data);
     if (req.file) {
       updateData.profilePhoto = req.file.path;
     } else if (req.body.removePhoto === true || req.body.removePhoto === 'true') {
@@ -58,8 +66,11 @@ const updateProfile = async (req, res) => {
     let creator = await Creator.findOneAndUpdate(
       { userId: req.user.id },
       { $set: updateData },
-      { new: true, runValidators: true, upsert: true }
+      { new: true, runValidators: true }
     );
+    if (!creator) {
+      return res.status(404).json({ message: 'Creator profile not found' });
+    }
 
     // recalculate quality score now that profile data may have changed
     // (bio, photo, categories, location, pricing all feed into it)

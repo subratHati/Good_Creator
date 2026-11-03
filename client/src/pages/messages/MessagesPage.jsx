@@ -73,6 +73,7 @@ const MessagesPage = () => {
   useEffect(() => {
     if (!user) return;
     const socket = io(SOCKET_URL, {
+      auth: (cb) => cb({ token: localStorage.getItem('token') }),
       withCredentials: true,
       transports: ['websocket', 'polling'],
     });

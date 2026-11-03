@@ -267,7 +267,7 @@ const AdminChatWindow = () => {
     };
     load();
 
-    socketRef.current = io(SOCKET_URL, { withCredentials: true, transports: ['websocket', 'polling'] });
+    socketRef.current = io(SOCKET_URL, { auth: (cb) => cb({ token: localStorage.getItem('token') }), withCredentials: true, transports: ['websocket', 'polling'] });
     socketRef.current.emit('join_admin_conversation', conversationId);
     socketRef.current.on('new_admin_message', (message) => {
       setMessages((prev) => (prev.find((m) => m._id === message._id) ? prev : [...prev, message]));

@@ -38,7 +38,7 @@ const generateCollabId = async () => {
     const candidateId = `GC-${year}${randomSegment(4)}`;
 
     const existing = await Message.findOne({
-      'paymentRequest.collabId': candidateId,
+      collabId: candidateId,
     }).select('_id');
 
     if (!existing) {

@@ -9,11 +9,31 @@ const generateCollabId = require('../utils/generateCollabId');
 const calculateQualityScore = require('../utils/calculateQualityScore');
 const Collaboration = require('../models/Collaboration');
 const { createNotification } = require('./notification.controller');
+const { loadConversationForUser, paymentRequestExpiry } = require('../utils/chatSafety');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
+
+// ─── helpers shared by the payment actions below ─────────────────────────────
+const OBJECT_ID = /^[0-9a-fA-F]{24}$/;
+const isId = (value) => typeof value === 'string' && OBJECT_ID.test(value);
+
+// Confirms the logged-in user is the BRAND inside this conversation. When they
+// are not, it sends the error reply itself and returns null.
+const requireBrandInConversation = async (req, res, conversationId) => {
+  const access = await loadConversationForUser(conversationId, req.user);
+  if (access.error) {
+    res.status(access.error.status).json({ message: access.error.message });
+    return null;
+  }
+  if (access.role !== 'brand') {
+    res.status(403).json({ message: 'Only the brand in this conversation can do this' });
+    return null;
+  }
+  return access.conversation;
+};
 
 // ─── POST /api/payment/create-order ──────────────────────────────────────────
 // Brand calls this when they click "Pay Now" on a payment request message
@@ -21,23 +41,38 @@ const createOrder = async (req, res) => {
   const { messageId, conversationId } = req.body;
 
   try {
-    const message = await Message.findById(messageId);
+    if (!isId(messageId)) return res.status(400).json({ message: 'Invalid payment request' });
+
+    const conversation = await requireBrandInConversation(req, res, conversationId);
+    if (!conversation) return;
+
+    // the payment request must live inside THIS conversation
+    const message = await Message.findOne({ _id: messageId, conversationId: conversation._id });
     if (!message) return res.status(404).json({ message: 'Message not found' });
     if (message.type !== 'payment_request') return res.status(400).json({ message: 'Not a payment request' });
     if (message.paymentRequest.status !== 'pending') return res.status(400).json({ message: 'Payment already processed' });
 
+    // a payment request can only be paid for a short time - after that the creator must send a new one
+    if (paymentRequestExpiry(message) <= new Date()) {
+      return res.status(410).json({ message: 'This payment request has expired. Please ask the creator to send a new one.', expired: true });
+    }
+
     const amount = message.paymentRequest.amount;
+    if (!Number.isFinite(amount) || amount < 1) {
+      return res.status(400).json({ message: 'This payment request has an invalid amount' });
+    }
     const platformFee = Math.round(amount * 0.15); // 15% platform fee
     const creatorAmount = amount - platformFee;
 
-    // create Razorpay order
+    // create Razorpay order - the notes tie this order to exactly this message,
+    // and verifyPayment checks them again before accepting any payment
     const order = await razorpay.orders.create({
-      amount: amount * 100, // Razorpay uses paise
+      amount: Math.round(amount * 100), // Razorpay uses paise
       currency: 'INR',
-      receipt: `order_${messageId}`,
+      receipt: `order_${message._id}`,
       notes: {
-        messageId: messageId.toString(),
-        conversationId: conversationId.toString(),
+        messageId: String(message._id),
+        conversationId: String(conversation._id),
         creatorAmount: creatorAmount.toString(),
         platformFee: platformFee.toString(),
       },
@@ -50,226 +85,365 @@ const createOrder = async (req, res) => {
       amount: order.amount,
       currency: order.currency,
       keyId: process.env.RAZORPAY_KEY_ID,
-      messageId,
-      conversationId,
+      messageId: String(message._id),
+      conversationId: String(conversation._id),
       description: 'GoodCreator collab payment',
       creatorAmount,
       platformFee,
     });
   } catch (error) {
     console.error('[PAYMENT] createOrder error:', error.message);
-    res.status(500).json({ message: 'Failed to create payment order' });
+    res.status(500).json({ message: 'Failed to create order' });
   }
 };
 
-// ─── POST /api/payment/verify ─────────────────────────────────────────────────
-// Called after Razorpay payment is completed to verify and update DB
-const verifyPayment = async (req, res) => {
-  const {
-    razorpay_order_id,
-    razorpay_payment_id,
-    razorpay_signature,
-    messageId,
-    conversationId,
-  } = req.body;
-  try {
-    // verify signature
-    const body = razorpay_order_id + '|' + razorpay_payment_id;
-    const expectedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-      .update(body.toString())
-      .digest('hex');
-    if (expectedSignature !== razorpay_signature) {
-      console.error('[PAYMENT] Signature mismatch');
-      return res.status(400).json({ message: 'Payment verification failed' });
-    }
-    console.log('[PAYMENT] Signature verified for payment:', razorpay_payment_id);
+// ─── shared: turn a real Razorpay payment into a paid collab ─────────────────
+// Used by BOTH the brand's browser (verifyPayment) and Razorpay's own server
+// call (razorpayWebhook), so the rules are identical and a payment still counts
+// only once even if both arrive at the same moment.
+// Asks Razorpay itself whether this order + payment belong to THIS payment
+// request, for the right amount, and are actually paid.
+// result: 'paid' (we just recorded it) | 'already' (this same payment was
+// recorded before) | 'conflict' (a DIFFERENT payment already paid it) |
+// 'closed' (request is cancelled etc.) | 'rejected' (Razorpay data doesn't match)
+const settlePayment = async ({ paymentMsg, conversation, orderId, paymentId, io }) => {
+  const pr = paymentMsg.paymentRequest;
+  if (pr.status === 'paid') {
+    return { result: pr.razorpayPaymentId === paymentId ? 'already' : 'conflict' };
+  }
+  if (pr.status !== 'pending') return { result: 'closed' };
 
-    // generate this collab's unique reference ID now that payment is real
-    const collabId = await generateCollabId();
+  const [order, payment] = await Promise.all([
+    razorpay.orders.fetch(orderId),
+    razorpay.payments.fetch(paymentId),
+  ]);
+  const expectedPaise = Math.round(pr.amount * 100);
+  const orderOk = !!order
+    && !!order.notes
+    && String(order.notes.messageId) === String(paymentMsg._id)
+    && order.amount === expectedPaise
+    && order.currency === 'INR';
+  const paymentOk = !!payment
+    && payment.order_id === orderId
+    && payment.amount === expectedPaise
+    && ['captured', 'authorized'].includes(payment.status);
+  if (!orderOk || !paymentOk) {
+    console.error('[PAYMENT] Razorpay data does not match this payment request', {
+      messageId: String(paymentMsg._id), orderOk, paymentOk, paymentStatus: payment && payment.status,
+    });
+    return { result: 'rejected' };
+  }
 
-    // fetch the original payment_request BEFORE updating it, so we have
-    // its amount/deliverables/deadline in hand for the Collaboration
-    // record below — these values don't actually change during this
-    // update, but fetching once and reusing avoids a redundant query
-    const originalPaymentMsg = await Message.findById(messageId);
-
-    // update message payment status
-    await Message.findByIdAndUpdate(messageId, {
+  // mark it paid - only ONE caller can win this switch from pending to paid
+  const collabId = await generateCollabId();
+  const claimed = await Message.findOneAndUpdate(
+    { _id: paymentMsg._id, 'paymentRequest.status': 'pending' },
+    {
       'paymentRequest.status': 'paid',
-      'paymentRequest.razorpayOrderId': razorpay_order_id,
-      'paymentRequest.razorpayPaymentId': razorpay_payment_id,
+      'paymentRequest.razorpayOrderId': orderId,
+      'paymentRequest.razorpayPaymentId': paymentId,
       'paymentRequest.paidAt': new Date(),
       'paymentRequest.deliveryStatus': 'awaiting_delivery',
       collabId,
+    }
+  );
+  if (!claimed) {
+    // someone else switched it a moment ago - was it this very payment?
+    const fresh = await Message.findById(paymentMsg._id);
+    const same = !!fresh && fresh.paymentRequest.status === 'paid' && fresh.paymentRequest.razorpayPaymentId === paymentId;
+    return { result: same ? 'already' : 'conflict' };
+  }
+  console.log('[PAYMENT] Verified with Razorpay:', paymentId, 'for message', String(paymentMsg._id));
+
+  // create the durable Collaboration record - only now that payment is real
+  await Collaboration.create({
+    collabId,
+    creatorId: conversation.creatorId,
+    brandId: conversation.brandId,
+    conversationId: conversation._id,
+    amount: pr.amount,
+    deliverables: pr.deliverables,
+    deadline: pr.deadline,
+    status: 'pending',
+    paidAt: new Date(),
+  });
+
+  // send payment confirmed message in chat (amount comes from our own record)
+  const paymentMessage = await Message.create({
+    conversationId: conversation._id,
+    senderId: conversation.brandUserId,
+    senderRole: 'brand',
+    type: 'payment_confirmed',
+    text: `Payment of ₹${pr.amount.toLocaleString('en-IN')} received! Money is held securely. Complete the deliverable to release payment.`,
+    collabId,
+  });
+
+  // update conversation
+  await Conversation.findByIdAndUpdate(conversation._id, {
+    lastMessage: '✅ Payment confirmed',
+    lastMessageAt: new Date(),
+    lastMessageBy: 'brand',
+    unreadByCreator: (conversation.unreadByCreator || 0) + 1,
+  });
+
+  // emit via socket
+  if (io) {
+    io.to(`conversation_${conversation._id}`).emit('new_message', paymentMessage);
+    io.to(`conversation_${conversation._id}`).emit('payment_confirmed', { messageId: String(paymentMsg._id) });
+  }
+
+  // notify the creator - payment received, collab now active
+  if (conversation.creatorUserId) {
+    createNotification({
+      userId: conversation.creatorUserId,
+      type: 'application',
+      title: 'Payment received 💰',
+      message: `A brand paid for your collab (${collabId}). Complete the deliverable to release payment.`,
+      actionPath: `/messages/${conversation._id}`,
     });
+  }
 
-    // fetch conversation once, reused below for both the Collaboration
-    // record and the unread-count update
-    const conversation = await Conversation.findById(conversationId);
+  return { result: 'paid', paymentMessage };
+};
 
-    // create the durable Collaboration record — this is the one moment a
-    // Collaboration document comes into existence, matching exactly when
-    // a Collab genuinely becomes a real, paid engagement (not before)
-    await Collaboration.create({
-      collabId,
-      creatorId: conversation.creatorId,
-      brandId: conversation.brandId,
-      conversationId,
-      amount: originalPaymentMsg.paymentRequest.amount,
-      deliverables: originalPaymentMsg.paymentRequest.deliverables,
-      deadline: originalPaymentMsg.paymentRequest.deadline,
-      status: 'pending',
-      paidAt: new Date(),
-    });
+// ─── POST /api/payment/verify ────────────────────────────────────────────────
+// Called by the brand's browser after Razorpay says the payment went through.
+// The browser is never trusted: we check the signature, then ask Razorpay
+// itself whether this order + payment really belong to THIS payment request,
+// for the right amount, and are actually paid. A payment can only ever be
+// used once.
+const verifyPayment = async (req, res) => {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, messageId, conversationId } = req.body;
 
-    // send payment confirmed message in chat
-    const paymentMessage = await Message.create({
-      conversationId,
-      senderId: req.user.id,
-      senderRole: req.user.role,
-      type: 'payment_confirmed',
-      text: `Payment of ₹${req.body.amount ? (req.body.amount / 100).toLocaleString('en-IN') : ''} received! Money is held securely. Complete the deliverable to release payment.`,
-      collabId,
-    });
-
-    // update conversation
-    await Conversation.findByIdAndUpdate(conversationId, {
-      lastMessage: '✅ Payment confirmed',
-      lastMessageAt: new Date(),
-      lastMessageBy: req.user.role,
-      unreadByCreator: (conversation?.unreadByCreator || 0) + 1,
-    });
-
-    // emit via socket
-    // emit via socket
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`conversation_${conversationId}`).emit('new_message', paymentMessage);
-      io.to(`conversation_${conversationId}`).emit('payment_confirmed', { messageId });
+  try {
+    const looksRight = [razorpay_order_id, razorpay_payment_id, razorpay_signature]
+      .every((v) => typeof v === 'string' && v.length > 0 && v.length < 100);
+    if (!looksRight || !isId(messageId)) {
+      return res.status(400).json({ message: 'Payment verification failed' });
     }
 
-    // notify the creator — payment received, collab now active
-    if (conversation?.creatorUserId) {
-      createNotification({
-        userId: conversation.creatorUserId,
-        type: 'application',
-        title: 'Payment received 💰',
-        message: `A brand paid for your collab (${collabId}). Complete the deliverable to release payment.`,
-        actionPath: `/messages/${conversationId}`,
-      });
+    const conversation = await requireBrandInConversation(req, res, conversationId);
+    if (!conversation) return;
+
+    // 1. the signature must be genuine
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+    const expected = Buffer.from(expectedSignature);
+    const given = Buffer.from(razorpay_signature);
+    if (expected.length !== given.length || !crypto.timingSafeEqual(expected, given)) {
+      console.error('[PAYMENT] Signature mismatch');
+      return res.status(400).json({ message: 'Payment verification failed' });
     }
 
-    res.json({ success: true, paymentMessage });
+    // 2. the payment request must be in this conversation
+    const paymentMsg = await Message.findOne({
+      _id: messageId,
+      conversationId: conversation._id,
+      type: 'payment_request',
+    });
+    if (!paymentMsg) return res.status(404).json({ message: 'Payment request not found' });
+
+    // 3. check with Razorpay and mark it paid (same code the webhook uses)
+    const { result, paymentMessage } = await settlePayment({
+      paymentMsg,
+      conversation,
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      io: req.app.get('io'),
+    });
+
+    if (result === 'paid') return res.json({ success: true, paymentMessage });
+    // same payment sent twice (browser retry, or the webhook got there first) is fine
+    if (result === 'already') return res.json({ success: true, alreadyProcessed: true });
+    if (result === 'conflict') return res.status(409).json({ message: 'This payment request has already been paid' });
+    if (result === 'closed') return res.status(400).json({ message: 'This payment request can no longer be paid' });
+    return res.status(400).json({ message: 'Payment verification failed' });
   } catch (error) {
     console.error('[PAYMENT] verifyPayment error:', error.message);
     res.status(500).json({ message: 'Payment verification failed' });
   }
 };
 
+// ─── POST /api/payment/webhook ───────────────────────────────────────────────
+// Razorpay calls THIS directly (not the brand's browser) when a payment
+// succeeds. It is what saves the day when the brand pays and then closes the
+// tab / loses signal before the browser could tell us. Nobody is logged in
+// here, so the ONLY proof is Razorpay's signature on the exact bytes it sent
+// (made with the webhook secret that only we and Razorpay know).
+// Reply codes matter: a 2xx tells Razorpay "done, stop"; a 5xx makes Razorpay
+// try again later (for up to a day) - so we only answer 5xx when a retry can help.
+const razorpayWebhook = async (req, res) => {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!secret) {
+    console.error('[WEBHOOK] RAZORPAY_WEBHOOK_SECRET is not set - cannot accept webhooks');
+    return res.status(503).json({ message: 'Webhook not configured' });
+  }
+
+  const signature = req.get('x-razorpay-signature');
+  const raw = req.rawBody;
+  if (typeof signature !== 'string' || !signature || !Buffer.isBuffer(raw)) {
+    return res.status(400).json({ message: 'Invalid webhook' });
+  }
+  const expected = Buffer.from(crypto.createHmac('sha256', secret).update(raw).digest('hex'));
+  const given = Buffer.from(signature);
+  if (expected.length !== given.length || !crypto.timingSafeEqual(expected, given)) {
+    console.error('[WEBHOOK] Signature mismatch - ignored');
+    return res.status(400).json({ message: 'Invalid webhook' });
+  }
+
+  // from here on the call is genuinely from Razorpay
+  const body = req.body || {};
+  if (body.event !== 'order.paid' && body.event !== 'payment.captured') {
+    return res.json({ ignored: true });
+  }
+  const entity = body.payload && body.payload.payment && body.payload.payment.entity;
+  const paymentId = entity && entity.id;
+  const orderId = entity && entity.order_id;
+  if (typeof paymentId !== 'string' || typeof orderId !== 'string') {
+    return res.json({ ignored: true });
+  }
+
+  try {
+    // our own orders carry the payment request id in their notes
+    const order = await razorpay.orders.fetch(orderId);
+    const messageId = order && order.notes && order.notes.messageId;
+    if (!isId(messageId)) return res.json({ ignored: true }); // not a collab payment
+
+    const paymentMsg = await Message.findOne({ _id: messageId, type: 'payment_request' });
+    if (!paymentMsg || String(paymentMsg.conversationId) !== String(order.notes.conversationId)) {
+      console.error('[WEBHOOK] No matching payment request for order', orderId);
+      return res.json({ ignored: true });
+    }
+    const conversation = await Conversation.findById(paymentMsg.conversationId);
+    if (!conversation) return res.json({ ignored: true });
+
+    const { result } = await settlePayment({
+      paymentMsg, conversation, orderId, paymentId, io: req.app.get('io'),
+    });
+
+    if (result === 'conflict') {
+      // the brand paid TWICE for one request - the second payment needs a manual refund
+      console.error('[WEBHOOK] NEEDS ATTENTION: extra payment', paymentId, 'for already-paid request', String(paymentMsg._id), '- refund it in Razorpay');
+    } else if (result === 'rejected') {
+      console.error('[WEBHOOK] NEEDS ATTENTION: payment', paymentId, 'did not match its payment request', String(paymentMsg._id));
+    } else {
+      console.log('[WEBHOOK]', body.event, paymentId, '->', result);
+    }
+    // 2xx for every outcome we have understood - retrying would not change it
+    return res.json({ ok: true, result });
+  } catch (error) {
+    // Razorpay says the order/payment does not exist (a test-mode or foreign id): nothing to retry
+    if (error && error.statusCode && error.statusCode >= 400 && error.statusCode < 500 && error.statusCode !== 429) {
+      console.error('[WEBHOOK] Razorpay does not know', orderId, '- ignored');
+      return res.json({ ignored: true });
+    }
+    console.error('[WEBHOOK] error:', error && (error.message || error.error?.description));
+    return res.status(500).json({ message: 'Failed - please retry' }); // Razorpay will try again
+  }
+};
+
 // ─── POST /api/payment/release ────────────────────────────────────────────────
-// Called when brand approves delivery — marks payout as processing
+// Called when brand approves delivery - marks payout as processing
 const releasePayment = async (req, res) => {
   const { conversationId, deliveryMessageId } = req.body;
 
   try {
-    // find the delivery message first — we need its collabId to look up
-    // the EXACT right payment request, not just "any paid one in this
-    // conversation" (a conversation can have several over time)
-    const deliveryMsg = await Message.findById(deliveryMessageId);
+    if (!isId(deliveryMessageId)) return res.status(400).json({ message: 'Invalid delivery' });
+
+    const conversation = await requireBrandInConversation(req, res, conversationId);
+    if (!conversation) return;
+
+    // the delivery must be a real delivery message inside THIS conversation
+    const deliveryMsg = await Message.findOne({
+      _id: deliveryMessageId,
+      conversationId: conversation._id,
+      type: 'delivery',
+    });
     if (!deliveryMsg) {
       return res.status(404).json({ message: 'Delivery message not found' });
     }
     if (!deliveryMsg.collabId) {
       return res.status(400).json({ message: 'This delivery has no linked collab ID — cannot determine payout amount' });
     }
-
-    // find the SPECIFIC payment request this delivery is fulfilling,
-    // matched by collabId — this is the actual fix for the old bug where
-    // findOne() with no filter could grab an unrelated paid request from
-    // the same conversation
-    const paymentMsg = await Message.findOne({
-      conversationId,
-      type: 'payment_request',
-      collabId: deliveryMsg.collabId,
-      'paymentRequest.status': 'paid',
-    });
-    if (!paymentMsg) {
-      return res.status(404).json({ message: 'Could not find the payment request for this collab' });
+    if (!deliveryMsg.delivery || deliveryMsg.delivery.status !== 'pending') {
+      return res.status(409).json({ message: 'This delivery was already approved or sent back for revision' });
     }
 
-    // update delivery status — payoutStatus starts as 'pending' the moment
+    // find the SPECIFIC paid payment request this delivery is fulfilling, and
+    // switch it to approved in the same step - so a delivery can only ever be
+    // released once, even if the button is pressed twice
+    const paymentMsg = await Message.findOneAndUpdate(
+      {
+        conversationId: conversation._id,
+        type: 'payment_request',
+        collabId: deliveryMsg.collabId,
+        'paymentRequest.status': 'paid',
+        'paymentRequest.deliveryStatus': { $ne: 'approved' },
+      },
+      { 'paymentRequest.deliveryStatus': 'approved' }
+    );
+    if (!paymentMsg) {
+      return res.status(404).json({ message: 'Could not find the payment request for this collab (it may already be released)' });
+    }
+
+    // update delivery status - payoutStatus starts as 'pending' the moment
     // delivery is approved, since that's the exact trigger for the admin's
     // 48-hour manual payout window
-    await Message.findByIdAndUpdate(deliveryMessageId, {
+    await Message.findByIdAndUpdate(deliveryMsg._id, {
       'delivery.status': 'approved',
       'delivery.approvedAt': new Date(),
       payoutStatus: 'pending',
     });
 
-    // mark this specific collab as fully approved — permanently removed
-    // from the "available for delivery" dropdown from this point on
-    await Message.findByIdAndUpdate(paymentMsg._id, {
-      'paymentRequest.deliveryStatus': 'approved',
-    });
-
-    // move the Collaboration record itself to 'delivered' — matches
-    // Collaboration.js's intended 3-state lifecycle (pending → delivered
-    // → completed), which this function was never actually updating
-    // until now. markPayoutCompleted still owns the final transition
-    // to 'completed'.
-    if (deliveryMsg.collabId) {
-      await Collaboration.findOneAndUpdate(
-        { collabId: deliveryMsg.collabId },
-        { status: 'delivered', deliveredAt: new Date() }
-      );
-    }
+    // move the Collaboration record itself to 'delivered'
+    await Collaboration.findOneAndUpdate(
+      { collabId: deliveryMsg.collabId },
+      { status: 'delivered', deliveredAt: new Date() }
+    );
 
     const amount = paymentMsg.paymentRequest?.amount || 0;
     const platformFee = Math.round(amount * 0.15);
     const creatorAmount = amount - platformFee;
 
-    // get creator bank details
-    const conversation = await Conversation.findById(conversationId);
-    const creator = await Creator.findById(conversation.creatorId)
-      .select('name userId');
+    const creator = await Creator.findById(conversation.creatorId).select('name userId');
 
     // send payment released message
     const releaseMessage = await Message.create({
-      conversationId,
+      conversationId: conversation._id,
       senderId: req.user.id,
-      senderRole: req.user.role,
+      senderRole: 'brand',
       type: 'payment_released',
       collabId: deliveryMsg.collabId,
       text: `🎉 Delivery approved! ₹${creatorAmount.toLocaleString('en-IN')} will be credited to ${creator?.name || 'creator'}'s bank account within 48 hours.`,
     });
 
-    await Conversation.findByIdAndUpdate(conversationId, {
+    await Conversation.findByIdAndUpdate(conversation._id, {
       lastMessage: '🎉 Payment released',
       lastMessageAt: new Date(),
-      lastMessageBy: req.user.role,
-      unreadByCreator: (conversation?.unreadByCreator || 0) + 1,
+      lastMessageBy: 'brand',
+      unreadByCreator: (conversation.unreadByCreator || 0) + 1,
     });
 
     // emit via socket
     const io = req.app.get('io');
     if (io) {
-      io.to(`conversation_${conversationId}`).emit('new_message', releaseMessage);
+      io.to(`conversation_${conversation._id}`).emit('new_message', releaseMessage);
     }
 
     console.log('[PAYMENT] Payment release initiated for creator:', creator?.name, 'amount:', creatorAmount);
     // TODO: Integrate Razorpay Payouts API here when business account is ready
     // For now, admin manually processes the payout
 
-    // notify the creator — delivery approved, payout on its way
-
+    // notify the creator - delivery approved, payout on its way
     if (creator?.userId) {
       createNotification({
         userId: creator.userId,
         type: 'application',
         title: 'Delivery approved 🎉',
         message: `Your delivery was approved. ₹${creatorAmount.toLocaleString('en-IN')} will be credited within 48 hours.`,
-        actionPath: `/messages/${conversationId}`,
+        actionPath: `/messages/${conversation._id}`,
       });
     }
 
@@ -281,7 +455,7 @@ const releasePayment = async (req, res) => {
 };
 
 // ─── GET /api/payment/available-collabs/:conversationId ─────────────────────
-// Returns paid collabs in this conversation that are awaiting delivery —
+// Returns paid collabs in this conversation that are awaiting delivery -
 // i.e. NOT already submitted for review, and NOT already approved. This
 // is exactly the dropdown list a creator should see when submitting a
 // new delivery, per the state machine: a collabId becomes unavailable
@@ -290,8 +464,14 @@ const releasePayment = async (req, res) => {
 // collab reverts to awaiting_delivery and becomes selectable again.
 const getAvailableCollabs = async (req, res) => {
   try {
+    const access = await loadConversationForUser(req.params.conversationId, req.user);
+    if (access.error) return res.status(access.error.status).json({ message: access.error.message });
+    if (access.role !== 'creator') {
+      return res.status(403).json({ message: 'Only the creator in this conversation can do this' });
+    }
+
     const collabs = await Message.find({
-      conversationId: req.params.conversationId,
+      conversationId: access.conversation._id,
       type: 'payment_request',
       'paymentRequest.status': 'paid',
       'paymentRequest.deliveryStatus': 'awaiting_delivery',
@@ -311,35 +491,52 @@ const getAvailableCollabs = async (req, res) => {
 // what was agreed). This reverts the collab back to 'awaiting_delivery',
 // making it selectable again in the creator's delivery-submission dropdown.
 const rejectDelivery = async (req, res) => {
-  const { conversationId, deliveryMessageId, reason } = req.body;
+  const { conversationId, deliveryMessageId } = req.body;
+  const reason = typeof req.body.reason === 'string' ? req.body.reason.trim().slice(0, 500) : '';
 
   try {
-    const deliveryMsg = await Message.findById(deliveryMessageId);
+    if (!isId(deliveryMessageId)) return res.status(400).json({ message: 'Invalid delivery' });
+
+    const conversation = await requireBrandInConversation(req, res, conversationId);
+    if (!conversation) return;
+
+    // switch pending -> revision_requested in ONE step, so a double click (or two
+    // tabs) can only ever send it back once
+    const deliveryMsg = await Message.findOneAndUpdate(
+      {
+        _id: deliveryMessageId,
+        conversationId: conversation._id,
+        type: 'delivery',
+        'delivery.status': 'pending',
+      },
+      { 'delivery.status': 'revision_requested' }
+    );
     if (!deliveryMsg) {
-      return res.status(404).json({ message: 'Delivery message not found' });
+      const exists = await Message.findOne({ _id: deliveryMessageId, conversationId: conversation._id, type: 'delivery' });
+      if (!exists) return res.status(404).json({ message: 'Delivery message not found' });
+      return res.status(409).json({ message: 'This delivery was already approved or sent back for revision' });
     }
 
-    await Message.findByIdAndUpdate(deliveryMessageId, {
-      'delivery.status': 'revision_requested',
-    });
-
     // revert the collab back to awaiting_delivery so it reappears in
-    // the dropdown for a fresh delivery submission
+    // the dropdown for a fresh delivery submission (never un-approve one
+    // that was already released)
     if (deliveryMsg.collabId) {
       await Message.findOneAndUpdate(
         {
-          conversationId,
+          conversationId: conversation._id,
           type: 'payment_request',
           collabId: deliveryMsg.collabId,
+          'paymentRequest.status': 'paid',
+          'paymentRequest.deliveryStatus': { $ne: 'approved' },
         },
         { 'paymentRequest.deliveryStatus': 'awaiting_delivery' }
       );
     }
 
     const releaseMessage = await Message.create({
-      conversationId,
+      conversationId: conversation._id,
       senderId: req.user.id,
-      senderRole: req.user.role,
+      senderRole: 'brand',
       type: 'text',
       text: reason
         ? `Delivery needs revision: ${reason}`
@@ -348,7 +545,7 @@ const rejectDelivery = async (req, res) => {
 
     const io = req.app.get('io');
     if (io) {
-      io.to(`conversation_${conversationId}`).emit('new_message', releaseMessage);
+      io.to(`conversation_${conversation._id}`).emit('new_message', releaseMessage);
     }
 
     res.json({ success: true, releaseMessage });
@@ -636,5 +833,6 @@ module.exports = {
   submitCreatorReview,
   getAvailableCollabs,
   rejectDelivery,
+  razorpayWebhook,
 
 };

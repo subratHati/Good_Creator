@@ -3,6 +3,8 @@ const Message = require('../models/Message');
 const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
 const sendPushNotification = require('../utils/sendPushNotification');
+const { loadConversationForUser, buildMessageContent } = require('../utils/chatSafety');
+
 
 // A Conversation document is created the moment someone opens a chat (so there
 // is a conversation id to open and send into) — but that alone is NOT a
@@ -113,8 +115,8 @@ const getOrCreateConversation = async (req, res) => {
 const getMessages = async (req, res) => {
   const { id } = req.params;
   try {
-    const conversation = await Conversation.findById(id);
-    if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
+    const access = await loadConversationForUser(id, req.user);
+    if (access.error) return res.status(access.error.status).json({ message: access.error.message });
 
     const messages = await Message.find({ conversationId: id })
       .sort({ createdAt: 1 });
@@ -144,11 +146,18 @@ const getMessages = async (req, res) => {
 // ─── POST /api/chat/conversations/:id/messages ────────────────────────────────
 const sendMessage = async (req, res) => {
   const { id } = req.params;
-  const { text, type, enquiry, paymentRequest, delivery, collabId } = req.body;
+  const type = req.body.type || 'text';
 
   try {
-    const conversation = await Conversation.findById(id);
-    if (!conversation) return res.status(404).json({ message: 'Conversation not found' });
+    // only the brand or creator inside this conversation may send into it
+    const access = await loadConversationForUser(id, req.user);
+    if (access.error) return res.status(access.error.status).json({ message: access.error.message });
+    const { conversation } = access;
+
+    // the server decides what a message may contain - never the raw request body
+    const built = buildMessageContent(type, req.body, access.role);
+    if (built.error) return res.status(400).json({ message: built.error });
+    const { text, paymentRequest, delivery, collabId } = built;
 
     // delivery messages need extra validation + a state transition on
     // the collab they're fulfilling — handled before creating the message
@@ -192,7 +201,6 @@ const sendMessage = async (req, res) => {
       senderRole: req.user.role,
       type: type || 'text',
       text: text || '',
-      enquiry,
       paymentRequest,
       delivery,
       collabId: type === 'delivery' ? collabId : undefined,
@@ -283,10 +291,12 @@ const getUnreadCount = async (req, res) => {
 
 const getConversationById = async (req, res) => {
   try {
+    const access = await loadConversationForUser(req.params.id, req.user);
+    if (access.error) return res.status(access.error.status).json({ message: access.error.message });
+
     const conversation = await Conversation.findById(req.params.id)
       .populate('brandId', 'brandName logo')
       .populate('creatorId', 'name profilePhoto');
-    if (!conversation) return res.status(404).json({ message: 'Not found' });
     res.json({ conversation });
   } catch (error) {
     console.error('getConversationById error:', error.message);
