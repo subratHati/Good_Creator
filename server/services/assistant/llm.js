@@ -19,6 +19,9 @@ const generateReply = async ({ system, messages, tools }) => {
   const response = await getClient().messages.create({
     model: MODEL,
     max_tokens: MAX_OUTPUT_TOKENS,
+    // Haiku 5.5 "thinks" by default and thinking tokens count toward max_tokens,
+    // which left some replies empty. Short chat replies do not need it.
+    thinking: { type: 'disabled' },
     system,
     messages,
     ...(tools && tools.length ? { tools } : {}),
