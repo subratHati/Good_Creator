@@ -57,6 +57,8 @@ const AdminPayments = lazy(() => import('./pages/admin/AdminPayments'));
 const AdminIssues = lazy(() => import('./pages/admin/AdminIssues'));
 const AdminDeletedAccounts = lazy(() => import('./pages/admin/AdminDeletedAccounts'));
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'));
+const AdminAIMessages = lazy(() => import('./pages/admin/AdminAIMessages'));
+const AdminAIMessageView = lazy(() => import('./pages/admin/AdminAIMessageView'));
 
 
 const App = () => {
@@ -183,6 +185,14 @@ const App = () => {
 
             <Route path="/admin/chat/:id" element={
               <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminChatWindow /></ProtectedRoute>
+            } />
+
+            <Route path="/admin/ai-messages" element={
+              <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminAIMessages /></ProtectedRoute>
+            } />
+
+            <Route path="/admin/ai-messages/:id" element={
+              <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminAIMessageView /></ProtectedRoute>
             } />
 
             <Route path="*" element={<Navigate to="/login" replace />} />

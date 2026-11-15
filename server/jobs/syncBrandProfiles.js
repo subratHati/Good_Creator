@@ -23,6 +23,7 @@ const syncBrandProfiles = () => {
               'instagram.followersCount': profile.followersCount,
               'instagram.profilePicUrl': profile.profilePicUrl,
               'instagram.handle': profile.username,
+              'instagram.lastSynced': new Date(),
             });
           } catch (err) {
             console.error(

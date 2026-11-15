@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Bell, LogOut, CheckCircle, Circle, AlertTriangle, BarChart3, Search, Smartphone, MessageSquare } from 'lucide-react';
+import { Mail, Bell, LogOut, CheckCircle, Circle, AlertTriangle, BarChart3, Search, Smartphone, MessageSquare, Sparkles } from 'lucide-react';
 import { getAllCreators, getAllBrands, sendAdminMessage, getReferralStats } from '../../api/admin';
 import { sendAdminPush } from '../../api/push';
 import useAuth from '../../hooks/useAuth';
@@ -17,6 +17,47 @@ const formatNumber = (num) => {
 
 const formatDate = (date) =>
   date ? new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+const formatDateTime = (date) =>
+  date
+    ? new Date(date).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : '';
+
+// "3 days ago" style. Last-active is only saved about once an hour, so anything
+// under an hour is shown as "within the hour" instead of a false-precise minute.
+const timeAgo = (date) => {
+  if (!date) return '';
+  const ms = Date.now() - new Date(date).getTime();
+  if (Number.isNaN(ms)) return '';
+  const hour = 60 * 60 * 1000;
+  const day = 24 * hour;
+  if (ms < hour) return 'within the hour';
+  if (ms < day) { const h = Math.floor(ms / hour); return h + (h === 1 ? ' hr ago' : ' hrs ago'); }
+  if (ms < 30 * day) { const d = Math.floor(ms / day); return d + (d === 1 ? ' day ago' : ' days ago'); }
+  return formatDate(date);
+};
+
+// colour for the "active" line: green = today, dark = this week, grey = older
+const activeColor = (date) => {
+  if (!date) return '#9CA3AF';
+  const ms = Date.now() - new Date(date).getTime();
+  if (ms < 24 * 60 * 60 * 1000) return '#166534';
+  if (ms < 7 * 24 * 60 * 60 * 1000) return '#101828';
+  return '#9CA3AF';
+};
+
+// what to say about the Instagram sync on one row (creator or brand)
+const syncLine = (item, isCreatorTab) => {
+  const ig = item.instagram || {};
+  const when = ig.lastSynced ? timeAgo(ig.lastSynced) : '';
+  if (isCreatorTab) {
+    if (ig.isConnected) return when ? 'IG synced ' + when : 'IG sync: not recorded';
+    if (ig.isManuallyAdded) return when ? 'Stats entered ' + when : 'Manual stats';
+    return 'No Instagram';
+  }
+  if (ig.isVerified) return when ? 'IG synced ' + when : 'IG sync: not recorded yet';
+  return 'No Instagram';
+};
 
 // <helper:toggleAllLoaded>
 // "Select all" acts on the users currently loaded on screen, and leaves any
@@ -167,6 +208,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [instagramFilter, setInstagramFilter] = useState('');
+  const [sortBy, setSortBy] = useState('newest'); // 'newest' signups or 'active' (recently active first)
   const [selectedIds, setSelectedIds] = useState([]);
   const [showCompose, setShowCompose] = useState(false);
   const [referralStats, setReferralStats] = useState(null);
@@ -194,6 +236,7 @@ const AdminDashboard = () => {
     try {
       const params = { page: pg, limit: PAGE_SIZE };
       if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (sortBy === 'active') params.sort = 'active';
       let res;
       if (tab === 'creators') {
         if (instagramFilter) params.instagramStatus = instagramFilter;
@@ -236,7 +279,7 @@ const AdminDashboard = () => {
     const t = setTimeout(() => fetchPage(1), searchQuery.trim() ? 400 : 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, instagramFilter, searchQuery]);
+  }, [tab, instagramFilter, searchQuery, sortBy]);
 
   const handleTabChange = (t) => {
     if (t === tab) return;
@@ -378,6 +421,20 @@ const AdminDashboard = () => {
             </div>
             <span style={{ color: '#155DFC', fontSize: '20px' }}>→</span>
           </button>
+          <button
+            onClick={() => navigate('/admin/ai-messages')}
+            className="w-full flex items-center justify-between bg-white rounded-2xl border p-5 hover:bg-gray-50 transition-colors"
+            style={{ borderColor: '#E5E7EB' }}
+          >
+            <div className="text-left flex items-center gap-3">
+              <Sparkles size={20} color="#7C3AED" style={{ flexShrink: 0 }} />
+              <div>
+                <div className="text-sm font-black" style={{ color: '#101828' }}>AI Messages</div>
+                <div className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>See what the AI says to users and how they answer (read only)</div>
+              </div>
+            </div>
+            <span style={{ color: '#155DFC', fontSize: '20px' }}>→</span>
+          </button>
         </div>
 
         {/* referral source stats */}
@@ -442,6 +499,28 @@ const AdminDashboard = () => {
           </div>
         )}
 
+        {/* sort */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-xs font-bold" style={{ color: '#6B7280' }}>Sort by</span>
+          {[
+            { key: 'newest', label: 'Newest signups' },
+            { key: 'active', label: 'Recently active' },
+          ].map((s) => (
+            <button
+              key={s.key}
+              onClick={() => setSortBy(s.key)}
+              className="px-3 py-1.5 rounded-full text-xs font-bold border"
+              style={{
+                borderColor: sortBy === s.key ? '#155DFC' : '#E5E7EB',
+                backgroundColor: sortBy === s.key ? '#EFF6FF' : 'white',
+                color: sortBy === s.key ? '#155DFC' : '#6B7280',
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </div>
+
         <div className="relative mb-4">
           <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -486,7 +565,7 @@ const AdminDashboard = () => {
                   <div
                     key={item._id}
                     onClick={() => userIdStr && toggleSelect(userIdStr)}
-                    className="flex items-center gap-4 px-5 py-3.5 cursor-pointer hover:bg-gray-50"
+                    className="flex flex-wrap md:flex-nowrap items-center gap-x-4 gap-y-1 px-5 py-3.5 cursor-pointer hover:bg-gray-50"
                   >
                     {isSelected ? <CheckCircle size={18} color="#155DFC" /> : <Circle size={18} color="#D1D5DB" />}
 
@@ -510,11 +589,35 @@ const AdminDashboard = () => {
                       </div>
                     )}
 
+                    <div className="hidden md:block text-right flex-shrink-0 w-36">
+                      <div
+                        className="text-xs font-bold"
+                        style={{ color: activeColor(item.userId?.lastActiveAt) }}
+                        title={item.userId?.lastActiveAt ? 'Last active: ' + formatDateTime(item.userId.lastActiveAt) : ''}
+                      >
+                        {item.userId?.lastActiveAt ? 'Active ' + timeAgo(item.userId.lastActiveAt) : 'Active: not recorded'}
+                      </div>
+                      <div
+                        className="text-xs"
+                        style={{ color: '#9CA3AF' }}
+                        title={item.instagram?.lastSynced ? 'Last Instagram sync: ' + formatDateTime(item.instagram.lastSynced) : ''}
+                      >
+                        {syncLine(item, tab === 'creators')}
+                      </div>
+                    </div>
+
                     <div className="text-right flex-shrink-0 w-24">
                       <div className="text-xs" style={{ color: '#9CA3AF' }}>{formatDate(item.userId?.createdAt)}</div>
                       <div className="text-xs font-semibold" style={{ color: item.userId?.isActive ? '#166534' : '#991B1B' }}>
                         {item.userId?.isActive ? 'Active' : 'Deactivated'}
                       </div>
+                    </div>
+
+                    <div className="md:hidden basis-full pl-[34px] text-xs">
+                      <span className="font-bold" style={{ color: activeColor(item.userId?.lastActiveAt) }}>
+                        {item.userId?.lastActiveAt ? 'Active ' + timeAgo(item.userId.lastActiveAt) : 'Active: not recorded'}
+                      </span>
+                      <span style={{ color: '#9CA3AF' }}> · {syncLine(item, tab === 'creators')}</span>
                     </div>
                   </div>
                 );

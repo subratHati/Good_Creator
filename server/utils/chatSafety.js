@@ -109,4 +109,4 @@ const paymentRequestExpiry = (message) => {
   return new Date(new Date(message.createdAt).getTime() + PAYMENT_REQUEST_MINUTES * 60 * 1000);
 };
 
-module.exports = { loadConversationForUser, buildMessageContent, paymentRequestExpiry };
+module.exports = { loadConversationForUser, buildMessageContent, paymentRequestExpiry, PAYMENT_REQUEST_MINUTES };

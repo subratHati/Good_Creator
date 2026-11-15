@@ -40,6 +40,7 @@ const brandSchema = new mongoose.Schema({
         followersCount: { type: Number, default: 0 },
         profilePicUrl: { type: String, default: '' },
         isVerified: { type: Boolean, default: false },
+        lastSynced: { type: Date, default: null },
         tokenRefreshedAt: { type: Date, default: Date.now },
     },
     savedCreators: [{

@@ -12,6 +12,48 @@ const parsePaging = (req) => {
   return { page, limit, skip: (page - 1) * limit };
 };
 
+// sort=active means "most recently active first". lastActiveAt lives on the
+// User record (the auth middleware keeps it fresh), not on Creator/Brand, so
+// that order needs a join. Everything else (filters, search, counts) stays
+// exactly as it was.
+const wantsActiveSort = (req) => req.query.sort === 'active';
+
+const LIST_USER_FIELDS = 'email isActive isEmailVerified createdAt lastActiveAt';
+
+const findListPage = async (Model, query, byActivity, skip, limit) => {
+  if (!byActivity) {
+    return Model.find(query)
+      .select('-instagram.accessToken')
+      .populate('userId', LIST_USER_FIELDS)
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+  }
+
+  // step 1: work out the right order (and the right page) with a join
+  // People who have no lastActiveAt saved yet sort last. _id is the tiebreaker
+  // so paging never repeats or skips a row.
+  const ordered = await Model.aggregate([
+    { $match: query },
+    { $lookup: { from: User.collection.name, localField: 'userId', foreignField: '_id', as: '_u' } },
+    { $addFields: { _lastActive: { $arrayElemAt: ['$_u.lastActiveAt', 0] } } },
+    { $sort: { _lastActive: -1, _id: -1 } },
+    { $skip: skip },
+    { $limit: limit },
+    { $project: { _id: 1 } },
+  ]);
+  const ids = ordered.map((d) => d._id);
+
+  // step 2: load those rows the normal way, then put them back in order
+  const docs = await Model.find({ _id: { $in: ids } })
+    .select('-instagram.accessToken')
+    .populate('userId', LIST_USER_FIELDS)
+    .lean();
+  const byId = new Map(docs.map((d) => [String(d._id), d]));
+  return ids.map((id) => byId.get(String(id))).filter(Boolean);
+};
+
 // GET /api/admin/creators?page=1&limit=25&instagramStatus=connected&search=abc
 // One page of creators, plus the TRUE total matching the current filters
 // (countDocuments, not the page length) and unfiltered totals for both tabs.
@@ -45,13 +87,7 @@ const getAllCreators = async (req, res) => {
     }
 
     const [creators, total, overallCreators, overallBrands] = await Promise.all([
-      Creator.find(query)
-        .select('-instagram.accessToken')
-        .populate('userId', 'email isActive isEmailVerified createdAt')
-        .sort({ createdAt: -1, _id: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+      findListPage(Creator, query, wantsActiveSort(req), skip, limit),
       Creator.countDocuments(query),
       Creator.countDocuments({}),
       Brand.countDocuments({}),
@@ -87,13 +123,7 @@ const getAllBrands = async (req, res) => {
     }
 
     const [brands, total, overallCreators, overallBrands] = await Promise.all([
-      Brand.find(query)
-        .select('-instagram.accessToken')
-        .populate('userId', 'email isActive isEmailVerified createdAt')
-        .sort({ createdAt: -1, _id: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+      findListPage(Brand, query, wantsActiveSort(req), skip, limit),
       Brand.countDocuments(query),
       Creator.countDocuments({}),
       Brand.countDocuments({}),

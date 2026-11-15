@@ -178,6 +178,7 @@ const connectInstagram = async (req, res) => {
           'instagram.followersCount': profile.followers_count || 0,
           'instagram.profilePicUrl': profile.profile_picture_url || '',
           'instagram.isVerified': true,
+          'instagram.lastSynced': new Date(),
           'instagram.tokenRefreshedAt': new Date(),
         },
         { new: true }
@@ -321,6 +322,7 @@ const syncInstagram = async (req, res) => {
       await Brand.findOneAndUpdate({ userId: req.user.id }, {
         'instagram.followersCount': profileRes.data.followers_count || 0,
         'instagram.profilePicUrl': profileRes.data.profile_picture_url || '',
+        'instagram.lastSynced': new Date(),
       });
       return res.json({ message: 'Instagram synced successfully' });
     }

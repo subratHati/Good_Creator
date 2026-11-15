@@ -16,6 +16,7 @@ const AdminConversation = require('../models/AdminConversation');
 const AdminMessage = require('../models/AdminMessage');
 const DeletedAccount = require('../models/DeletedAccount');
 const profilePhoto = require('../utils/profilePhoto');
+const { PAYMENT_REQUEST_MINUTES } = require('../utils/chatSafety');
 
 const DELETED_EMAIL_DOMAIN = 'deleted.invalid';
 
@@ -28,6 +29,28 @@ const maskEmail = (email = '') => {
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 // ---------- 1. what is blocking deletion? ----------
+
+// A payment request only counts as "open" while it can still be paid. Its
+// status stays "pending" in the database after the 10 minutes run out (nothing
+// flips it), so an old unpaid request must NOT block deleting an account.
+// Two small exceptions keep real money safe:
+//  - requests saved before expiry times existed count from the time they were sent
+//  - if a payment was already started (Razorpay order exists), it keeps counting
+//    for one more hour, so a payment that completes just after the timer is not missed
+const openPaymentRequestFilter = (convIds, now = new Date()) => ({
+    conversationId: { $in: convIds },
+    type: 'payment_request',
+    'paymentRequest.status': 'pending',
+    $or: [
+        { 'paymentRequest.expiresAt': { $gt: now } },
+        { 'paymentRequest.expiresAt': null, createdAt: { $gt: new Date(now.getTime() - PAYMENT_REQUEST_MINUTES * 60 * 1000) } },
+        {
+            'paymentRequest.razorpayOrderId': { $nin: [null, ''] },
+            'paymentRequest.expiresAt': { $gt: new Date(now.getTime() - 60 * 60 * 1000) },
+        },
+    ],
+});
+
 async function getBlockers(role, profile) {
     const isCreator = role === 'creator';
     const side = isCreator ? { creatorId: profile._id } : { brandId: profile._id };
@@ -43,11 +66,7 @@ async function getBlockers(role, profile) {
     let payoutPendingMsgs = 0;
     if (convIds.length) {
         [openRequests, payoutPendingMsgs] = await Promise.all([
-            Message.countDocuments({
-                conversationId: { $in: convIds },
-                type: 'payment_request',
-                'paymentRequest.status': 'pending',
-            }),
+            Message.countDocuments(openPaymentRequestFilter(convIds)),
             Message.countDocuments({
                 conversationId: { $in: convIds },
                 payoutStatus: 'pending',
@@ -80,7 +99,7 @@ async function getBlockers(role, profile) {
         blockers.push({
             code: 'open_payment_request',
             count: openRequests,
-            message: `${plural(openRequests, 'open payment request')} in your chats. Wait until each one is paid or cancelled.`,
+            message: `${plural(openRequests, 'open payment request')} in your chats. A payment request can be paid for 10 minutes, so wait until it is paid or the time runs out.`,
         });
     }
 

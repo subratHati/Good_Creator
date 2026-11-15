@@ -30,6 +30,7 @@ const analyticsRoutes = require('./routes/analytics.routes');
 const pushRoutes = require('./routes/push.routes');
 const collaborationHistoryRoutes = require('./routes/collaborationHistory.routes');
 const adminChatRoutes = require('./routes/adminChat.routes');
+const adminAssistantRoutes = require('./routes/adminAssistant.routes');
 const assistantRoutes = require('./routes/assistant.routes');
 const accountRoutes = require('./routes/account.routes');
 
@@ -169,6 +170,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/collaboration-history', collaborationHistoryRoutes);
 app.use('/api/admin-chat', adminChatRoutes);
+app.use('/api/admin-assistant', adminAssistantRoutes);
 app.use('/api/assistant', assistantRoutes);
 app.use('/api/account', accountRoutes);
 
