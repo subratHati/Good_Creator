@@ -22,6 +22,7 @@ import toast from 'react-hot-toast';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { usePostHog } from '@posthog/react'
+import CancellationRulesModal from '../../components/CancellationRulesModal';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
@@ -73,6 +74,7 @@ const PaymentRequestMessage = ({ message, isOwn, onPay }) => {
   const expiresAtMs = pr?.expiresAt
     ? new Date(pr.expiresAt).getTime()
     : new Date(message.createdAt).getTime() + 10 * 60 * 1000;
+  const [showRules, setShowRules] = useState(false);
   const [now, setNow] = useState(Date.now());
   const msLeft = expiresAtMs - now;
   const expired = status === 'pending' && msLeft <= 0;
@@ -163,6 +165,34 @@ const PaymentRequestMessage = ({ message, isOwn, onPay }) => {
             Secure payment protected by Good Creator
           </p>
         </div>
+
+        {/* reassurance for the brand, before they pay */}
+        {status === "pending" && !isOwn && !expired && (
+          <div className="mt-3 rounded-xl border border-green-200 bg-green-50 px-3 py-3">
+            <p className="text-xs font-bold text-green-800 mb-2">Your payment is protected</p>
+            <ul className="space-y-1.5">
+              {[
+                "Your money is held by GoodCreator until you approve the delivery",
+                "If the creator misses the deadline, your money is returned to you",
+                "You get 48 hours to review the delivery",
+              ].map((line) => (
+                <li key={line} className="flex items-start gap-2 text-xs leading-snug text-green-800">
+                  <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-green-600" />
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setShowRules(true)}
+          className="mt-3 w-full text-center text-xs font-semibold text-[#155DFC] underline underline-offset-2 cursor-pointer"
+        >
+          Cancellation &amp; refund rules
+        </button>
+        {showRules && <CancellationRulesModal onClose={() => setShowRules(false)} />}
 
         {/* Action */}
         {status === "pending" && !isOwn && !expired && (
@@ -712,6 +742,7 @@ const PaymentRequestModal = ({ onClose, onSend }) => {
     agreedToTerms: false,
   });
   const [sending, setSending] = useState(false);
+  const [showRules, setShowRules] = useState(false);
 
   const handleDeliverable = (key, value) => {
     const num = Math.max(0, parseInt(value) || 0);
@@ -858,6 +889,15 @@ const PaymentRequestModal = ({ onClose, onSend }) => {
                 </span>
               </label>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setShowRules(true)}
+              className="text-xs font-semibold text-[#155DFC] underline underline-offset-2 cursor-pointer"
+            >
+              Read the cancellation &amp; refund rules the brand will see
+            </button>
+            {showRules && <CancellationRulesModal onClose={() => setShowRules(false)} />}
           </div>
 
           <div className="flex gap-3 mt-6">
