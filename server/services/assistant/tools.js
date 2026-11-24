@@ -11,6 +11,7 @@ const MAX_CARDS = 5;
 const MIN_FOLLOWERS_FOR_ENGAGEMENT = 100; // tiny accounts are too noisy to rank by engagement
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const { lookupPlace, looseRegex } = require('../../utils/places');
 const text = (v, max = 60) => String(v || '').trim().slice(0, max);
 
 // a finite number clamped to [min, max], or null if the value isn't usable
@@ -119,15 +120,15 @@ const runSearchCreators = async (input, ctx) => {
     applied.category = input.category;
   }
 
+  // "Bombay" also finds Mumbai, "Orissa" also finds Odisha
   const city = text(input.city);
+  const state = text(input.state);
   if (city) {
-    query['location.city'] = { $regex: escapeRegex(city), $options: 'i' };
+    query['location.city'] = { $regex: looseRegex(lookupPlace('city', city, state).variants), $options: 'i' };
     applied.city = city;
   }
-
-  const state = text(input.state);
   if (state) {
-    query['location.state'] = { $regex: escapeRegex(state), $options: 'i' };
+    query['location.state'] = { $regex: looseRegex(lookupPlace('state', state).variants), $options: 'i' };
     applied.state = state;
   }
 

@@ -14,6 +14,8 @@ import BrandHomeSkeleton from '../../components/BrandHomeSkeleton';
 import PaymentAnnouncementBanner from '../../components/PaymentAnnouncementBanner';
 import PushPermissionBanner from '../../components/PushPermissionBanner';
 import ActiveCollabCard from '../../components/ActiveCollabCard';
+import BrandVerificationBanner from '../../components/BrandVerificationBanner';
+import useBrandVerification from '../../hooks/useBrandVerification';
 
 const formatNumber = (num) => {
   if (!num) return '—';
@@ -72,7 +74,7 @@ const Carousel = ({ height = 'h-full' }) => {
   );
 };
 
-const CampaignPanel = ({ activeCampaigns, onPost }) => (
+const CampaignPanel = ({ activeCampaigns, onPost, verified }) => (
   <div className="rounded-3xl overflow-hidden flex-1" style={{ backgroundColor: '#101828', boxShadow: '0 6px 0 0 #0a1020' }}>
     <div className="p-5 h-full flex flex-col justify-between">
       <div>
@@ -80,8 +82,8 @@ const CampaignPanel = ({ activeCampaigns, onPost }) => (
         <div className="text-5xl font-black mb-1" style={{ color: '#FFE234' }}>{activeCampaigns}</div>
         <div className="text-sm font-medium mb-1" style={{ color: 'rgba(255,255,255,0.5)' }}>campaigns running now</div>
         <div className="flex items-center gap-1 mt-2">
-          <TrendingUp size={14} color="#22C55E" />
-          <span className="text-xs font-bold" style={{ color: '#22C55E' }}>Your brand is live</span>
+          <TrendingUp size={14} color={verified ? '#22C55E' : '#F79009'} />
+          <span className="text-xs font-bold" style={{ color: verified ? '#22C55E' : '#F79009' }}>{verified ? 'Your brand is live' : 'Campaigns unlock after verification'}</span>
         </div>
       </div>
       <button onClick={onPost} className="w-full py-3 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2 mt-4"
@@ -97,6 +99,7 @@ const BrandHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const posthog = usePostHog();
+  const { isVerified } = useBrandVerification();
   const [profile, setProfile] = useState(null);
   const [openings, setOpenings] = useState([]);
   const [suggestedCreators, setSuggestedCreators] = useState([]);
@@ -174,6 +177,8 @@ const BrandHome = () => {
           </div>
 
           <div className="bg-white px-4 pt-4 pb-24 space-y-6">
+            {/* admin verification status */}
+            <BrandVerificationBanner hideWhenVerified />
             {/* active collaboration — only takes space if one exists */}
             <ActiveCollabCard />
             {/* active campaigns row */}
@@ -233,10 +238,13 @@ const BrandHome = () => {
         <div className="hidden md:block">
           <div className="max-w-6xl mx-auto px-6 pb-10">
 
+            {/* admin verification status */}
+            <BrandVerificationBanner className="pt-6" hideWhenVerified />
+
             <div className="grid grid-cols-2 gap-5 pt-6" style={{ minHeight: '60vh' }}>
               <div style={{ minHeight: '400px' }}><Carousel height="h-full" /></div>
               <div className="flex flex-col gap-4">
-                <CampaignPanel activeCampaigns={activeCount} onPost={() => navigate('/brand/openings/create')} />
+                <CampaignPanel activeCampaigns={activeCount} verified={isVerified} onPost={() => navigate('/brand/openings/create')} />
                 <div className="flex gap-3">
                   <button onClick={() => navigate('/brand/browse-creators')} className="flex-1 py-4 rounded-2xl font-black text-white text-sm flex items-center justify-center gap-2 transition-transform hover:scale-95" style={{ backgroundColor: '#155DFC' }}>Browse Creators 🔍</button>
                   <button onClick={() => navigate('/brand/openings')} className="px-6 py-4 rounded-2xl font-black text-sm flex items-center gap-1 transition-transform hover:scale-95" style={{ backgroundColor: 'white', color: '#101828', border: '2px solid #101828' }}>My Campaigns <ArrowRight size={14} /></button>

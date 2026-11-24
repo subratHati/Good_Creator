@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Bell, LogOut, CheckCircle, Circle, AlertTriangle, BarChart3, Search, Smartphone, MessageSquare, Sparkles } from 'lucide-react';
-import { getAllCreators, getAllBrands, sendAdminMessage, getReferralStats } from '../../api/admin';
+import { Mail, Bell, LogOut, CheckCircle, Circle, AlertTriangle, BarChart3, Search, Smartphone, MessageSquare, Sparkles, ShieldCheck } from 'lucide-react';
+import { getAllCreators, getAllBrands, sendAdminMessage, getReferralStats, getBrandVerifications } from '../../api/admin';
 import { sendAdminPush } from '../../api/push';
 import useAuth from '../../hooks/useAuth';
 import toast from 'react-hot-toast';
@@ -212,6 +212,7 @@ const AdminDashboard = () => {
   const [selectedIds, setSelectedIds] = useState([]);
   const [showCompose, setShowCompose] = useState(false);
   const [referralStats, setReferralStats] = useState(null);
+  const [pendingBrands, setPendingBrands] = useState(0); // brands waiting to be verified
   const [searchQuery, setSearchQuery] = useState('');
   // stops a slow, older response from overwriting a newer one when the tab,
   // filter or search changes quickly
@@ -227,6 +228,9 @@ const AdminDashboard = () => {
     getReferralStats()
       .then((res) => setReferralStats(res.data.counts))
       .catch(() => setReferralStats(null));
+    getBrandVerifications({ status: 'pending', limit: 1 })
+      .then((res) => setPendingBrands(res.data.counts?.pending || 0))
+      .catch(() => setPendingBrands(0));
   }, []);
 
   const fetchPage = async (pg) => {
@@ -357,6 +361,25 @@ const AdminDashboard = () => {
       <div className="max-w-6xl mx-auto px-6 py-8">
         {/* payments + issues section links */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <button
+            onClick={() => navigate('/admin/brand-verification')}
+            className="w-full flex items-center justify-between bg-white rounded-2xl border p-5 hover:bg-gray-50 transition-colors"
+            style={{ borderColor: pendingBrands > 0 ? '#FEDF89' : '#E5E7EB' }}
+          >
+            <div className="text-left flex items-center gap-3">
+              <ShieldCheck size={20} color="#12B76A" style={{ flexShrink: 0 }} />
+              <div>
+                <div className="text-sm font-black" style={{ color: '#101828' }}>
+                  Verify Brands
+                  {pendingBrands > 0 && (
+                    <span className="ml-2 text-xs font-black rounded-full px-2 py-0.5" style={{ backgroundColor: '#FEF0C7', color: '#B54708' }}>{pendingBrands} waiting</span>
+                  )}
+                </div>
+                <div className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>Call new brands, then mark them verified</div>
+              </div>
+            </div>
+            <span style={{ color: '#155DFC', fontSize: '20px' }}>→</span>
+          </button>
           <button
             onClick={() => navigate('/admin/deleted-accounts')}
             className="order-last w-full flex items-center justify-between bg-white rounded-2xl border p-5 hover:bg-gray-50 transition-colors"

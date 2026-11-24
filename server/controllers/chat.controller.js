@@ -3,7 +3,12 @@ const Message = require('../models/Message');
 const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
 const sendPushNotification = require('../utils/sendPushNotification');
-const { loadConversationForUser, buildMessageContent } = require('../utils/chatSafety');
+const { loadConversationForUser, accessErrorBody, buildMessageContent } = require('../utils/chatSafety');
+const { isBrandVerified, effectiveStatus, NOT_VERIFIED_CODE, NOT_VERIFIED_MESSAGE } = require('../utils/brandVerification');
+
+// the reply a brand gets for anything in chat while an admin has not verified it
+const notVerifiedReply = (res, brand) =>
+  res.status(403).json({ message: NOT_VERIFIED_MESSAGE, code: NOT_VERIFIED_CODE, verificationStatus: effectiveStatus(brand) });
 
 
 // A Conversation document is created the moment someone opens a chat (so there
@@ -42,6 +47,7 @@ const getConversations = async (req, res) => {
     } else {
       const brand = await Brand.findOne({ userId: req.user.id });
       if (!brand) return res.json({ conversations: [] });
+      if (!isBrandVerified(brand)) return notVerifiedReply(res, brand);
 
       conversations = await Conversation.find({ brandId: brand._id, ...HAS_MESSAGES })
         .populate('creatorId', 'name profilePhoto instagram.handle instagram.isConnected instagram.followersCount instagram.engagementRate categories')
@@ -72,6 +78,7 @@ const getOrCreateConversation = async (req, res) => {
     if (req.user.role === 'brand') {
       const brand = await Brand.findOne({ userId: req.user.id });
       if (!brand) return res.status(404).json({ message: 'Brand profile not found' });
+      if (!isBrandVerified(brand)) return notVerifiedReply(res, brand);
       const creator = await Creator.findById(targetId);
       if (!creator) return res.status(404).json({ message: 'Creator not found' });
 
@@ -83,7 +90,8 @@ const getOrCreateConversation = async (req, res) => {
       const creator = await Creator.findOne({ userId: req.user.id });
       if (!creator) return res.status(404).json({ message: 'Creator profile not found' });
       const brand = await Brand.findById(targetId);
-      if (!brand) return res.status(404).json({ message: 'Brand not found' });
+      // a creator cannot start a chat with a brand that is not verified
+      if (!brand || !isBrandVerified(brand)) return res.status(404).json({ message: 'Brand not found' });
 
       brandId = brand._id;
       creatorId = creator._id;
@@ -116,7 +124,7 @@ const getMessages = async (req, res) => {
   const { id } = req.params;
   try {
     const access = await loadConversationForUser(id, req.user);
-    if (access.error) return res.status(access.error.status).json({ message: access.error.message });
+    if (access.error) return res.status(access.error.status).json(accessErrorBody(access.error));
 
     const messages = await Message.find({ conversationId: id })
       .sort({ createdAt: 1 });
@@ -151,8 +159,14 @@ const sendMessage = async (req, res) => {
   try {
     // only the brand or creator inside this conversation may send into it
     const access = await loadConversationForUser(id, req.user);
-    if (access.error) return res.status(access.error.status).json({ message: access.error.message });
+    if (access.error) return res.status(access.error.status).json(accessErrorBody(access.error));
     const { conversation } = access;
+
+    // a creator can still hand in work that was already paid for, but cannot
+    // start anything new (messages, payment requests) with a brand that is not verified
+    if (access.role === 'creator' && !access.brandVerified && type !== 'delivery') {
+      return res.status(403).json({ message: 'This brand is not verified right now, so you cannot send new messages to it.' });
+    }
 
     // the server decides what a message may contain - never the raw request body
     const built = buildMessageContent(type, req.body, access.role);
@@ -292,7 +306,7 @@ const getUnreadCount = async (req, res) => {
 const getConversationById = async (req, res) => {
   try {
     const access = await loadConversationForUser(req.params.id, req.user);
-    if (access.error) return res.status(access.error.status).json({ message: access.error.message });
+    if (access.error) return res.status(access.error.status).json(accessErrorBody(access.error));
 
     const conversation = await Conversation.findById(req.params.id)
       .populate('brandId', 'brandName logo')

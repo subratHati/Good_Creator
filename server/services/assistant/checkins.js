@@ -8,6 +8,7 @@ const AssistantMessage = require('../../models/AssistantMessage');
 const { isEnabled, generateReply } = require('./llm');
 const { pushAssistantMessage } = require('./notify');
 const { closeExpiredOpenings, startOfTodayIST } = require('../closeExpiredOpenings');
+const { isBrandVerified } = require('../../utils/brandVerification');
 
 const DAY = 24 * 60 * 60 * 1000;
 const ACTIVE_WINDOW_DAYS = 30;          // only people active in the last 30 days
@@ -86,8 +87,10 @@ const creatorSituation = async (userId) => {
 };
 
 const brandSituation = async (userId) => {
-    const brand = await Brand.findOne({ userId }).select('brandName').lean();
+    const brand = await Brand.findOne({ userId }).select('brandName verification').lean();
     if (!brand) return null;
+    // a brand that is not verified cannot post campaigns, so a "create a campaign" nudge would be wrong
+    if (!isBrandVerified(brand)) return { notVerified: true };
 
     const now = new Date();
     const active = await Opening.find({
@@ -233,6 +236,7 @@ const processUser = async (user, { slotKey, dry, force }) => {
         ? await creatorSituation(user._id)
         : await brandSituation(user._id);
     if (!situation) return skipped('no_profile');
+    if (situation.notVerified) return skipped('brand_not_verified');
 
     let conv;
     if (dry) {

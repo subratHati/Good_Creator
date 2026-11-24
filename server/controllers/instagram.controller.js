@@ -1,6 +1,7 @@
 const axios = require('axios');
 const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
+const { isBrandVerified, checkVerifiedBrandEdit, backToWaiting } = require('../utils/brandVerification');
 const { encryptToken, decryptToken } = require('../services/instagram.service');
 const calculateQualityScore = require('../utils/calculateQualityScore');
 const { photoForConnect, isInstagramPhoto } = require('../utils/profilePhoto');
@@ -169,9 +170,16 @@ const connectInstagram = async (req, res) => {
         await Creator.findByIdAndUpdate(updated._id, { qualityScore: newScore });
       }
     } else if (req.user.role === 'brand') {
+      // a verified brand that connects a different Instagram account than the one
+      // the team checked goes back to "waiting" (same rule as changing the handle)
+      const before = await Brand.findOne({ userId: req.user.id }).select('instagram.handle verification');
+      const handleCheck = before && isBrandVerified(before)
+        ? checkVerifiedBrandEdit(before, { instagram: { handle: profile.username } })
+        : { changed: [] };
       await Brand.findOneAndUpdate(
         { userId: req.user.id },
         {
+          ...(handleCheck.changed.length ? backToWaiting(handleCheck.changed) : {}),
           'instagram.handle': profile.username,
           'instagram.userId': String(igUserId),
           'instagram.accessToken': encryptedToken,

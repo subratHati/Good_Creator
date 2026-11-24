@@ -4,6 +4,7 @@ const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
 const sendPushNotification = require('../utils/sendPushNotification');
 const { createNotification } = require('./notification.controller');
+const { isBrandVerified } = require('../utils/brandVerification');
 
 // POST /api/applications/apply
 const applyToOpening = async (req, res) => {
@@ -21,6 +22,11 @@ const applyToOpening = async (req, res) => {
     }
     if (opening.status !== 'active') {
       return res.status(400).json({ message: 'This opening is no longer active' });
+    }
+    // creators can only apply to campaigns of verified brands
+    const openingBrand = await Brand.findById(opening.brandId).select('verification');
+    if (!isBrandVerified(openingBrand)) {
+      return res.status(404).json({ message: 'Opening not found' });
     }
 
     const existing = await Application.findOne({

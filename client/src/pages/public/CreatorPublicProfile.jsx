@@ -146,6 +146,9 @@ const CreatorPublicProfile = () => {
       setMessaging(true);
       const res = await getOrCreateConversation(creator._id);
       navigate(`/messages/${res.data.conversation._id}`);
+    } catch (err) {
+      // e.g. a brand that is not verified yet
+      toast.error(err.response?.data?.message || 'Could not open the chat. Please try again.');
     } finally {
       setMessaging(false);
     }

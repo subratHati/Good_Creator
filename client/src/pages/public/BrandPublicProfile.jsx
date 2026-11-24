@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ExternalLink, MapPin } from 'lucide-react';
 import axiosInstance from '../../api/axiosInstance';
+import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 const contentTypeColors = {
   reel: 'bg-blue-100 text-blue-700',
@@ -94,7 +95,10 @@ const BrandPublicProfile = () => {
                 }
               </div>
 
-              <h1 className="text-xl font-bold text-gray-900 mb-1">{brand.brandName}</h1>
+              <h1 className="text-xl font-bold text-gray-900 mb-1 flex items-center justify-center gap-1.5">
+                {brand.brandName}
+                {brand.isVerified && <VerifiedBadge size={20} title="Verified brand" />}
+              </h1>
 
               <span className="inline-block bg-blue-50 text-blue-700 text-xs font-medium px-2.5 py-1 rounded-full mb-3">
                 {getCategoryLabel(brand.category)}

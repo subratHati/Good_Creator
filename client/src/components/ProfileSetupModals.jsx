@@ -2,6 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { createCreatorProfile } from '../api/creator';
 import { createBrandProfile } from '../api/brand';
 import CategoryPolicyDialog from './CategoryPolicyDialog';
+import { phoneProblem, registrationProblem, splitRegistration, igHandleProblem } from '../utils/brandDetails';
+import { locationProblem } from '../utils/indiaLocations';
+import LocationPicker from './LocationPicker';
+import PhoneInput from './PhoneInput';
 import toast from 'react-hot-toast';
 
 const CREATOR_CATEGORIES = [
@@ -107,8 +111,8 @@ export const CreatorSetupModal = ({ onComplete }) => {
 
   const handleSubmit = async () => {
     if (!form.name.trim()) return toast.error('Please enter your name');
-    if (!form.city.trim()) return toast.error('Please enter your city');
-    if (!form.state.trim()) return toast.error('Please enter your state');
+    const placeProblem = locationProblem(form.state, form.city);
+    if (placeProblem) return toast.error(placeProblem);
     if (!form.gender) return toast.error('Please select your gender');
     if (form.categories.length < MIN_CREATOR_CATEGORIES) return toast.error('Please select at least 1 category');
     if (form.categories.length > MAX_CREATOR_CATEGORIES) return setShowPolicyDialog(true);
@@ -145,16 +149,13 @@ export const CreatorSetupModal = ({ onComplete }) => {
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Your name <span className="text-red-500">*</span></label>
               <input type="text" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Priya Sharma" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">City <span className="text-red-500">*</span></label>
-                <input type="text" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} placeholder="Mumbai" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">State <span className="text-red-500">*</span></label>
-                <input type="text" value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} placeholder="Maharashtra" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-              </div>
-            </div>
+            <LocationPicker
+              state={form.state}
+              city={form.city}
+              onChange={({ state, city }) => setForm({ ...form, state, city })}
+              variant="tailwind"
+              required
+            />
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                 Content categories <span className="text-red-500">*</span>
@@ -234,22 +235,30 @@ export const CreatorSetupModal = ({ onComplete }) => {
 };
 
 export const BrandSetupModal = ({ onComplete }) => {
-  const [form, setForm] = useState({ brandName: '', city: '', state: '', category: '' });
+  const [form, setForm] = useState({ brandName: '', city: '', state: '', category: '', phone: '', website: '', instagramHandle: '', registration: '' });
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async () => {
     if (!form.brandName.trim()) return toast.error('Please enter your brand name');
-    if (!form.city.trim()) return toast.error('Please enter your city');
-    if (!form.state.trim()) return toast.error('Please enter your state');
+    const placeProblem = locationProblem(form.state, form.city);
+    if (placeProblem) return toast.error(placeProblem);
     if (!form.category) return toast.error('Please select a category');
+    const problem = phoneProblem(form.phone) || igHandleProblem(form.instagramHandle) || registrationProblem(form.registration);
+    if (problem) return toast.error(problem);
     setSaving(true);
     try {
+      const { gstin, udyam } = splitRegistration(form.registration);
       await createBrandProfile({
         brandName: form.brandName.trim(),
         location: { city: form.city.trim(), state: form.state.trim() },
         category: form.category,
+        phone: form.phone.trim(),
+        website: form.website.trim(),
+        'instagram.handle': form.instagramHandle.trim(),
+        gstin,
+        udyam,
       });
-      toast.success('Brand profile created! Welcome to GoodCreator 🎉');
+      toast.success('Brand profile created! We will verify your brand within 24 hours.');
       window.dispatchEvent(new Event('profileCreated'));
       onComplete();
     } catch (err) {
@@ -267,23 +276,20 @@ export const BrandSetupModal = ({ onComplete }) => {
           <div className="mb-6">
             <div className="text-2xl mb-2">🏷️</div>
             <h2 className="text-xl font-bold text-gray-900">Set up your brand</h2>
-            <p className="text-sm text-gray-500 mt-1">Tell creators who you are. Takes 30 seconds.</p>
+            <p className="text-sm text-gray-500 mt-1">Tell creators who you are. Takes about a minute.</p>
           </div>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Brand name <span className="text-red-500">*</span></label>
               <input type="text" value={form.brandName} onChange={e => setForm({ ...form, brandName: e.target.value })} placeholder="e.g. Nykaa, Mamaearth" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">City <span className="text-red-500">*</span></label>
-                <input type="text" value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} placeholder="Mumbai" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">State <span className="text-red-500">*</span></label>
-                <input type="text" value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} placeholder="Maharashtra" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-              </div>
-            </div>
+            <LocationPicker
+              state={form.state}
+              city={form.city}
+              onChange={({ state, city }) => setForm({ ...form, state, city })}
+              variant="tailwind"
+              required
+            />
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Brand category <span className="text-red-500">*</span></label>
               <CategoryDropdown
@@ -292,11 +298,39 @@ export const BrandSetupModal = ({ onComplete }) => {
                 placeholder={form.category ? getCategoryLabel(form.category) : 'Select category'}
               />
             </div>
+
+            {/* brand verification details */}
+            <div className="rounded-2xl p-4 space-y-4" style={{ backgroundColor: '#F8FAFF', border: '1.5px solid #DBEAFE' }}>
+              <div>
+                <div className="text-sm font-bold text-gray-900">Verify your brand</div>
+                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                  Every new brand is verified within 24 hours. Only your phone / WhatsApp number is compulsory. If you have a website, an Instagram handle or a GSTIN / UDYAM number, please add them as well. It makes verification faster and easier.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone / WhatsApp number <span className="text-red-500">*</span></label>
+                <PhoneInput value={form.phone} onChange={(phone) => setForm({ ...form, phone })} variant="tailwind" />
+                <p className="text-xs text-gray-400 mt-1">Only our team sees this.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Website <span className="text-gray-400 font-normal">(if any)</span></label>
+                <input type="text" inputMode="url" autoCapitalize="none" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })} placeholder="https://yourbrand.com" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Instagram handle <span className="text-gray-400 font-normal">(if any)</span></label>
+                <input type="text" autoCapitalize="none" value={form.instagramHandle} onChange={e => setForm({ ...form, instagramHandle: e.target.value })} placeholder="@yourbrand" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">GSTIN or UDYAM number <span className="text-gray-400 font-normal">(if any)</span></label>
+                <input type="text" autoCapitalize="characters" value={form.registration} onChange={e => setForm({ ...form, registration: e.target.value })} placeholder="Enter either one" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                <p className="text-xs text-gray-400 mt-1">GSTIN has 15 characters. UDYAM looks like UDYAM-MH-00-0000000.</p>
+              </div>
+            </div>
           </div>
           <button onClick={handleSubmit} disabled={saving} className="w-full mt-6 py-4 bg-gray-900 text-white rounded-2xl font-bold text-sm hover:bg-gray-800 transition-colors disabled:opacity-60">
             {saving ? 'Setting up...' : 'Get started →'}
           </button>
-          <p className="text-xs text-center text-gray-400 mt-3">You can add logo, description, and more from your profile anytime.</p>
+          <p className="text-xs text-center text-gray-400 mt-3">You can browse creators right away. Campaigns and messages unlock once you are verified.</p>
         </div>
       </div>
     </div>

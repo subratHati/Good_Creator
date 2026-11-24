@@ -3,6 +3,9 @@ const Brand = require('../models/Brand');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { sendAdminEmail } = require('../services/email.service');
+const sendPushNotification = require('../utils/sendPushNotification');
+const { createNotification } = require('./notification.controller');
+const { STATUS } = require('../utils/brandVerification');
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -228,4 +231,136 @@ const getReferralStats = async (req, res) => {
   }
 };
 
-module.exports = { getAllCreators, getAllBrands, sendMessage, getReferralStats };
+// ─── brand verification (done by hand by the admin team) ─────────────────────
+// A brand is verified ONLY by the review endpoint below. Both routes are
+// admin-only (protect + isAdmin in admin.routes.js).
+
+const OBJECT_ID = /^[0-9a-fA-F]{24}$/;
+const REVIEW_STATUSES = [STATUS.VERIFIED, STATUS.NOT_VERIFIED, STATUS.PENDING];
+
+// brands that still need a decision: 'pending', and also any brand that has no
+// status saved at all (so nobody can hide from the queue)
+const statusQuery = (status) => {
+  if (status === STATUS.VERIFIED || status === STATUS.NOT_VERIFIED) return { 'verification.status': status };
+  return { 'verification.status': { $nin: [STATUS.VERIFIED, STATUS.NOT_VERIFIED] } };
+};
+
+// GET /api/admin/brand-verifications?status=pending|not_verified|verified&search=&page=&limit=
+const listBrandVerifications = async (req, res) => {
+  try {
+    const status = REVIEW_STATUSES.includes(req.query.status) ? req.query.status : STATUS.PENDING;
+    const search = (typeof req.query.search === 'string' ? req.query.search : '').trim();
+    const { page, limit, skip } = parsePaging(req);
+
+    const query = statusQuery(status);
+    if (search) {
+      const rx = new RegExp(escapeRegex(search), 'i');
+      const emailMatches = await User.find({ role: 'brand', email: rx }).select('_id').lean();
+      query.$or = [
+        { brandName: rx },
+        { phone: rx },
+        { gstin: rx },
+        { udyam: rx },
+        { 'instagram.handle': rx },
+        { userId: { $in: emailMatches.map((u) => u._id) } },
+      ];
+    }
+
+    // waiting brands: the one waiting longest first. Decided brands: latest decision first.
+    const sort = status === STATUS.PENDING
+      ? { 'verification.requestedAt': 1, createdAt: 1, _id: 1 }
+      : { 'verification.reviewedAt': -1, _id: -1 };
+
+    const [brands, total, pending, notVerified, verified] = await Promise.all([
+      Brand.find(query)
+        .select('-instagram.accessToken -savedCreators')
+        .populate('userId', 'email isEmailVerified createdAt lastActiveAt')
+        .populate('verification.reviewedBy', 'email')
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Brand.countDocuments(query),
+      Brand.countDocuments(statusQuery(STATUS.PENDING)),
+      Brand.countDocuments(statusQuery(STATUS.NOT_VERIFIED)),
+      Brand.countDocuments(statusQuery(STATUS.VERIFIED)),
+    ]);
+
+    res.json({
+      brands,
+      total,
+      status,
+      counts: { pending, not_verified: notVerified, verified },
+      pagination: { page, hasMore: skip + brands.length < total },
+    });
+  } catch (error) {
+    console.error('listBrandVerifications error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// PUT /api/admin/brand-verifications/:brandId   body: { status, note }
+// status: 'verified' | 'not_verified' | 'pending'. "Not verified" needs a note,
+// because the brand reads it to know what to fix.
+const reviewBrandVerification = async (req, res) => {
+  try {
+    const { brandId } = req.params;
+    if (!OBJECT_ID.test(String(brandId))) return res.status(404).json({ message: 'Brand not found' });
+
+    const status = req.body && req.body.status;
+    if (!REVIEW_STATUSES.includes(status)) {
+      return res.status(400).json({ message: 'Status must be verified, not_verified or pending' });
+    }
+    const note = typeof (req.body && req.body.note) === 'string' ? req.body.note.trim().slice(0, 500) : '';
+    if (status === STATUS.NOT_VERIFIED && note.length < 3) {
+      return res.status(400).json({ message: 'Please write a short note telling the brand what to fix' });
+    }
+
+    const set = {
+      'verification.status': status,
+      'verification.note': status === STATUS.VERIFIED ? '' : note,
+      'verification.reason': '',
+      'verification.reviewedAt': new Date(),
+      'verification.reviewedBy': req.user._id,
+    };
+    // moved back to the queue by hand: it is waiting again from now
+    if (status === STATUS.PENDING) set['verification.requestedAt'] = new Date();
+
+    const brand = await Brand.findByIdAndUpdate(brandId, { $set: set }, { new: true }).select('userId brandName verification');
+    if (!brand) return res.status(404).json({ message: 'Brand not found' });
+
+    console.log(`[BRAND VERIFICATION] ${brand.brandName} (${brand._id}) -> ${status} by admin ${req.user.email}`);
+
+    // A brand that is no longer verified must stop receiving live chat messages
+    // at once. Its open connections may still be sitting inside chat rooms they
+    // joined earlier, so take them out of those rooms (they cannot join again).
+    const io = req.app && req.app.get && req.app.get('io');
+    if (io && status !== STATUS.VERIFIED) {
+      io.in(`user_${brand.userId}`).fetchSockets()
+        .then((sockets) => sockets.forEach((s) => s.rooms.forEach((room) => {
+          if (String(room).startsWith('conversation_')) s.leave(room);
+        })))
+        .catch((err) => console.error('[BRAND VERIFICATION] could not leave chat rooms:', err.message));
+    }
+
+    // tell the brand - best effort, a failed message must never undo the decision
+    if (status !== STATUS.PENDING) {
+      const title = status === STATUS.VERIFIED ? 'Your brand is verified 🎉' : 'We could not verify your brand yet';
+      const body = status === STATUS.VERIFIED
+        ? 'You can now post campaigns and message creators on GoodCreator.'
+        : `${note} Please update your details in your profile and send it for verification again.`;
+      createNotification({ userId: brand.userId, type: 'admin', title, message: body, actionPath: '/brand/profile' });
+      sendPushNotification(String(brand.userId), { title, body, url: '/brand/profile' });
+      User.findById(brand.userId).select('email').then((u) => {
+        if (u && u.email) sendAdminEmail(u.email, title, body).catch((err) => console.error('[BRAND VERIFICATION] email failed:', err.message));
+      }).catch(() => { });
+    }
+
+    res.json({ message: 'Brand updated', brand });
+  } catch (error) {
+    console.error('reviewBrandVerification error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { getAllCreators, getAllBrands, sendMessage, getReferralStats, listBrandVerifications, reviewBrandVerification };

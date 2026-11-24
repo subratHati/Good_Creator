@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminChatList from './pages/admin/AdminChatList';
 import AdminChatWindow from './pages/admin/AdminChatWindow';
 import PrivacyPolicy from './pages/PrivacyPolicy'; // use the path where you saved the file
+import LocationReviewGate from './components/LocationReviewGate';
 
 const MessagesPage = lazy(() => import('./pages/messages/MessagesPage'));
 const ChatWindow = lazy(() => import('./pages/messages/ChatWindow'));
@@ -24,6 +25,7 @@ const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 
 //Navbar
 import BottomNav from './components/BottomNav';
+import RequireVerifiedBrand from './components/RequireVerifiedBrand';
 
 // creator
 const CreatorDashboard = lazy(() => import('./pages/creator/CreatorDashboard'));
@@ -59,6 +61,7 @@ const AdminDeletedAccounts = lazy(() => import('./pages/admin/AdminDeletedAccoun
 const AdminAnalytics = lazy(() => import('./pages/admin/AdminAnalytics'));
 const AdminAIMessages = lazy(() => import('./pages/admin/AdminAIMessages'));
 const AdminAIMessageView = lazy(() => import('./pages/admin/AdminAIMessageView'));
+const AdminBrandVerification = lazy(() => import('./pages/admin/AdminBrandVerification'));
 
 
 const App = () => {
@@ -66,6 +69,7 @@ const App = () => {
     <BrowserRouter>
       <AuthProvider>
         <Toaster position="top-right" />
+        <LocationReviewGate />
         <Suspense fallback={
           <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F8FAFC' }}>
             <div className="w-10 h-10 rounded-full animate-spin" style={{ border: '3px solid #EFF6FF', borderTopColor: '#155DFC' }} />
@@ -119,13 +123,13 @@ const App = () => {
               <ProtectedRoute allowedRole="brand"><BrowseCreators /></ProtectedRoute>
             } />
             <Route path="/brand/openings" element={
-              <ProtectedRoute allowedRole="brand"><ManageOpenings /></ProtectedRoute>
+              <ProtectedRoute allowedRole="brand"><RequireVerifiedBrand feature="Campaigns"><ManageOpenings /></RequireVerifiedBrand></ProtectedRoute>
             } />
             <Route path="/brand/openings/create" element={
-              <ProtectedRoute allowedRole="brand"><CreateOpening /></ProtectedRoute>
+              <ProtectedRoute allowedRole="brand"><RequireVerifiedBrand feature="Campaigns"><CreateOpening /></RequireVerifiedBrand></ProtectedRoute>
             } />
             <Route path="/brand/openings/:id/applicants" element={
-              <ProtectedRoute allowedRole="brand"><ViewApplicants /></ProtectedRoute>
+              <ProtectedRoute allowedRole="brand"><RequireVerifiedBrand feature="Applicants"><ViewApplicants /></RequireVerifiedBrand></ProtectedRoute>
             } />
             <Route path="/brand/saved-creators" element={
               <ProtectedRoute allowedRole="brand"><SavedCreators /></ProtectedRoute>
@@ -135,10 +139,10 @@ const App = () => {
             } />
 
             <Route path="/messages" element={
-              <ProtectedRoute><MessagesPage /></ProtectedRoute>
+              <ProtectedRoute><RequireVerifiedBrand feature="Messages"><MessagesPage /></RequireVerifiedBrand></ProtectedRoute>
             } />
             <Route path="/messages/:id" element={
-              <ProtectedRoute><ChatWindow /></ProtectedRoute>
+              <ProtectedRoute><RequireVerifiedBrand feature="Messages"><ChatWindow /></RequireVerifiedBrand></ProtectedRoute>
             } />
             <Route path="/messages/admin/:id" element={
               <ProtectedRoute><AdminChatWindow /></ProtectedRoute>
@@ -174,6 +178,9 @@ const App = () => {
             />
             <Route path="/admin/issues" element={
               <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminIssues /></ProtectedRoute>
+            } />
+            <Route path="/admin/brand-verification" element={
+              <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminBrandVerification /></ProtectedRoute>
             } />
             <Route path="/admin/analytics" element={
               <ProtectedRoute allowedRole="admin" loginPath="/admin/login"><AdminAnalytics /></ProtectedRoute>

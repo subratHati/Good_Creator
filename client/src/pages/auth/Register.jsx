@@ -136,10 +136,15 @@ const Register = () => {
 
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>Email</label>
-                <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="you@example.com"
+                <input type="email" name="email" value={formData.email} onChange={handleChange} required placeholder={formData.role === 'brand' ? 'Company email recommended' : 'you@example.com'}
                   style={{ width: '100%', padding: '14px 16px', borderRadius: '14px', border: '1.5px solid #E5E7EB', fontSize: '16px', outline: 'none', backgroundColor: '#F9FAFB', boxSizing: 'border-box' }}
                   onFocus={e => e.target.style.borderColor = '#155DFC'}
                   onBlur={e => e.target.style.borderColor = '#E5E7EB'} />
+                {formData.role === 'brand' && (
+                  <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '6px', lineHeight: 1.4 }}>
+                    Use your company email if you have one. It helps us verify your brand faster.
+                  </p>
+                )}
               </div>
 
               <div style={{ marginBottom: '24px' }}>
@@ -274,9 +279,14 @@ const Register = () => {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    placeholder="you@example.com"
+                    placeholder={formData.role === 'brand' ? 'Company email recommended' : 'you@example.com'}
                     className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                   />
+                  {formData.role === 'brand' && (
+                    <p className="text-xs text-gray-500 mt-1.5">
+                      Use your company email if you have one. It helps us verify your brand faster.
+                    </p>
+                  )}
                 </div>
 
                 <div>

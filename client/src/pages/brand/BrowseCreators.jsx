@@ -8,6 +8,8 @@ import CreatorCard from '../../components/CreatorCard';
 import toast from 'react-hot-toast';
 import useBackButtonClose from '../../hooks/useBackButtonClose';
 import CreatorListSkeleton from '../../components/CreatorListSkeleton';
+import LocationPicker from '../../components/LocationPicker';
+import { matchState, matchCity, stateOfCity } from '../../utils/indiaLocations';
 
 const CATEGORIES = ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'finance', 'entertainment', 'parenting_family', 'vlogging', 'dance', 'religious', 'news_politics', 'video_editing', 'ai_content', 'pets_wildlife', 'other'];
 
@@ -34,7 +36,7 @@ const formatNumber = (num) => {
 
 
 // ─── MOBILE FILTER SHEET ──────────────────────────────────────────────────────
-const FilterSheet = ({ open, onClose, filters, onFilterChange, onApply, onClear }) => {
+const FilterSheet = ({ open, onClose, filters, onFilterChange, onLocationChange, onApply, onClear }) => {
   useBackButtonClose(open, onClose);
   if (!open) return null;
   return (
@@ -84,10 +86,8 @@ const FilterSheet = ({ open, onClose, filters, onFilterChange, onApply, onClear 
               className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <div>
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">City</div>
-            <input type="text" value={filters.city} onChange={e => onFilterChange('city', e.target.value)}
-              placeholder="e.g. Mumbai"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Location</div>
+            <LocationPicker mode="filter" hideLabels state={filters.state} city={filters.city} onChange={onLocationChange} />
           </div>
           <div className="space-y-4">
             <label className="flex items-center justify-between cursor-pointer">
@@ -114,7 +114,7 @@ const FilterSheet = ({ open, onClose, filters, onFilterChange, onApply, onClear 
 };
 
 // ─── DESKTOP LEFT SIDEBAR ─────────────────────────────────────────────────────
-const DesktopSidebar = ({ filters, onFilterChange, onApply, onClear }) => (
+const DesktopSidebar = ({ filters, onFilterChange, onLocationChange, onApply, onClear }) => (
   <div className="hidden md:block w-56 flex-shrink-0">
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden sticky top-24">
       <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -179,10 +179,8 @@ const DesktopSidebar = ({ filters, onFilterChange, onApply, onClear }) => (
         <div className="h-px bg-gray-100" />
         {/* city */}
         <div>
-          <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">City</div>
-          <input type="text" value={filters.city} onChange={e => onFilterChange('city', e.target.value)}
-            placeholder="e.g. Mumbai"
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <div className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Location</div>
+          <LocationPicker mode="filter" hideLabels state={filters.state} city={filters.city} onChange={onLocationChange} />
         </div>
         <div className="h-px bg-gray-100" />
         {/* toggles */}
@@ -225,22 +223,31 @@ const BrowseCreators = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [sessionSeed] = useState(() => Math.random().toString(36).slice(2));
 
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState(() => {
+    // an old link such as ?city=Bombay still works: it becomes Maharashtra + Mumbai when that is certain
+    let state = searchParams.get('state') || '';
+    let city = searchParams.get('city') || '';
+    if (city && !state) { const s = stateOfCity(city); if (s) state = s; }
+    if (state && matchState(state)) { state = matchState(state); if (matchCity(state, city)) city = matchCity(state, city); }
+    return {
     search: searchParams.get('search') || '',
     category: searchParams.get('category') || '',
-    city: searchParams.get('city') || '',
+    state,
+    city,
     minFollowers: searchParams.get('minFollowers') || '',
     maxFollowers: searchParams.get('maxFollowers') || '',
     minEngagement: searchParams.get('minEngagement') || '',
     barterEnabled: searchParams.get('barterEnabled') || '',
     isOpenForCollab: searchParams.get('isOpenForCollab') || 'true',
     sortBy: searchParams.get('sortBy') || '',
+    };
   });
 
   const buildParams = (f) => {
     const params = {};
     if (f.search) params.search = f.search;
     if (f.category) params.category = f.category;
+    if (f.state) params.state = f.state;
     if (f.city) params.city = f.city;
     if (f.minFollowers) params.minFollowers = f.minFollowers;
     if (f.maxFollowers) params.maxFollowers = f.maxFollowers;
@@ -321,6 +328,7 @@ const BrowseCreators = () => {
     const params = {};
     if (f.search) params.search = f.search;
     if (f.category) params.category = f.category;
+    if (f.state) params.state = f.state;
     if (f.city) params.city = f.city;
     if (f.minFollowers) params.minFollowers = f.minFollowers;
     if (f.maxFollowers) params.maxFollowers = f.maxFollowers;
@@ -334,6 +342,15 @@ const BrowseCreators = () => {
   const handleFilterChange = (key, value) => {
     setFilters(prev => {
       const updated = { ...prev, [key]: value };
+      syncFiltersToUrl(updated);
+      return updated;
+    });
+  };
+
+  // the state / city drop-downs change both values together (picking a new state clears the city)
+  const handleLocationChange = ({ state, city }) => {
+    setFilters(prev => {
+      const updated = { ...prev, state: state || '', city: city || '' };
       syncFiltersToUrl(updated);
       return updated;
     });
@@ -359,7 +376,7 @@ const BrowseCreators = () => {
   };
 
   const handleClearFilters = () => {
-    const cleared = { search: '', category: '', city: '', minFollowers: '', maxFollowers: '', minEngagement: '', barterEnabled: '', isOpenForCollab: 'true', sortBy: '' };
+    const cleared = { search: '', category: '', state: '', city: '', minFollowers: '', maxFollowers: '', minEngagement: '', barterEnabled: '', isOpenForCollab: 'true', sortBy: '' };
     setFilters(cleared);
     syncFiltersToUrl(cleared);
     fetchCreators(cleared);
@@ -380,7 +397,7 @@ const BrowseCreators = () => {
     }));
   };
 
-  const activeFilterCount = [filters.category, filters.city, filters.minFollowers, filters.minEngagement, filters.barterEnabled].filter(Boolean).length;
+  const activeFilterCount = [filters.category, filters.state || filters.city, filters.minFollowers, filters.minEngagement, filters.barterEnabled].filter(Boolean).length;
 
   const EmptyState = () => (
     <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
@@ -400,7 +417,7 @@ const BrowseCreators = () => {
     <div className="min-h-screen" style={{ backgroundColor: '#F5F5F7' }}>
       <Navbar />
       <FilterSheet open={showFilterSheet} onClose={() => setShowFilterSheet(false)}
-        filters={filters} onFilterChange={handleFilterChange}
+        filters={filters} onFilterChange={handleFilterChange} onLocationChange={handleLocationChange}
         onApply={() => fetchCreators(filters)} onClear={handleClearFilters} />
       {/* mobile top bar */}
       {/* mobile search */}
@@ -448,7 +465,7 @@ const BrowseCreators = () => {
 
         {/* DESKTOP — sidebar + content */}
         <div className="hidden md:flex gap-6 items-start">
-          <DesktopSidebar filters={filters} onFilterChange={handleFilterChange}
+          <DesktopSidebar filters={filters} onFilterChange={handleFilterChange} onLocationChange={handleLocationChange}
             onApply={() => fetchCreators(filters)} onClear={handleClearFilters} />
 
           <div className="flex-1 min-w-0">

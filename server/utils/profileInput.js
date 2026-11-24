@@ -52,6 +52,49 @@ const safeUrl = (v, max = 300) => {
   }
 };
 
+// Phone / WhatsApp number: spaces, dashes and brackets are ignored, a leading
+// + is allowed, and what is left must be 10-15 digits. Returns the cleaned
+// number, or null when it is not a usable phone number.
+//  - The screens send it with the country code, e.g. +919876543210.
+//  - A number saved earlier without a country code (9876543210) is read as an
+//    Indian number and written as +919876543210.
+//  - +91 numbers must be a 10-digit Indian mobile number (starts with 6-9).
+const cleanPhone = (v) => {
+  if (typeof v !== 'string') return null;
+  const s = v.trim().replace(/[\s\-().]/g, '');
+  if (!/^\+?[0-9]{10,15}$/.test(s)) return null;
+  if (s.startsWith('+')) {
+    return s.startsWith('+91') && !/^\+91[6-9][0-9]{9}$/.test(s) ? null : s;
+  }
+  if (/^[6-9][0-9]{9}$/.test(s)) return `+91${s}`;
+  if (/^0[6-9][0-9]{9}$/.test(s)) return `+91${s.slice(1)}`;
+  if (/^91[6-9][0-9]{9}$/.test(s)) return `+${s}`;
+  return s;
+};
+
+// GSTIN: 15 characters, e.g. 27AAPFU0939F1ZV. Returns the upper-case value,
+// '' for empty input, or null when the format is wrong.
+const GSTIN_FORMAT = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+const cleanGstin = (v) => {
+  const s = str(v, 40);
+  if (s === null) return null;
+  if (s === '') return '';
+  const gst = s.replace(/\s/g, '').toUpperCase();
+  return GSTIN_FORMAT.test(gst) ? gst : null;
+};
+
+// UDYAM registration number: UDYAM-XX-00-0000000 (the dashes may be left out).
+// Returns the value in the standard dashed form, '' for empty input, or null
+// when the format is wrong.
+const cleanUdyam = (v) => {
+  const s = str(v, 40);
+  if (s === null) return null;
+  if (s === '') return '';
+  const plain = s.replace(/[\s-]/g, '').toUpperCase();
+  const m = /^UDYAM([A-Z]{2})([0-9]{2})([0-9]{7})$/.exec(plain);
+  return m ? `UDYAM-${m[1]}-${m[2]}-${m[3]}` : null;
+};
+
 const categoryList = (v, allowed) => {
   if (!Array.isArray(v)) return null;
   return [...new Set(v.filter((c) => typeof c === 'string' && allowed.includes(c)))];
@@ -173,6 +216,32 @@ const cleanBrandInput = (body, { isCreate = false } = {}) => {
     data.location = location;
   }
 
+  // Verification details. The phone / WhatsApp number is the only compulsory
+  // one - the admin team uses it to verify the brand. Website, Instagram handle,
+  // GSTIN and UDYAM are optional, but when given they must look right.
+  // NOTE: verification status, note, reviewer and dates are NOT read from the
+  // request here, so a brand can never mark itself verified.
+  // (When an existing brand saves its profile with the phone box left empty, the
+  // saved number is simply kept - a number can be changed but not removed.)
+  if (has(b, 'phone') && (isCreate || str(b.phone, 40) !== '')) {
+    const phone = cleanPhone(b.phone);
+    if (!phone) return { error: 'Enter a valid phone / WhatsApp number. Indian numbers have 10 digits and start with 6, 7, 8 or 9.' };
+    data.phone = phone;
+  }
+  if (isCreate && !data.phone) return { error: 'Phone / WhatsApp number is required' };
+
+  if (has(b, 'gstin')) {
+    const gstin = cleanGstin(b.gstin);
+    if (gstin === null) return { error: 'GSTIN looks wrong. It has 15 characters, for example 27AAPFU0939F1ZV' };
+    data.gstin = gstin;
+  }
+
+  if (has(b, 'udyam')) {
+    const udyam = cleanUdyam(b.udyam);
+    if (udyam === null) return { error: 'UDYAM number looks wrong. It looks like UDYAM-MH-00-0000000' };
+    data.udyam = udyam;
+  }
+
   // the screen sends this as the dotted key 'instagram.handle'
   const rawHandle = has(b, 'instagram.handle') ? b['instagram.handle'] : (isObject(b.instagram) ? b.instagram.handle : undefined);
   if (rawHandle !== undefined) {
@@ -251,4 +320,4 @@ const cleanOpeningInput = (body, { isCreate = false } = {}) => {
   return { data };
 };
 
-module.exports = { cleanCreatorInput, cleanBrandInput, cleanOpeningInput, flatten, safeUrl };
+module.exports = { cleanCreatorInput, cleanBrandInput, cleanOpeningInput, flatten, safeUrl, cleanPhone };

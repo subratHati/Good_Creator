@@ -10,6 +10,8 @@
 //      from the request.
 
 const Conversation = require('../models/Conversation');
+const Brand = require('../models/Brand');
+const { isBrandVerified, effectiveStatus, NOT_VERIFIED_CODE, NOT_VERIFIED_MESSAGE } = require('./brandVerification');
 
 const OBJECT_ID = /^[0-9a-fA-F]{24}$/;
 const MAX_TEXT = 5000;
@@ -21,7 +23,11 @@ const PAYMENT_REQUEST_MINUTES = 10; // a payment request can only be paid for th
 // 404 (not 403) on purpose, so nobody can probe which conversation ids exist
 const NOT_FOUND = { error: { status: 404, message: 'Conversation not found' } };
 
-const loadConversationForUser = async (conversationId, user) => {
+// Pass { allowUnverifiedBrand: true } only for things that must keep working for
+// a brand an admin has since un-verified (finishing a collab that was already
+// paid for: release, reject, review). Everything else - reading or sending
+// messages, opening live chat, starting a payment - needs a verified brand.
+const loadConversationForUser = async (conversationId, user, { allowUnverifiedBrand = false } = {}) => {
   const id = String(conversationId || '');
   if (!OBJECT_ID.test(id)) return NOT_FOUND;
 
@@ -34,8 +40,30 @@ const loadConversationForUser = async (conversationId, user) => {
   else if (String(conversation.creatorUserId) === userId) role = 'creator';
   if (!role) return NOT_FOUND;
 
-  return { conversation, role };
+  // the BRAND in a chat must be verified. (A creator keeps access to the chat
+  // so they can still hand in work that was already paid for; sendMessage stops
+  // them from starting anything new with an unverified brand.)
+  const brand = await Brand.findById(conversation.brandId).select('verification');
+  const brandVerified = isBrandVerified(brand);
+  if (role === 'brand' && !brandVerified && !allowUnverifiedBrand) {
+    return {
+      error: {
+        status: 403,
+        code: NOT_VERIFIED_CODE,
+        message: NOT_VERIFIED_MESSAGE,
+        verificationStatus: effectiveStatus(brand),
+      },
+    };
+  }
+
+  return { conversation, role, brandVerified };
 };
+
+// the reply body for an { error } returned by loadConversationForUser
+const accessErrorBody = (error) => ({
+  message: error.message,
+  ...(error.code ? { code: error.code, verificationStatus: error.verificationStatus } : {}),
+});
 
 const str = (value, max) => (typeof value === 'string' ? value.trim().slice(0, max) : '');
 
@@ -109,4 +137,4 @@ const paymentRequestExpiry = (message) => {
   return new Date(new Date(message.createdAt).getTime() + PAYMENT_REQUEST_MINUTES * 60 * 1000);
 };
 
-module.exports = { loadConversationForUser, buildMessageContent, paymentRequestExpiry, PAYMENT_REQUEST_MINUTES };
+module.exports = { loadConversationForUser, accessErrorBody, buildMessageContent, paymentRequestExpiry, PAYMENT_REQUEST_MINUTES };

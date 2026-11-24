@@ -7,6 +7,7 @@ import { applyToOpening } from '../../api/applications';
 import useCreatorProfileGuard from '../../hooks/useCreatorProfileGuard';
 import toast from 'react-hot-toast';
 import OpeningListSkeleton from '../../components/OpeningListSkeleton';
+import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 const categoryColors = {
   fashion: { bg: '#FED7AA', color: '#7C2D12' },
@@ -92,6 +93,9 @@ const OpeningCard = ({ opening, onApply, applied }) => {
           {/* brand name */}
           <div style={{ fontSize: '11px', fontWeight: 600, color: '#16A34A', marginBottom: '8px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             By {opening.brandId?.brandName || 'Brand'}
+            {opening.brandId?.verification?.status === 'verified' && (
+              <span style={{ display: 'inline-block', verticalAlign: '-2px', marginLeft: '4px' }}><VerifiedBadge size={13} title="Verified brand" /></span>
+            )}
           </div>
 
           {/* deliverable boxes */}

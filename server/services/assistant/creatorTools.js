@@ -1,6 +1,7 @@
 const Opening = require('../../models/Opening');
 const Brand = require('../../models/Brand');
 const Application = require('../../models/Application');
+const { unverifiedBrandIds } = require('../../utils/brandVerification');
 
 const MAX_CARDS = 5; // keep equal to MAX_CARDS in tools.js
 const CANDIDATES = 200; // campaigns are few, so they are filtered and ranked in code
@@ -11,6 +12,7 @@ const BLOCKED = /(?!)/; // blocking turned off for now // campaigns the AI will 
 const KNOWN_CITIES = ['mumbai', 'delhi', 'bangalore', 'bengaluru', 'hyderabad', 'chennai', 'kolkata', 'pune', 'ahmedabad', 'jaipur', 'lucknow', 'surat', 'kochi', 'chandigarh', 'indore', 'bhopal', 'nagpur', 'patna', 'guwahati', 'ranchi', 'raipur', 'bhubaneswar', 'cuttack', 'noida', 'gurgaon', 'gurugram', 'goa'];
 
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const { lookupPlace, looseRegex, samePlace } = require('../../utils/places');
 const text = (v, max = 60) => String(v || '').trim().slice(0, max);
 const num = (v, min, max) => {
     if (v === undefined || v === null || v === '') return null;
@@ -76,6 +78,8 @@ const runSearchCampaigns = async (input, ctx) => {
     const sortBy = SORTS.includes(input.sort_by) ? input.sort_by : 'newest';
     const limit = Math.floor(num(input.limit, 1, MAX_CARDS) ?? 4);
     const query = { status: 'active' };
+    // campaigns of brands that an admin has not verified are never suggested
+    query.brandId = { $nin: await unverifiedBrandIds() };
     const and = [];
     const applied = {};
     const notes = [];
@@ -92,7 +96,7 @@ const runSearchCampaigns = async (input, ctx) => {
     let nearbyBrandIds = new Set();
     let stateName = '';
     if (city) {
-        const cityBrands = await Brand.find({ 'location.city': { $regex: escapeRegex(city), $options: 'i' } })
+        const cityBrands = await Brand.find({ 'location.city': { $regex: looseRegex(lookupPlace('city', city).variants), $options: 'i' } })
             .select('_id location.state')
             .limit(500)
             .lean();
@@ -126,7 +130,7 @@ const runSearchCampaigns = async (input, ctx) => {
         if (stateName) applied.then_nearby_in = stateName;
     }
     const cityBrandSet = new Set(cityBrandIds);
-    const cityTest = city ? new RegExp(escapeRegex(city), 'i') : null;
+    const cityTest = city ? new RegExp(looseRegex(lookupPlace('city', city).variants), 'i') : null;
     // 0 = this city, 1 = same state, 2 = elsewhere
     const placeStage = (o) => {
         if (!city) return 0;
@@ -196,13 +200,13 @@ const runSearchCampaigns = async (input, ctx) => {
         const overlap = wanted.filter((c) => creatorCats.has(c)).length;
         if (wanted.length && !overlap) unmet.push('Different category');
         const locs = (r.locations || []).map((l) => String(l).trim().toLowerCase()).filter(Boolean);
-        const cityOk = !locs.length || (creatorCity && locs.some((l) => l === creatorCity || creatorCity.includes(l) || l.includes(creatorCity)));
+        const cityOk = !locs.length || (creatorCity && locs.some((l) => l === creatorCity || samePlace(l, creatorCity) || creatorCity.includes(l) || l.includes(creatorCity)));
         if (!cityOk) unmet.push('Different location');
         const homeCity = (city || creatorCity || '').toLowerCase();
         if (!locs.length && homeCity) {
             const title = String(o.title || '').toLowerCase();
             const named = KNOWN_CITIES.find((c) => new RegExp(`\\b${c}\\b`).test(title));
-            if (named && named !== homeCity && !homeCity.includes(named)) {
+            if (named && named !== homeCity && !homeCity.includes(named) && !samePlace(named, homeCity)) {
                 unmet.push(`Title mentions ${named[0].toUpperCase()}${named.slice(1)}`);
             }
         }

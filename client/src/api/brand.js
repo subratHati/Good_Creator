@@ -14,6 +14,9 @@ export const uploadBrandLogo = (formData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 
+export const requestBrandVerification = () =>
+  axiosInstance.post('/brands/request-verification');
+
 export const saveCreator = (creatorId) =>
   axiosInstance.put(`/brands/save-creator/${creatorId}`);
 

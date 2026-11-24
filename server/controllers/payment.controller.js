@@ -9,7 +9,7 @@ const generateCollabId = require('../utils/generateCollabId');
 const calculateQualityScore = require('../utils/calculateQualityScore');
 const Collaboration = require('../models/Collaboration');
 const { createNotification } = require('./notification.controller');
-const { loadConversationForUser, paymentRequestExpiry } = require('../utils/chatSafety');
+const { loadConversationForUser, accessErrorBody, paymentRequestExpiry } = require('../utils/chatSafety');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -22,10 +22,14 @@ const isId = (value) => typeof value === 'string' && OBJECT_ID.test(value);
 
 // Confirms the logged-in user is the BRAND inside this conversation. When they
 // are not, it sends the error reply itself and returns null.
-const requireBrandInConversation = async (req, res, conversationId) => {
-  const access = await loadConversationForUser(conversationId, req.user);
+// The brand must be verified, except for { allowUnverifiedBrand: true }, which
+// is only used for finishing a collab that was already paid for (verify the
+// payment, release it, reject a delivery) so money that has already moved is
+// never left stuck if an admin un-verifies a brand in the middle.
+const requireBrandInConversation = async (req, res, conversationId, options) => {
+  const access = await loadConversationForUser(conversationId, req.user, options);
   if (access.error) {
-    res.status(access.error.status).json({ message: access.error.message });
+    res.status(access.error.status).json(accessErrorBody(access.error));
     return null;
   }
   if (access.role !== 'brand') {
@@ -222,7 +226,8 @@ const verifyPayment = async (req, res) => {
       return res.status(400).json({ message: 'Payment verification failed' });
     }
 
-    const conversation = await requireBrandInConversation(req, res, conversationId);
+    // already-paid money must always be able to finish, even if the brand was un-verified meanwhile
+    const conversation = await requireBrandInConversation(req, res, conversationId, { allowUnverifiedBrand: true });
     if (!conversation) return;
 
     // 1. the signature must be genuine
@@ -352,7 +357,8 @@ const releasePayment = async (req, res) => {
   try {
     if (!isId(deliveryMessageId)) return res.status(400).json({ message: 'Invalid delivery' });
 
-    const conversation = await requireBrandInConversation(req, res, conversationId);
+    // already-paid money must always be able to finish, even if the brand was un-verified meanwhile
+    const conversation = await requireBrandInConversation(req, res, conversationId, { allowUnverifiedBrand: true });
     if (!conversation) return;
 
     // the delivery must be a real delivery message inside THIS conversation
@@ -465,7 +471,7 @@ const releasePayment = async (req, res) => {
 const getAvailableCollabs = async (req, res) => {
   try {
     const access = await loadConversationForUser(req.params.conversationId, req.user);
-    if (access.error) return res.status(access.error.status).json({ message: access.error.message });
+    if (access.error) return res.status(access.error.status).json(accessErrorBody(access.error));
     if (access.role !== 'creator') {
       return res.status(403).json({ message: 'Only the creator in this conversation can do this' });
     }
@@ -497,7 +503,8 @@ const rejectDelivery = async (req, res) => {
   try {
     if (!isId(deliveryMessageId)) return res.status(400).json({ message: 'Invalid delivery' });
 
-    const conversation = await requireBrandInConversation(req, res, conversationId);
+    // already-paid money must always be able to finish, even if the brand was un-verified meanwhile
+    const conversation = await requireBrandInConversation(req, res, conversationId, { allowUnverifiedBrand: true });
     if (!conversation) return;
 
     // switch pending -> revision_requested in ONE step, so a double click (or two

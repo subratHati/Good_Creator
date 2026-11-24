@@ -25,6 +25,10 @@ const creatorSchema = new mongoose.Schema({
         city: { type: String, default: '' },
         state: { type: String, default: '' },
     },
+    // true = the saved location could not be matched to our lists, so the person is
+    // asked to pick it again (a pop-up until they do). Set by the clean-up script,
+    // cleared when a proper location is saved.
+    locationReview: { type: Boolean, default: false },
     categories: {
         type: [String],
         enum: ['lifestyle', 'food', 'travel', 'fashion', 'beauty', 'tech', 'fitness', 'gaming', 'education', 'finance', 'entertainment', 'parenting_family', 'vlogging', 'dance', 'religious', 'news_politics', 'video_editing', 'ai_content', 'pets_wildlife', 'other'],

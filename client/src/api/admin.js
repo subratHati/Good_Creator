@@ -6,6 +6,12 @@ export const getAllCreators = (params) =>
 export const getAllBrands = (params) =>
   axiosInstance.get('/admin/brands', { params });
 
+export const getBrandVerifications = (params) =>
+  axiosInstance.get('/admin/brand-verifications', { params });
+
+export const reviewBrandVerification = (brandId, data) =>
+  axiosInstance.put(`/admin/brand-verifications/${brandId}`, data);
+
 export const sendAdminMessage = (data) =>
   axiosInstance.post('/admin/send-message', data);
 

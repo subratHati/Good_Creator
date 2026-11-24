@@ -3,7 +3,9 @@ const Brand = require('../models/Brand');
 const Creator = require('../models/Creator');
 const sendPushNotification = require('../utils/sendPushNotification');
 const { cleanOpeningInput, flatten } = require('../utils/profileInput');
+const { escapeRegex, lookupPlace, wholeValueRegex } = require('../utils/places');
 const { sendPushNotificationBatch } = require('../utils/sendPushNotification');
+const { unverifiedBrandIds, isBrandVerified, NOT_VERIFIED_CODE, NOT_VERIFIED_MESSAGE, effectiveStatus } = require('../utils/brandVerification');
 
 // Pushes a "new campaign" notification to every creator whose
 // categories overlap with this campaign's preferred niches, or whose
@@ -19,7 +21,8 @@ const notifyMatchingCreators = async (opening, brand) => {
     orConditions.push({ categories: { $in: categoryList } });
   }
   if (city) {
-    orConditions.push({ 'location.city': { $regex: `^${city}$`, $options: 'i' } });
+    // same city by any of its spellings (Bombay = Mumbai); the typed name is escaped
+    orConditions.push({ 'location.city': { $regex: wholeValueRegex(lookupPlace('city', city, brand.location?.state).variants), $options: 'i' } });
   }
   if (orConditions.length === 0) return; // nothing to match on
 
@@ -40,6 +43,11 @@ const createOpening = async (req, res) => {
     const brand = await Brand.findOne({ userId: req.user.id });
     if (!brand) {
       return res.status(404).json({ message: 'Brand profile not found. Create your brand profile first.' });
+    }
+    // the route already checks this; it is checked again here so a campaign can
+    // never be created by an unverified brand even if the route is changed later
+    if (!isBrandVerified(brand)) {
+      return res.status(403).json({ message: NOT_VERIFIED_MESSAGE, code: NOT_VERIFIED_CODE, verificationStatus: effectiveStatus(brand) });
     }
 
     // only the allowed fields are read from the request
@@ -154,10 +162,14 @@ const searchOpenings = async (req, res) => {
 
     const query = { status: 'active' };
 
-    if (brandId) query.brandId = brandId;
+    // campaigns of brands that an admin has not verified are never shown
+    query.brandId = { $nin: await unverifiedBrandIds() };
+    if (brandId) query.$and = [{ brandId }];
 
-    if (search) {
-      const searchRegex = { $regex: search, $options: 'i' };
+    // typed text is never used as a raw regex
+    const searchText = typeof search === 'string' ? search.trim().slice(0, 100) : '';
+    if (searchText) {
+      const searchRegex = { $regex: escapeRegex(searchText), $options: 'i' };
 
       // "brand name" and "category" both live on the Brand document, not on
       // Opening itself — find matching brands first, then combine with a
@@ -196,7 +208,7 @@ const searchOpenings = async (req, res) => {
 
     const [openings, total] = await Promise.all([
       Opening.find(query)
-        .populate('brandId', 'brandName logo category location instagram.handle instagram.followersCount')
+        .populate('brandId', 'brandName logo category location instagram.handle instagram.followersCount verification.status')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(Number(limit)),
@@ -236,9 +248,10 @@ const searchOpenings = async (req, res) => {
 const getOpeningById = async (req, res) => {
   try {
     const opening = await Opening.findById(req.params.id)
-      .populate('brandId', 'brandName logo category location');
+      .populate('brandId', 'brandName logo category location verification.status');
 
-    if (!opening) {
+    // a campaign of an unverified brand does not exist as far as the public is concerned
+    if (!opening || !opening.brandId || !isBrandVerified(opening.brandId)) {
       return res.status(404).json({ message: 'Opening not found' });
     }
 

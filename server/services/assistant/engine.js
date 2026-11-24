@@ -3,6 +3,7 @@ const { toolsForRole, runTool, MAX_CARDS } = require('./tools');
 const Brand = require('../../models/Brand');
 const Creator = require('../../models/Creator');
 const AssistantMessage = require('../../models/AssistantMessage');
+const { isBrandVerified } = require('../../utils/brandVerification');
 
 const MAX_TOOL_ROUNDS = 4; // safety cap so the AI can't loop forever
 
@@ -18,6 +19,14 @@ CREATOR SEARCH RULES (for brands):
 - After searching, write one or two short sentences: which filters you used, and how many creators matched in total. If nothing matched, say so and suggest loosening the least important filter; if you loosen a filter yourself, say exactly which one.
 - You only see counts, not creator statistics. Do not claim to know a specific creator's numbers; the cards show them.
 - Engagement rate is interactions (likes, comments, saves, shares) divided by reach, so it can never be above 100%. If asked for more than 100%, explain that and ask for a lower minimum instead of searching.`;
+
+// added for a brand that an admin has not verified yet
+const BRAND_NOT_VERIFIED_RULES = `
+BRAND VERIFICATION (this brand is NOT verified yet):
+- This brand is waiting for GoodCreator to verify it by phone. This is done within 24 hours and its status is shown on the Home and Profile pages.
+- Until it is verified the brand can browse creators, check their Instagram numbers and save creators, but it cannot post campaigns or message creators.
+- If the brand asks to post a campaign, contact or message a creator, or pay a creator, do not help with it. Explain this in one or two short sentences, and say the Contact & Help page is the way to reach the team.
+- Never say the brand is verified, and never promise a time shorter than 24 hours.`;
 
 const CREATOR_SEARCH_RULES = `
 CAMPAIGN SEARCH RULES (for creators):
@@ -72,9 +81,10 @@ const runAssistant = async ({ user, system, history, conversationId }) => {
   const ctx = { role: user.role, userId: user.id, brand: null, creator: null, shownIds: new Set(), turnIds: new Set() };
   let rules = '';
   if (user.role === 'brand') {
-    ctx.brand = await Brand.findOne({ userId: user.id }).select('category location').lean();
+    ctx.brand = await Brand.findOne({ userId: user.id }).select('category location verification').lean();
     ctx.shownIds = await loadShownIds(conversationId);
     rules = BRAND_SEARCH_RULES;
+    if (!isBrandVerified(ctx.brand)) rules += `\n${BRAND_NOT_VERIFIED_RULES}`;
   } else if (user.role === 'creator') {
     ctx.creator = await Creator.findOne({ userId: user.id })
       .select('categories location instagram.followersCount instagram.engagementRate')

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Camera, HelpCircle, Handshake } from 'lucide-react';
+import { Camera, HelpCircle, Handshake, Lock } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,6 +9,12 @@ import {
   uploadBrandLogo,
 } from '../../api/brand';
 import { getMyOpenings } from '../../api/openings';
+import BrandVerificationBanner from '../../components/BrandVerificationBanner';
+import { refreshBrandVerification } from '../../hooks/useBrandVerification';
+import { phoneProblem, registrationProblem, splitRegistration, igHandleProblem, splitPhone, joinPhone } from '../../utils/brandDetails';
+import { normalizeLocation, locationProblem } from '../../utils/indiaLocations';
+import LocationPicker from '../../components/LocationPicker';
+import PhoneInput from '../../components/PhoneInput';
 import toast from 'react-hot-toast';
 
 
@@ -51,6 +57,17 @@ const getCategoryLabel = (cat) => {
 
 const avatarBgs = ['#FF6B35', '#155DFC', '#E1306C', '#16A34A', '#8B5CF6', '#F59E0B'];
 
+// a value that cannot be edited any more (shown after the brand is verified)
+const LockedField = ({ children }) => (
+  <>
+    <div data-testid="locked-field" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '13px 14px', borderRadius: '14px', border: '1.5px solid #E5E7EB', fontSize: '15px', backgroundColor: '#F2F4F7', color: '#475467' }}>
+      <Lock size={14} color="#98A2B3" style={{ flexShrink: 0 }} />
+      <span style={{ overflowWrap: 'anywhere' }}>{children}</span>
+    </div>
+    <p style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '6px' }}>Cannot be changed after your brand is verified.</p>
+  </>
+);
+
 // ─── EDIT MODAL ───────────────────────────────────────────────────────────────
 const EditModal = ({ profile, onClose, onSave }) => {
   const [form, setForm] = useState({
@@ -58,13 +75,19 @@ const EditModal = ({ profile, onClose, onSave }) => {
     description: profile?.description || '',
     website: profile?.website || '',
     category: profile?.category || '',
-    city: profile?.location?.city || '',
-    state: profile?.location?.state || '',
+    ...normalizeLocation(profile?.location?.state, profile?.location?.city),
     instagramHandle: profile?.instagram?.handle || '',
+    phone: (() => { const p = splitPhone(profile?.phone); return joinPhone(p.code, p.number); })(),
+    registration: profile?.gstin || profile?.udyam || '',
   });
   const [saving, setSaving] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoPreview, setLogoPreview] = useState(profile?.logo || null);
+
+  // Once the team has verified the brand, its name, category, GSTIN and UDYAM
+  // number are locked (the server enforces this too). Logo and description are free.
+  const isVerified = profile?.verification?.status === 'verified';
+  const registrationLocked = isVerified && Boolean(profile?.gstin || profile?.udyam);
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -83,19 +106,31 @@ const EditModal = ({ profile, onClose, onSave }) => {
   const handleSave = async () => {
     if (!form.brandName.trim()) return toast.error('Brand name is required');
     if (!form.category) return toast.error('Please select a category');
+    if (form.phone.trim() === '' && !profile?.phone) return toast.error('Phone / WhatsApp number is required');
+    const placeProblem = locationProblem(form.state, form.city);
+    if (placeProblem) return toast.error(placeProblem);
+    const problem = (form.phone.trim() ? phoneProblem(form.phone) : '') || igHandleProblem(form.instagramHandle) || registrationProblem(form.registration);
+    if (problem) return toast.error(problem);
     setSaving(true);
     try {
+      const { gstin, udyam } = splitRegistration(form.registration);
       const payload = {
-        brandName: form.brandName,
         description: form.description,
         website: form.website,
-        category: form.category,
-        location: { city: form.city, state: form.state },
+        location: { city: form.city.trim(), state: form.state.trim() },
         'instagram.handle': form.instagramHandle,
+        phone: form.phone,
       };
-      if (profile) await updateBrandProfile(payload);
-      else await createBrandProfile(payload);
-      toast.success('Profile saved!');
+      // locked fields are not sent at all once verified
+      if (!isVerified) { payload.brandName = form.brandName; payload.category = form.category; }
+      if (!registrationLocked) { payload.gstin = gstin; payload.udyam = udyam; }
+      let sentBackForReview = false;
+      if (profile) {
+        const res = await updateBrandProfile(payload);
+        sentBackForReview = !!res.data?.sentBackForReview;
+      } else await createBrandProfile(payload);
+      toast.success(sentBackForReview ? 'Saved. Your brand will be verified again within 24 hours.' : 'Profile saved!');
+      refreshBrandVerification();
       onSave(); onClose();
     } catch (err) { toast.error(err.response?.data?.message || 'Failed to save'); }
     finally { setSaving(false); }
@@ -133,10 +168,14 @@ const EditModal = ({ profile, onClose, onSave }) => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>Brand name <span style={{ color: '#EF4444' }}>*</span></label>
-              <input name="brandName" value={form.brandName} onChange={handleChange} placeholder="Your brand name"
-                style={{ width: '100%', padding: '13px 14px', borderRadius: '14px', border: '1.5px solid #E5E7EB', fontSize: '15px', outline: 'none', backgroundColor: '#F9FAFB', boxSizing: 'border-box' }}
-                onFocus={e => e.target.style.borderColor = '#155DFC'}
-                onBlur={e => e.target.style.borderColor = '#E5E7EB'} />
+              {isVerified ? (
+                <LockedField>{form.brandName}</LockedField>
+              ) : (
+                <input name="brandName" value={form.brandName} onChange={handleChange} placeholder="Your brand name"
+                  style={{ width: '100%', padding: '13px 14px', borderRadius: '14px', border: '1.5px solid #E5E7EB', fontSize: '15px', outline: 'none', backgroundColor: '#F9FAFB', boxSizing: 'border-box' }}
+                  onFocus={e => e.target.style.borderColor = '#155DFC'}
+                  onBlur={e => e.target.style.borderColor = '#E5E7EB'} />
+              )}
             </div>
 
             <div>
@@ -148,44 +187,45 @@ const EditModal = ({ profile, onClose, onSave }) => {
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>Website</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>Website <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(if any)</span></label>
               <input name="website" value={form.website} onChange={handleChange} placeholder="https://yourbrand.com"
                 style={{ width: '100%', padding: '13px 14px', borderRadius: '14px', border: '1.5px solid #E5E7EB', fontSize: '15px', outline: 'none', backgroundColor: '#F9FAFB', boxSizing: 'border-box' }}
                 onFocus={e => e.target.style.borderColor = '#155DFC'}
                 onBlur={e => e.target.style.borderColor = '#E5E7EB'} />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>City</label>
-                <input name="city" value={form.city} onChange={handleChange} placeholder="Mumbai"
-                  style={{ width: '100%', padding: '13px 14px', borderRadius: '14px', border: '1.5px solid #E5E7EB', fontSize: '15px', outline: 'none', backgroundColor: '#F9FAFB', boxSizing: 'border-box' }}
-                  onFocus={e => e.target.style.borderColor = '#155DFC'}
-                  onBlur={e => e.target.style.borderColor = '#E5E7EB'} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>State</label>
-                <input name="state" value={form.state} onChange={handleChange} placeholder="Maharashtra"
-                  style={{ width: '100%', padding: '13px 14px', borderRadius: '14px', border: '1.5px solid #E5E7EB', fontSize: '15px', outline: 'none', backgroundColor: '#F9FAFB', boxSizing: 'border-box' }}
-                  onFocus={e => e.target.style.borderColor = '#155DFC'}
-                  onBlur={e => e.target.style.borderColor = '#E5E7EB'} />
-              </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>Phone / WhatsApp number</label>
+              <PhoneInput value={form.phone} onChange={(phone) => setForm({ ...form, phone })} variant="inline" />
             </div>
+            <p style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '-8px' }}>Only you and our team can see this.</p>
+
+            <LocationPicker
+              state={form.state}
+              city={form.city}
+              onChange={({ state, city }) => setForm({ ...form, state, city })}
+              variant="inline"
+              required
+            />
 
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '8px' }}>Category <span style={{ color: '#EF4444' }}>*</span></label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
-                {CATEGORIES.map(cat => (
-                  <button key={cat} type="button" onClick={() => setForm({ ...form, category: cat })}
-                    style={{ padding: '6px 14px', borderRadius: '99px', fontSize: '12px', fontWeight: 700, border: '1.5px solid', borderColor: form.category === cat ? '#155DFC' : '#E5E7EB', backgroundColor: form.category === cat ? '#155DFC' : 'white', color: form.category === cat ? 'white' : '#6B7280', cursor: 'pointer' }}>
-                    {getCategoryLabel(cat)}
-                  </button>
-                ))}
-              </div>
+              {isVerified ? (
+                <LockedField>{getCategoryLabel(form.category)}</LockedField>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {CATEGORIES.map(cat => (
+                    <button key={cat} type="button" onClick={() => setForm({ ...form, category: cat })}
+                      style={{ padding: '6px 14px', borderRadius: '99px', fontSize: '12px', fontWeight: 700, border: '1.5px solid', borderColor: form.category === cat ? '#155DFC' : '#E5E7EB', backgroundColor: form.category === cat ? '#155DFC' : 'white', color: form.category === cat ? 'white' : '#6B7280', cursor: 'pointer' }}>
+                      {getCategoryLabel(cat)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>Instagram handle</label>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>Instagram handle <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(if any)</span></label>
               <div style={{ position: 'relative' }}>
                 <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF', fontSize: '15px' }}>@</span>
                 <input name="instagramHandle" value={form.instagramHandle} onChange={handleChange} placeholder="yourbrand"
@@ -194,6 +234,27 @@ const EditModal = ({ profile, onClose, onSave }) => {
                   onBlur={e => e.target.style.borderColor = '#E5E7EB'} />
               </div>
             </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>GSTIN or UDYAM number <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(if any)</span></label>
+              {registrationLocked ? (
+                <LockedField>{profile?.gstin || profile?.udyam}</LockedField>
+              ) : (
+                <input name="registration" value={form.registration} onChange={handleChange} placeholder="Enter either one" autoCapitalize="characters"
+                  style={{ width: '100%', padding: '13px 14px', borderRadius: '14px', border: '1.5px solid #E5E7EB', fontSize: '15px', outline: 'none', backgroundColor: '#F9FAFB', boxSizing: 'border-box' }}
+                  onFocus={e => e.target.style.borderColor = '#155DFC'}
+                  onBlur={e => e.target.style.borderColor = '#E5E7EB'} />
+              )}
+              {registrationLocked ? null : (
+                <p style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '6px' }}>If you have a website, Instagram handle or GSTIN / UDYAM number, please add them. It makes verification faster and easier.</p>
+              )}
+            </div>
+
+            {isVerified && (
+              <div style={{ fontSize: '12px', lineHeight: 1.5, color: '#93370D', backgroundColor: '#FFFAEB', border: '1px solid #FEDF89', borderRadius: '12px', padding: '10px 12px' }}>
+                Your logo and description can be changed any time. If you change your phone number, website or Instagram handle, or add a website, Instagram handle, GSTIN or UDYAM number, your brand will be verified again within 24 hours.
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: '10px', marginTop: '24px' }}>
@@ -292,6 +353,21 @@ const BrandProfile = () => {
     </div>
   );
 
+  const VerificationDetailsSection = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {[
+        { label: 'Phone / WhatsApp', value: profile?.phone },
+        { label: profile?.gstin ? 'GSTIN' : profile?.udyam ? 'UDYAM number' : 'GSTIN / UDYAM', value: profile?.gstin || profile?.udyam },
+      ].map(row => (
+        <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '13px' }}>
+          <span style={{ color: '#6B7280', flexShrink: 0 }}>{row.label}</span>
+          <span style={{ color: row.value ? '#101828' : '#9CA3AF', fontWeight: row.value ? 600 : 400, textAlign: 'right', overflowWrap: 'anywhere' }}>{row.value || 'Not added'}</span>
+        </div>
+      ))}
+      <p style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '2px' }}>Only you and our team can see these. They are used to verify your brand.</p>
+    </div>
+  );
+
   // ── MOBILE ──
   const MobileLayout = () => (
     <div className="md:hidden" style={{ height: '100%', overflowY: 'auto' }}>
@@ -340,6 +416,9 @@ const BrandProfile = () => {
           </div>
         </div>
 
+        {/* admin verification status */}
+        <BrandVerificationBanner className="mb-4" onEditDetails={() => setShowModal(true)} />
+
         {/* stats row */}
         <div style={{ display: 'flex', border: '1px solid #E5E7EB', borderRadius: '16px', overflow: 'hidden', marginBottom: '16px' }}>
           {[
@@ -382,6 +461,7 @@ const BrandProfile = () => {
         <SectionCard title="Website" onEdit={() => setShowModal(true)}><WebsiteSection /></SectionCard>
         <SectionCard title="Location" onEdit={() => setShowModal(true)}><LocationSection /></SectionCard>
         <SectionCard title="Category" onEdit={() => setShowModal(true)}><CategorySection /></SectionCard>
+        <SectionCard title="Verification details" onEdit={() => setShowModal(true)}><VerificationDetailsSection /></SectionCard>
         <SectionCard title="Contact Us & Help">
           <button
             onClick={() => navigate('/contact-help')}
@@ -427,6 +507,9 @@ const BrandProfile = () => {
           </div>
         </div>
       </div>
+
+      {/* admin verification status */}
+      <BrandVerificationBanner className="mb-5" onEditDetails={() => setShowModal(true)} />
 
       {/* two column layout */}
       <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
@@ -484,6 +567,7 @@ const BrandProfile = () => {
           <SectionCard title="About the Brand" onEdit={() => setShowModal(true)}><AboutSection /></SectionCard>
           <SectionCard title="Location" onEdit={() => setShowModal(true)}><LocationSection /></SectionCard>
           <SectionCard title="Category" onEdit={() => setShowModal(true)}><CategorySection /></SectionCard>
+          <SectionCard title="Verification details" onEdit={() => setShowModal(true)}><VerificationDetailsSection /></SectionCard>
 
           {!profile?.website && <SectionCard title="Website" onEdit={() => setShowModal(true)}><WebsiteSection /></SectionCard>}
           <SectionCard title="Contact Us & Help">

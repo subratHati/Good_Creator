@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import LocationPicker from '../../components/LocationPicker';
+import { normalizeLocation, locationProblem } from '../../utils/indiaLocations';
 import { useNavigate } from 'react-router-dom';
 import { Camera, RefreshCw, X, Link2, Landmark, ImagePlay, Tag, Pencil, AlertCircle, Sparkles, TrendingUp, HelpCircle, Handshake } from 'lucide-react';
 import Navbar from '../../components/Navbar';
@@ -82,8 +84,7 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
   const [form, setForm] = useState({
     name: profile?.name || '',
     bio: profile?.bio || '',
-    city: profile?.location?.city || '',
-    state: profile?.location?.state || '',
+    ...normalizeLocation(profile?.location?.state, profile?.location?.city),
     categories: profile?.categories || [],
   });
   const [saving, setSaving] = useState(false);
@@ -146,13 +147,13 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
 
   const handleSave = async () => {
     if (!form.name.trim()) return toast.error('Name is required');
-    if (!form.city.trim()) return toast.error('City is required');
-    if (!form.state.trim()) return toast.error('State is required');
+    const placeProblem = locationProblem(form.state, form.city);
+    if (placeProblem) return toast.error(placeProblem);
     if (form.categories.length < 1) return toast.error('Select at least 1 category');
     if (form.categories.length > 3) return setShowPolicyDialog(true);
     setSaving(true);
     try {
-      const payload = { name: form.name, bio: form.bio, location: { city: form.city, state: form.state }, categories: form.categories };
+      const payload = { name: form.name, bio: form.bio, location: { city: form.city.trim(), state: form.state.trim() }, categories: form.categories };
       if (profile) await updateCreatorProfile(payload);
       else await createCreatorProfile(payload);
       toast.success('Profile saved!');
@@ -211,18 +212,13 @@ const ProfileDetailsModal = ({ profile, onClose, onSave }) => {
               <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Your name"
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">City <span className="text-red-500">*</span></label>
-                <input value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} placeholder="Bhubaneswar"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">State <span className="text-red-500">*</span></label>
-                <input value={form.state} onChange={e => setForm({ ...form, state: e.target.value })} placeholder="Odisha"
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-              </div>
-            </div>
+            <LocationPicker
+              state={form.state}
+              city={form.city}
+              onChange={({ state, city }) => setForm({ ...form, state, city })}
+              variant="tailwind"
+              required
+            />
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-1">
                 Categories <span className="text-red-500">*</span>

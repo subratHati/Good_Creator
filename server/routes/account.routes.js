@@ -6,6 +6,8 @@ const Creator = require('../models/Creator');
 const Brand = require('../models/Brand');
 const DeletedAccount = require('../models/DeletedAccount');
 const { getBlockers, deleteAccount } = require('../services/accountDeletion');
+const { checkPickedLocation, checkOutsideLocation } = require('../utils/places');
+const calculateQualityScore = require('../utils/calculateQualityScore');
 
 // wrong-password protection: 5 wrong tries locks deleting for 15 minutes
 const MAX_WRONG = 5;
@@ -22,6 +24,50 @@ const loadProfile = async (user) => {
     if (user.role === 'brand') return Brand.findOne({ userId: user._id });
     return null;
 };
+
+// Does this person still have to set their location? (the pop-up asks this on every visit)
+router.get('/location-status', protect, async (req, res) => {
+    try {
+        const profile = await loadProfile(req.user);
+        const needed = Boolean(profile && profile.locationReview === true);
+        const loc = (profile && profile.location) || {};
+        res.json({ needed, city: needed ? (loc.city || '') : '', state: needed ? (loc.state || '') : '' });
+    } catch (err) {
+        console.error('[ACCOUNT] location-status failed:', err.message);
+        res.status(500).json({ message: 'Could not check your location.' });
+    }
+});
+
+// The pop-up's save. Only a state from the list plus a real city is accepted
+// (or, with outsideIndia, a typed city and country). On success the "please set
+// your location" flag is cleared and the pop-up never appears again.
+router.put('/location', protect, async (req, res) => {
+    try {
+        if (!['creator', 'brand'].includes(req.user.role)) return res.status(403).json({ message: 'Not available for this account.' });
+        const body = req.body || {};
+        const picked = body.outsideIndia === true
+            ? checkOutsideLocation(body.city, body.state)
+            : checkPickedLocation(body.city, body.state);
+        if (!picked.ok) return res.status(400).json({ message: picked.message });
+
+        const Model = req.user.role === 'creator' ? Creator : Brand;
+        let profile = await Model.findOneAndUpdate(
+            { userId: req.user._id },
+            { $set: { 'location.city': picked.city, 'location.state': picked.state, locationReview: false } },
+            { new: true }
+        );
+        if (!profile) return res.status(404).json({ message: 'Profile not found' });
+        if (req.user.role === 'creator') {
+            // location is one of the things the quality score looks at
+            const score = await calculateQualityScore(profile);
+            profile = await Creator.findByIdAndUpdate(profile._id, { qualityScore: score }, { new: true });
+        }
+        res.json({ message: 'Location saved', location: { city: picked.city, state: picked.state } });
+    } catch (err) {
+        console.error('[ACCOUNT] save location failed:', err.message);
+        res.status(500).json({ message: 'Could not save your location. Please try again.' });
+    }
+});
 
 // Step 1 of the screen: can this person delete right now, and if not, why?
 router.get('/delete-check', protect, async (req, res) => {

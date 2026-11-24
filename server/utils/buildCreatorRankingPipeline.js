@@ -57,7 +57,16 @@ const QUALITY_TIER = {
 // safety property the earlier jitter design had.
 const ROTATION_WEIGHT = 0.2;
 
+const { lookupPlace } = require('./places');
+
+// the spellings (lower case) that count as the brand's own city / state
+const placeList = (type, name, stateName) => (name ? lookupPlace(type, name, stateName).variants.map((v) => v.trim().toLowerCase()) : []);
+// the creator's saved value, tidied for comparing: no capitals, no stray spaces
+const savedLower = (field) => ({ $toLower: { $trim: { input: { $ifNull: [field, ''] } } } });
+
 const buildCreatorRankingPipeline = ({ matchQuery, brandCategory, brandCity, brandState, skip, limit }) => {
+  const cityList = placeList('city', brandCity, brandState);
+  const stateList = placeList('state', brandState);
   return [
     { $match: matchQuery },
 
@@ -72,8 +81,8 @@ const buildCreatorRankingPipeline = ({ matchQuery, brandCategory, brandCity, bra
             $cond: [
               {
                 $or: [
-                  brandCity ? { $eq: ['$location.city', brandCity] } : false,
-                  brandState ? { $eq: ['$location.state', brandState] } : false,
+                  cityList.length ? { $in: [savedLower('$location.city'), cityList] } : false,
+                  stateList.length ? { $in: [savedLower('$location.state'), stateList] } : false,
                 ],
               },
               1,

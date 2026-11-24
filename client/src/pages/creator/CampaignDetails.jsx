@@ -5,6 +5,7 @@ import Navbar from '../../components/Navbar';
 import { getOpeningById, searchOpenings } from '../../api/openings';
 import { applyToOpening, getMyApplications } from '../../api/applications';
 import toast from 'react-hot-toast';
+import { VerifiedBadge } from '../../components/VerifiedBadge';
 
 const categoryColors = {
   fashion: { bg: '#FED7AA', color: '#7C2D12' },
@@ -215,7 +216,10 @@ const CampaignDetails = () => {
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-black text-lg truncate" style={{ color: '#101828' }}>{brand.brandName || 'Brand'}</div>
+            <div className="font-black text-lg truncate flex items-center gap-1.5" style={{ color: '#101828' }}>
+              <span className="truncate">{brand.brandName || 'Brand'}</span>
+              {brand.verification?.status === 'verified' && <VerifiedBadge size={18} title="Verified brand" />}
+            </div>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               {brand.category && (
                 <span

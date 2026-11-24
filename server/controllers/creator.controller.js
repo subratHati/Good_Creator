@@ -1,4 +1,5 @@
 const Creator = require('../models/Creator');
+const { escapeRegex, lookupPlace, wholeValueRegex, checkPickedLocation } = require('../utils/places');
 const Review = require('../models/Review');
 const Brand = require('../models/Brand');
 const buildCreatorRankingPipeline = require('../utils/buildCreatorRankingPipeline');
@@ -58,6 +59,8 @@ const updateProfile = async (req, res) => {
     if (error) return res.status(400).json({ message: error });
 
     const updateData = flatten(data);
+    // a proper location saved here also ends the "please set your location" pop-up
+    if (data.location && checkPickedLocation(data.location.city, data.location.state).ok) updateData.locationReview = false;
     if (req.file) {
       updateData.profilePhoto = req.file.path;
     } else if (req.body.removePhoto === true || req.body.removePhoto === 'true') {
@@ -91,7 +94,7 @@ const updateProfile = async (req, res) => {
 // GET /api/creators/:id  (public)
 const getPublicProfile = async (req, res) => {
   try {
-    const creator = await Creator.findById(req.params.id).select('-instagram.accessToken -bankDetails');
+    const creator = await Creator.findById(req.params.id).select('-instagram.accessToken -bankDetails -locationReview');
     if (!creator) {
       return res.status(404).json({ message: 'Creator not found' });
     }
@@ -108,6 +111,7 @@ const searchCreators = async (req, res) => {
     const {
       category,
       city,
+      state,
       minFollowers,
       maxFollowers,
       minEngagement,
@@ -125,15 +129,22 @@ const searchCreators = async (req, res) => {
 
     // text search — matches creator name, category, or Instagram handle
     // (only meaningful for creators who've actually connected/added Instagram)
-    if (search) {
-      const searchRegex = { $regex: search, $options: 'i' };
+    // typed text is never used as a raw regex (a stray "(" would crash the search)
+    const searchText = typeof search === 'string' ? search.trim().slice(0, 100) : '';
+    if (searchText) {
+      const searchRegex = { $regex: escapeRegex(searchText), $options: 'i' };
       query.$or = [
         { name: searchRegex },
         { categories: searchRegex },
         { 'instagram.handle': searchRegex },
       ];
     }
-    if (city) query['location.city'] = { $regex: city, $options: 'i' };
+    // State and city match by official name, so "Bombay" finds Mumbai and
+    // "Orissa" finds Odisha. (Old, not-yet-cleaned spellings still match too.)
+    const stateText = typeof state === 'string' ? state.trim().slice(0, 100) : '';
+    const cityText = typeof city === 'string' ? city.trim().slice(0, 100) : '';
+    if (stateText) query['location.state'] = { $regex: wholeValueRegex(lookupPlace('state', stateText).variants), $options: 'i' };
+    if (cityText) query['location.city'] = { $regex: wholeValueRegex(lookupPlace('city', cityText, stateText).variants), $options: 'i' };
     if (minFollowers || maxFollowers) {
       query['instagram.followersCount'] = {};
       if (minFollowers) query['instagram.followersCount'].$gte = Number(minFollowers);
