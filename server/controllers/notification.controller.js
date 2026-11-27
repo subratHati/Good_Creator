@@ -7,16 +7,19 @@ const getMyNotifications = async (req, res) => {
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const [notifications, total] = await Promise.all([
+    const [notifications, total, unreadCount] = await Promise.all([
       Notification.find({ userId: req.user.id })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
       Notification.countDocuments({ userId: req.user.id }),
+      // the red number on the bell: ALL unread ones, not just this page
+      Notification.countDocuments({ userId: req.user.id, isRead: false }),
     ]);
 
     res.json({
       notifications,
+      unreadCount,
       pagination: { total, page, pages: Math.ceil(total / limit), hasMore: skip + notifications.length < total },
     });
   } catch (error) {
@@ -39,6 +42,19 @@ const markAsRead = async (req, res) => {
     res.json({ message: 'Marked as read', notification });
   } catch (error) {
     console.error('markAsRead error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// PUT /api/notifications/read-all
+// Called when the bell is opened: everything the person has now seen is marked
+// read on the server, so the red number is the same on every device and browser.
+const markAllAsRead = async (req, res) => {
+  try {
+    const result = await Notification.updateMany({ userId: req.user.id, isRead: false }, { isRead: true });
+    res.json({ message: 'All marked as read', modified: result.modifiedCount != null ? result.modifiedCount : result.nModified || 0 });
+  } catch (error) {
+    console.error('markAllAsRead error:', error.message);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -67,4 +83,4 @@ const createNotification = async ({ userId, type = 'admin', title, message = '',
   }
 };
 
-module.exports = { getMyNotifications, markAsRead, getUnreadNotificationCount, createNotification };
+module.exports = { getMyNotifications, markAsRead, markAllAsRead, getUnreadNotificationCount, createNotification };

@@ -13,13 +13,16 @@ import useAuth from './useAuth';
 const useNotifications = ({ limit = 10, pollIntervalMs = 60000 } = {}) => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
+  // how many are unread on the SERVER (all of them, not just the ones in the list)
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) {
       setNotifications([]);
+      setUnreadCount(0);
       setLoading(false);
-      return;
+      return [];
     }
     try {
       const res = await axiosInstance.get('/notifications/my', { params: { page: 1, limit } });
@@ -33,12 +36,21 @@ const useNotifications = ({ limit = 10, pollIntervalMs = 60000 } = {}) => {
         action: { path: n.actionPath || '/' },
       }));
       setNotifications(items);
+      setUnreadCount(Number(res.data.unreadCount) || 0);
+      return items;
     } catch {
       // silent — leave previous notifications in place rather than clearing them
     } finally {
       setLoading(false);
     }
+    return null;
   }, [user, limit]);
+
+  // after the server was told "all read": show it straight away
+  const markAllReadLocally = useCallback(() => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+  }, []);
 
   useEffect(() => {
     fetchNotifications();
@@ -61,7 +73,7 @@ const useNotifications = ({ limit = 10, pollIntervalMs = 60000 } = {}) => {
     };
   }, [fetchNotifications, pollIntervalMs]);
 
-  return { notifications, loading, refetch: fetchNotifications };
+  return { notifications, unreadCount, loading, refetch: fetchNotifications, markAllReadLocally };
 };
 
 export default useNotifications;

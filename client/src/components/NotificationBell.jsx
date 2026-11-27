@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell } from 'lucide-react';
+import axiosInstance from '../api/axiosInstance';
 import useAuth from '../hooks/useAuth';
 import useNotifications from '../hooks/useNotifications';
 
@@ -8,27 +9,24 @@ const NotificationBell = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [lastSeen, setLastSeen] = useState(() => {
-    const stored = localStorage.getItem(`notif_seen_${user?.id}`);
-    return stored ? new Date(stored) : new Date(0);
-  });
   const panelRef = useRef(null);
+  const seenTimer = useRef(null);
 
-  const { notifications, refetch } = useNotifications({ limit: 10, pollIntervalMs: 60000 });
+  // "unread" comes from the server (the same on every device and browser),
+  // not from a date saved in this one browser
+  const { notifications, unreadCount, refetch, markAllReadLocally } = useNotifications({ limit: 10, pollIntervalMs: 60000 });
+  const notificationsWithUnread = notifications.map((n) => ({ ...n, unread: !n.isRead }));
 
-  // derive unread status from lastSeen locally, same as before —
-  // this keeps the shared hook itself free of per-user seen-state
-  const notificationsWithUnread = notifications.map((n) => ({
-    ...n,
-    unread: new Date(n.time) > lastSeen,
-  }));
-  const unreadCount = notificationsWithUnread.filter((n) => n.unread).length;
-
-  const markAllSeen = () => {
-    const now = new Date();
-    localStorage.setItem(`notif_seen_${user?.id}`, now.toISOString());
-    setLastSeen(now);
+  const markAllSeen = async () => {
+    try {
+      await axiosInstance.put('/notifications/read-all');
+      markAllReadLocally();
+    } catch {
+      // not critical - the number simply stays until the next try
+    }
   };
+
+  useEffect(() => () => clearTimeout(seenTimer.current), []);
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -44,7 +42,8 @@ const NotificationBell = () => {
     if (!open) {
       refetch();
       // mark all as seen when opening the panel
-      setTimeout(markAllSeen, 1500);
+      clearTimeout(seenTimer.current);
+      seenTimer.current = setTimeout(markAllSeen, 1500);
     }
     setOpen(!open);
   };
